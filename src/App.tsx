@@ -10,6 +10,7 @@ import StudentLogin from "./pages/auth/StudentLogin";
 import StudentRegister from "./pages/auth/StudentRegister";
 import DriverLogin from "./pages/auth/DriverLogin";
 import DriverRegister from "./pages/auth/DriverRegister";
+import StudentDashboard from "./pages/student/Dashboard";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/auth/student/register" element={<StudentRegister />} />
           <Route path="/auth/driver/login" element={<DriverLogin />} />
           <Route path="/auth/driver/register" element={<DriverRegister />} />
+          <Route path="/student/dashboard" element={<StudentDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
