@@ -1,6 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { MapPin, User, Car, Shield, Clock, CreditCard } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Index = () => {
   return (
@@ -28,23 +29,27 @@ const Index = () => {
             style={{ animationDelay: "200ms" }}
           >
             {/* Student Login Button */}
-            <Button 
-              size="lg"
-              className="gap-2 hover:scale-105 transition-transform duration-300 text-lg px-8"
-            >
-              <User className="w-5 h-5" />
-              Student Login
-            </Button>
+            <Link to="/auth/student/login">
+              <Button 
+                size="lg"
+                className="gap-2 hover:scale-105 transition-transform duration-300 text-lg px-8 w-full sm:w-auto"
+              >
+                <User className="w-5 h-5" />
+                Student Login
+              </Button>
+            </Link>
 
             {/* Driver Login Button */}
-            <Button 
-              variant="outline"
-              size="lg"
-              className="gap-2 hover:scale-105 transition-transform duration-300 text-lg px-8 border-2"
-            >
-              <Car className="w-5 h-5" />
-              Driver Login
-            </Button>
+            <Link to="/auth/driver/login">
+              <Button 
+                variant="outline"
+                size="lg"
+                className="gap-2 hover:scale-105 transition-transform duration-300 text-lg px-8 border-2 w-full sm:w-auto"
+              >
+                <Car className="w-5 h-5" />
+                Driver Login
+              </Button>
+            </Link>
           </div>
         </div>
 
