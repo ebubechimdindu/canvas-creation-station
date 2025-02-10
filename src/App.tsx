@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import StudentLogin from "./pages/auth/StudentLogin";
+import StudentRegister from "./pages/auth/StudentRegister";
 import DriverLogin from "./pages/auth/DriverLogin";
 
 const queryClient = new QueryClient();
@@ -20,6 +21,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth/student/login" element={<StudentLogin />} />
+          <Route path="/auth/student/register" element={<StudentRegister />} />
           <Route path="/auth/driver/login" element={<DriverLogin />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
