@@ -39,6 +39,7 @@ export interface Ride {
 
 export interface StudentSettings {
   id: string;
+  name?: string;
   profileImage?: {
     url: string;
     lastUpdated: string;

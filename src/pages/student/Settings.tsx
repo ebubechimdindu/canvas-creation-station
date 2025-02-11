@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -31,6 +30,7 @@ export default function StudentSettings() {
   const { toast } = useToast();
   const [settings, setSettings] = useState<StudentSettingsType>({
     id: "1",
+    name: "",
     profileImage: undefined,
     preferredPaymentType: "cash",
     notifications: {
