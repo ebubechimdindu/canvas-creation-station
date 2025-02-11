@@ -65,7 +65,7 @@ const rides = [
     pickup: "Student Center",
     dropoff: "Library",
     driver: "John Doe",
-    status: "Completed",
+    status: "Completed" as const,
     rating: 4,
   },
   {
@@ -74,7 +74,7 @@ const rides = [
     pickup: "Dorm A",
     dropoff: "Science Building",
     driver: "Jane Smith",
-    status: "Upcoming",
+    status: "Upcoming" as const,
     rating: null,
   },
   {
@@ -83,7 +83,7 @@ const rides = [
     pickup: "Gym",
     dropoff: "Student Center",
     driver: "Mike Johnson",
-    status: "Completed",
+    status: "Completed" as const,
     rating: 5,
   },
 ];
