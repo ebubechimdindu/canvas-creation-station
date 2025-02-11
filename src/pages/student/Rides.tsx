@@ -3,6 +3,7 @@ import { useAppSelector, useAppDispatch } from "@/hooks/redux";
 import { setActiveRide, addToHistory, updateDrivers } from "@/features/rides/ridesSlice";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import RideDetailsModal from "@/components/rides/RideDetailsModal";
 import {
   Table,
   TableBody,
@@ -55,6 +56,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import RideMap from "@/components/map/RideMap";
 
 const rides = [
   {
@@ -117,6 +119,8 @@ export default function StudentRides() {
     estimatedWait: "5-10 minutes",
     nearbyDrivers: 3,
   });
+  const [selectedRideDetails, setSelectedRideDetails] = useState<typeof rides[0] | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   const handleRideRequest = (e: React.FormEvent) => {
     e.preventDefault();
@@ -405,7 +409,11 @@ export default function StudentRides() {
                     {filteredRides.map((ride) => (
                       <div
                         key={ride.id}
-                        className="mb-4 rounded-lg border p-4 space-y-2"
+                        className="mb-4 rounded-lg border p-4 space-y-2 cursor-pointer hover:bg-accent/50 transition-colors"
+                        onClick={() => {
+                          setSelectedRideDetails(ride);
+                          setIsDetailsModalOpen(true);
+                        }}
                       >
                         <div className="flex justify-between items-center">
                           <div className="font-medium">{format(new Date(ride.date), "MMM dd, yyyy")}</div>
@@ -438,7 +446,11 @@ export default function StudentRides() {
                                 variant="outline"
                                 size="sm"
                                 className="w-full mt-2"
-                                onClick={() => setSelectedRide(ride.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedRide(ride.id);
+                                  setIsRatingOpen(true);
+                                }}
                               >
                                 Rate Ride
                               </Button>
@@ -463,7 +475,14 @@ export default function StudentRides() {
                       </TableHeader>
                       <TableBody>
                         {filteredRides.map((ride) => (
-                          <TableRow key={ride.id}>
+                          <TableRow 
+                            key={ride.id}
+                            className="cursor-pointer hover:bg-accent/50 transition-colors"
+                            onClick={() => {
+                              setSelectedRideDetails(ride);
+                              setIsDetailsModalOpen(true);
+                            }}
+                          >
                             <TableCell>{format(new Date(ride.date), "MMM dd, yyyy")}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-1">
@@ -500,71 +519,87 @@ export default function StudentRides() {
                               )}
                             </TableCell>
                             <TableCell>
-                              {ride.status === "Completed" && !ride.rating && (
-                                <Dialog open={isRatingOpen} onOpenChange={setIsRatingOpen}>
-                                  <DialogTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="flex items-center gap-1"
-                                      onClick={() => setSelectedRide(ride.id)}
-                                    >
-                                      <MessageSquare className="h-4 w-4" />
-                                      Rate
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent>
-                                    <DialogHeader>
-                                      <DialogTitle>Rate Your Ride</DialogTitle>
-                                    </DialogHeader>
-                                    <div className="space-y-4 py-4">
-                                      <div className="flex justify-center gap-1">
-                                        {[1, 2, 3, 4, 5].map((star) => (
-                                          <button
-                                            key={star}
-                                            type="button"
-                                            className="p-0 hover:scale-110 transition-transform"
-                                            onMouseEnter={() => setRatingHover(star)}
-                                            onMouseLeave={() => setRatingHover(0)}
-                                            onClick={() => setRating(star)}
-                                          >
-                                            <Star
-                                              className={cn(
-                                                "h-8 w-8",
-                                                (rating >= star || ratingHover >= star) &&
-                                                  "fill-yellow-400 text-yellow-400"
-                                              )}
-                                            />
-                                          </button>
-                                        ))}
-                                      </div>
-                                      <div className="space-y-2">
-                                        <Label htmlFor="review">Your Review</Label>
-                                        <Textarea
-                                          id="review"
-                                          placeholder="How was your ride?"
-                                          value={review}
-                                          onChange={(e) => setReview(e.target.value)}
-                                        />
-                                      </div>
-                                    </div>
-                                    <DialogFooter>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedRideDetails(ride);
+                                    setIsDetailsModalOpen(true);
+                                  }}
+                                >
+                                  <MessageSquare className="h-4 w-4" />
+                                </Button>
+                                {ride.status === "Completed" && !ride.rating && (
+                                  <Dialog open={isRatingOpen} onOpenChange={setIsRatingOpen}>
+                                    <DialogTrigger asChild>
                                       <Button
                                         variant="outline"
-                                        onClick={() => setIsRatingOpen(false)}
+                                        size="sm"
+                                        className="flex items-center gap-1"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedRide(ride.id);
+                                        }}
                                       >
-                                        Cancel
+                                        <Star className="h-4 w-4" />
+                                        Rate
                                       </Button>
-                                      <Button
-                                        onClick={() => handleRating(selectedRide!)}
-                                        disabled={!rating}
-                                      >
-                                        Submit Rating
-                                      </Button>
-                                    </DialogFooter>
-                                  </DialogContent>
-                                </Dialog>
-                              )}
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                      <DialogHeader>
+                                        <DialogTitle>Rate Your Ride</DialogTitle>
+                                      </DialogHeader>
+                                      <div className="space-y-4 py-4">
+                                        <div className="flex justify-center gap-1">
+                                          {[1, 2, 3, 4, 5].map((star) => (
+                                            <button
+                                              key={star}
+                                              type="button"
+                                              className="p-0 hover:scale-110 transition-transform"
+                                              onMouseEnter={() => setRatingHover(star)}
+                                              onMouseLeave={() => setRatingHover(0)}
+                                              onClick={() => setRating(star)}
+                                            >
+                                              <Star
+                                                className={cn(
+                                                  "h-8 w-8",
+                                                  (rating >= star || ratingHover >= star) &&
+                                                    "fill-yellow-400 text-yellow-400"
+                                                )}
+                                              />
+                                            </button>
+                                          ))}
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Label htmlFor="review">Your Review</Label>
+                                          <Textarea
+                                            id="review"
+                                            placeholder="How was your ride?"
+                                            value={review}
+                                            onChange={(e) => setReview(e.target.value)}
+                                          />
+                                        </div>
+                                      </div>
+                                      <DialogFooter>
+                                        <Button
+                                          variant="outline"
+                                          onClick={() => setIsRatingOpen(false)}
+                                        >
+                                          Cancel
+                                        </Button>
+                                        <Button
+                                          onClick={() => handleRating(selectedRide!)}
+                                          disabled={!rating}
+                                        >
+                                          Submit Rating
+                                        </Button>
+                                      </DialogFooter>
+                                    </DialogContent>
+                                  </Dialog>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -603,6 +638,12 @@ export default function StudentRides() {
           </div>
         </main>
       </div>
+
+      <RideDetailsModal
+        ride={selectedRideDetails}
+        open={isDetailsModalOpen}
+        onOpenChange={setIsDetailsModalOpen}
+      />
     </SidebarProvider>
   );
 }
