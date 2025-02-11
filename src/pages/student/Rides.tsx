@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +20,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, Star, MessageSquare, Clock, Car } from "lucide-react";
+import { Calendar, MapPin, Star, MessageSquare, Clock, Car, Search, Filter, Download, X } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import {
   Dialog,
@@ -27,10 +28,32 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 // Mock data for rides
 const rides = [
@@ -66,6 +89,13 @@ const rides = [
 export default function StudentRides() {
   const [selectedRide, setSelectedRide] = useState<number | null>(null);
   const [isRequestOpen, setIsRequestOpen] = useState(false);
+  const [isRatingOpen, setIsRatingOpen] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [ratingHover, setRatingHover] = useState(0);
+  const [review, setReview] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [dateRange, setDateRange] = useState({ start: "", end: "" });
   const { toast } = useToast();
   const [rideRequest, setRideRequest] = useState({
     pickup: "",
@@ -73,16 +103,66 @@ export default function StudentRides() {
     date: "",
     time: "",
     notes: "",
+    recurring: false,
+    specialRequirements: "",
+  });
+  const [activeRequest, setActiveRequest] = useState({
+    status: "Searching for driver",
+    estimatedWait: "5-10 minutes",
+    nearbyDrivers: 3,
   });
 
   const handleRideRequest = (e: React.FormEvent) => {
     e.preventDefault();
+    setActiveRequest({
+      status: "Searching for driver",
+      estimatedWait: "5-10 minutes",
+      nearbyDrivers: 3,
+    });
     toast({
       title: "Ride Requested",
       description: "Looking for available drivers...",
     });
     setIsRequestOpen(false);
   };
+
+  const handleRating = (rideId: number) => {
+    toast({
+      title: "Rating Submitted",
+      description: "Thank you for your feedback!",
+    });
+    setIsRatingOpen(false);
+    setRating(0);
+    setReview("");
+  };
+
+  const handleCancelRequest = () => {
+    setActiveRequest({
+      status: "Cancelled",
+      estimatedWait: "0",
+      nearbyDrivers: 0,
+    });
+    toast({
+      title: "Ride Cancelled",
+      description: "Your ride request has been cancelled.",
+    });
+  };
+
+  const handleExportHistory = () => {
+    toast({
+      title: "Export Started",
+      description: "Your ride history is being downloaded.",
+    });
+  };
+
+  const filteredRides = rides.filter((ride) => {
+    const matchesSearch =
+      ride.pickup.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ride.dropoff.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ride.driver.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || ride.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <SidebarProvider>
@@ -155,8 +235,28 @@ export default function StudentRides() {
                       </div>
                     </div>
                     <div className="space-y-2">
+                      <Label htmlFor="specialRequirements">Special Requirements</Label>
+                      <Select
+                        onValueChange={(value) =>
+                          setRideRequest({
+                            ...rideRequest,
+                            specialRequirements: value,
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select any special requirements" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="wheelchair">Wheelchair Accessible</SelectItem>
+                          <SelectItem value="assistant">Need Assistant</SelectItem>
+                          <SelectItem value="luggage">Extra Luggage Space</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
                       <Label htmlFor="notes">Additional Notes</Label>
-                      <Input
+                      <Textarea
                         id="notes"
                         placeholder="Any special requirements?"
                         value={rideRequest.notes}
@@ -181,93 +281,261 @@ export default function StudentRides() {
             </div>
 
             <div className="grid gap-6">
-              <Card className="border-l-4 border-l-blue-500">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Clock className="h-5 w-5" />
-                    Active Request
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">No active ride requests</p>
-                </CardContent>
-              </Card>
+              {activeRequest.status !== "Cancelled" && (
+                <Card className="border-l-4 border-l-blue-500">
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-5 w-5 animate-pulse text-blue-500" />
+                        Active Request
+                      </div>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Cancel Ride Request?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to cancel your current ride request?
+                              This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Keep Request</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleCancelRequest}>
+                              Cancel Ride
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid gap-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Status:</span>
+                      <span className="font-medium">{activeRequest.status}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Estimated Wait:</span>
+                      <span className="font-medium">{activeRequest.estimatedWait}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Nearby Drivers:</span>
+                      <span className="font-medium">{activeRequest.nearbyDrivers}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5" />
-                    Ride History
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-5 w-5" />
+                      Ride History
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <Input
+                        placeholder="Search rides..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="max-w-[200px]"
+                      />
+                      <Select onValueChange={setStatusFilter} defaultValue="all">
+                        <SelectTrigger className="w-[150px]">
+                          <SelectValue placeholder="Filter by status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Status</SelectItem>
+                          <SelectItem value="Completed">Completed</SelectItem>
+                          <SelectItem value="Upcoming">Upcoming</SelectItem>
+                          <SelectItem value="Cancelled">Cancelled</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={handleExportHistory}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Pickup</TableHead>
-                        <TableHead>Dropoff</TableHead>
-                        <TableHead>Driver</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Rating</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {rides.map((ride) => (
-                        <TableRow key={ride.id}>
-                          <TableCell>{ride.date}</TableCell>
-                          <TableCell>
+                  <div className="md:hidden">
+                    {filteredRides.map((ride) => (
+                      <div
+                        key={ride.id}
+                        className="mb-4 rounded-lg border p-4 space-y-2"
+                      >
+                        <div className="flex justify-between items-center">
+                          <div className="font-medium">{format(new Date(ride.date), "MMM dd, yyyy")}</div>
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                              ride.status === "Completed"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-blue-100 text-blue-700"
+                            }`}
+                          >
+                            {ride.status}
+                          </span>
+                        </div>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
+                            {ride.pickup} → {ride.dropoff}
+                          </div>
+                          <div className="text-muted-foreground">
+                            Driver: {ride.driver}
+                          </div>
+                          {ride.rating ? (
                             <div className="flex items-center gap-1">
-                              <MapPin className="h-4 w-4 text-muted-foreground" />
-                              {ride.pickup}
+                              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                              <span>{ride.rating}</span>
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              <MapPin className="h-4 w-4 text-muted-foreground" />
-                              {ride.dropoff}
-                            </div>
-                          </TableCell>
-                          <TableCell>{ride.driver}</TableCell>
-                          <TableCell>
-                            <span
-                              className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                                ride.status === "Completed"
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-blue-100 text-blue-700"
-                              }`}
-                            >
-                              {ride.status}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            {ride.rating ? (
-                              <div className="flex items-center gap-1">
-                                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                                <span>{ride.rating}</span>
-                              </div>
-                            ) : (
-                              "-"
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {ride.status === "Completed" && !ride.rating && (
+                          ) : (
+                            ride.status === "Completed" && (
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="flex items-center gap-1"
+                                className="w-full mt-2"
                                 onClick={() => setSelectedRide(ride.id)}
                               >
-                                <MessageSquare className="h-4 w-4" />
-                                Rate
+                                Rate Ride
                               </Button>
-                            )}
-                          </TableCell>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="hidden md:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Pickup</TableHead>
+                          <TableHead>Dropoff</TableHead>
+                          <TableHead>Driver</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Rating</TableHead>
+                          <TableHead>Actions</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredRides.map((ride) => (
+                          <TableRow key={ride.id}>
+                            <TableCell>{format(new Date(ride.date), "MMM dd, yyyy")}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <MapPin className="h-4 w-4 text-muted-foreground" />
+                                {ride.pickup}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <MapPin className="h-4 w-4 text-muted-foreground" />
+                                {ride.dropoff}
+                              </div>
+                            </TableCell>
+                            <TableCell>{ride.driver}</TableCell>
+                            <TableCell>
+                              <span
+                                className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                                  ride.status === "Completed"
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-blue-100 text-blue-700"
+                                }`}
+                              >
+                                {ride.status}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              {ride.rating ? (
+                                <div className="flex items-center gap-1">
+                                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                                  <span>{ride.rating}</span>
+                                </div>
+                              ) : (
+                                "-"
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {ride.status === "Completed" && !ride.rating && (
+                                <Dialog open={isRatingOpen} onOpenChange={setIsRatingOpen}>
+                                  <DialogTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="flex items-center gap-1"
+                                      onClick={() => setSelectedRide(ride.id)}
+                                    >
+                                      <MessageSquare className="h-4 w-4" />
+                                      Rate
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Rate Your Ride</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="space-y-4 py-4">
+                                      <div className="flex justify-center gap-1">
+                                        {[1, 2, 3, 4, 5].map((star) => (
+                                          <button
+                                            key={star}
+                                            type="button"
+                                            className="p-0 hover:scale-110 transition-transform"
+                                            onMouseEnter={() => setRatingHover(star)}
+                                            onMouseLeave={() => setRatingHover(0)}
+                                            onClick={() => setRating(star)}
+                                          >
+                                            <Star
+                                              className={cn(
+                                                "h-8 w-8",
+                                                (rating >= star || ratingHover >= star) &&
+                                                  "fill-yellow-400 text-yellow-400"
+                                              )}
+                                            />
+                                          </button>
+                                        ))}
+                                      </div>
+                                      <div className="space-y-2">
+                                        <Label htmlFor="review">Your Review</Label>
+                                        <Textarea
+                                          id="review"
+                                          placeholder="How was your ride?"
+                                          value={review}
+                                          onChange={(e) => setReview(e.target.value)}
+                                        />
+                                      </div>
+                                    </div>
+                                    <DialogFooter>
+                                      <Button
+                                        variant="outline"
+                                        onClick={() => setIsRatingOpen(false)}
+                                      >
+                                        Cancel
+                                      </Button>
+                                      <Button
+                                        onClick={() => handleRating(selectedRide!)}
+                                        disabled={!rating}
+                                      >
+                                        Submit Rating
+                                      </Button>
+                                    </DialogFooter>
+                                  </DialogContent>
+                                </Dialog>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                   <div className="mt-4">
                     <Pagination>
                       <PaginationContent>
