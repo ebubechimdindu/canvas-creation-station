@@ -14,16 +14,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { 
   User, 
   Bell, 
-  Moon, 
-  Sun, 
+  Moon,
   Languages, 
   MapPin,
-  Lock,
+  Camera,
   Trash2
 } from "lucide-react";
 import { StudentSettings as StudentSettingsType } from "@/types";
@@ -32,6 +31,7 @@ export default function StudentSettings() {
   const { toast } = useToast();
   const [settings, setSettings] = useState<StudentSettingsType>({
     id: "1",
+    profileImage: undefined,
     preferredPaymentType: "cash",
     notifications: {
       email: true,
@@ -42,6 +42,47 @@ export default function StudentSettings() {
     theme: "system",
     language: "en",
   });
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "Error",
+          description: "Image size should be less than 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setSettings({
+          ...settings,
+          profileImage: {
+            url: e.target?.result as string,
+            lastUpdated: new Date().toISOString(),
+          },
+        });
+        toast({
+          title: "Success",
+          description: "Profile image updated successfully",
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setSettings({
+      ...settings,
+      profileImage: undefined,
+    });
+    toast({
+      title: "Success",
+      description: "Profile image removed successfully",
+    });
+  };
 
   const handleSaveSettings = () => {
     toast({
@@ -69,7 +110,45 @@ export default function StudentSettings() {
                     Profile Information
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6">
+                  <div className="flex flex-col items-center space-y-4">
+                    <Avatar className="h-32 w-32">
+                      <AvatarImage src={settings.profileImage?.url} />
+                      <AvatarFallback className="text-4xl">
+                        {settings.name?.[0]?.toUpperCase() || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        className="flex items-center gap-2"
+                        onClick={() => document.getElementById("image-upload")?.click()}
+                      >
+                        <Camera className="h-4 w-4" />
+                        Change Photo
+                      </Button>
+                      {settings.profileImage && (
+                        <Button
+                          variant="outline"
+                          className="flex items-center gap-2"
+                          onClick={handleRemoveImage}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+                    <input
+                      id="image-upload"
+                      type="file"
+                      className="hidden"
+                      accept="image/png,image/jpeg"
+                      onChange={handleImageUpload}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Supported formats: JPEG, PNG. Max size: 5MB
+                    </p>
+                  </div>
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">Full Name</Label>

@@ -1,5 +1,5 @@
 
-import { Home, MapPin, Settings, User, Calendar } from "lucide-react";
+import { Home, MapPin, Settings, Calendar } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -15,7 +15,6 @@ const menuItems = [
   { title: "Home", icon: Home, url: "/student/dashboard" },
   { title: "Rides", icon: MapPin, url: "/student/rides" },
   { title: "Schedule", icon: Calendar, url: "/student/schedule" },
-  { title: "Profile", icon: User, url: "/student/profile" },
   { title: "Settings", icon: Settings, url: "/student/settings" },
 ];
 

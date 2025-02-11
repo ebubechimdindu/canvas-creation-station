@@ -39,6 +39,10 @@ export interface Ride {
 
 export interface StudentSettings {
   id: string;
+  profileImage?: {
+    url: string;
+    lastUpdated: string;
+  };
   preferredPaymentType: 'cash' | 'transfer';
   notifications: {
     email: boolean;
