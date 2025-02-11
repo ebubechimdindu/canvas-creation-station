@@ -269,4 +269,34 @@ export default function StudentSettings() {
                     <Moon className="h-5 w-5" />
                     Appearance
                   </CardTitle>
-                </Car
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Label>Theme</Label>
+                      <Select
+                        value={settings.theme}
+                        onValueChange={(value: 'light' | 'dark' | 'system') =>
+                          setSettings({ ...settings, theme: value })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select theme" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="light">Light</SelectItem>
+                          <SelectItem value="dark">Dark</SelectItem>
+                          <SelectItem value="system">System</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </main>
+      </div>
+    </SidebarProvider>
+  );
+}
