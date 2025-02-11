@@ -179,59 +179,75 @@ export default function StudentRides() {
                     Request a Ride
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="sm:max-w-[625px]">
                   <DialogHeader>
                     <DialogTitle>Request a Ride</DialogTitle>
                   </DialogHeader>
                   <form onSubmit={handleRideRequest} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="pickup">Pickup Location</Label>
-                      <Input
-                        id="pickup"
-                        placeholder="Enter pickup location"
-                        value={rideRequest.pickup}
-                        onChange={(e) =>
-                          setRideRequest({ ...rideRequest, pickup: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="dropoff">Dropoff Location</Label>
-                      <Input
-                        id="dropoff"
-                        placeholder="Enter dropoff location"
-                        value={rideRequest.dropoff}
-                        onChange={(e) =>
-                          setRideRequest({ ...rideRequest, dropoff: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="date">Date</Label>
-                        <Input
-                          id="date"
-                          type="date"
-                          value={rideRequest.date}
-                          onChange={(e) =>
-                            setRideRequest({ ...rideRequest, date: e.target.value })
-                          }
-                          required
-                        />
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="pickup">Pickup Location</Label>
+                          <Input
+                            id="pickup"
+                            placeholder="Enter pickup location"
+                            value={rideRequest.pickup}
+                            onChange={(e) =>
+                              setRideRequest({ ...rideRequest, pickup: e.target.value })
+                            }
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="dropoff">Dropoff Location</Label>
+                          <Input
+                            id="dropoff"
+                            placeholder="Enter dropoff location"
+                            value={rideRequest.dropoff}
+                            onChange={(e) =>
+                              setRideRequest({ ...rideRequest, dropoff: e.target.value })
+                            }
+                            required
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="date">Date</Label>
+                            <Input
+                              id="date"
+                              type="date"
+                              value={rideRequest.date}
+                              onChange={(e) =>
+                                setRideRequest({ ...rideRequest, date: e.target.value })
+                              }
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="time">Time</Label>
+                            <Input
+                              id="time"
+                              type="time"
+                              value={rideRequest.time}
+                              onChange={(e) =>
+                                setRideRequest({ ...rideRequest, time: e.target.value })
+                              }
+                              required
+                            />
+                          </div>
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="time">Time</Label>
-                        <Input
-                          id="time"
-                          type="time"
-                          value={rideRequest.time}
-                          onChange={(e) =>
-                            setRideRequest({ ...rideRequest, time: e.target.value })
-                          }
-                          required
-                        />
+                      <div className="space-y-4">
+                        <Label>Location Preview</Label>
+                        <div className="relative aspect-square rounded-lg overflow-hidden bg-[#F1F0FB] border">
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="text-center space-y-2">
+                              <MapPin className="h-8 w-8 text-[#8E9196] mx-auto" />
+                              <p className="text-sm text-[#8E9196]">Select a location to preview</p>
+                            </div>
+                          </div>
+                          <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent to-background/10" />
+                        </div>
                       </div>
                     </div>
                     <div className="space-y-2">
@@ -313,18 +329,31 @@ export default function StudentRides() {
                       </AlertDialog>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="grid gap-4">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Status:</span>
-                      <span className="font-medium">{activeRequest.status}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Estimated Wait:</span>
-                      <span className="font-medium">{activeRequest.estimatedWait}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Nearby Drivers:</span>
-                      <span className="font-medium">{activeRequest.nearbyDrivers}</span>
+                  <CardContent>
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Status:</span>
+                          <span className="font-medium">{activeRequest.status}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Estimated Wait:</span>
+                          <span className="font-medium">{activeRequest.estimatedWait}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Nearby Drivers:</span>
+                          <span className="font-medium">{activeRequest.nearbyDrivers}</span>
+                        </div>
+                      </div>
+                      <div className="relative aspect-video md:aspect-square rounded-lg overflow-hidden bg-[#F1F0FB] border">
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="text-center space-y-2">
+                            <Car className="h-8 w-8 text-[#8E9196] mx-auto animate-pulse" />
+                            <p className="text-sm text-[#8E9196]">Searching for nearby drivers...</p>
+                          </div>
+                        </div>
+                        <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent to-background/10" />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
