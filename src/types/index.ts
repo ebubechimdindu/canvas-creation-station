@@ -12,7 +12,7 @@ export interface Driver {
   rating: number;
   distance: number;
   status: 'available' | 'busy' | 'offline';
-  accountDetails?: {
+  accountDetails: {
     bankName: string;
     accountNumber: string;
     accountName: string;
@@ -29,24 +29,16 @@ export interface Ride {
   rating?: number;
   payment?: {
     method: 'cash' | 'transfer';
-    status: 'pending' | 'completed';
+    status: 'pending' | 'paid';
     amount: number;
+    confirmedBy?: string;
+    confirmedAt?: string;
   };
   notes?: string;
 }
 
-export interface PaymentMethod {
-  id: string;
-  type: 'bank_account';
-  bankName: string;
-  accountNumber: string;
-  accountName: string;
-  isDefault: boolean;
-}
-
 export interface StudentSettings {
   id: string;
-  defaultPaymentMethod: PaymentMethod | null;
   preferredPaymentType: 'cash' | 'transfer';
   notifications: {
     email: boolean;
