@@ -1,5 +1,6 @@
-
 import { useState } from "react";
+import { useAppSelector, useAppDispatch } from "@/hooks/redux";
+import { setActiveRide, addToHistory, updateDrivers } from "@/features/rides/ridesSlice";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -55,7 +56,6 @@ import {
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
-// Mock data for rides
 const rides = [
   {
     id: 1,
@@ -87,6 +87,12 @@ const rides = [
 ];
 
 export default function StudentRides() {
+  const dispatch = useAppDispatch();
+  const { activeRide, history: rideHistory, availableDrivers } = useAppSelector(
+    (state) => state.rides
+  );
+  const { isAuthenticated, user } = useAppSelector((state) => state.auth);
+
   const [selectedRide, setSelectedRide] = useState<number | null>(null);
   const [isRequestOpen, setIsRequestOpen] = useState(false);
   const [isRatingOpen, setIsRatingOpen] = useState(false);
@@ -114,11 +120,15 @@ export default function StudentRides() {
 
   const handleRideRequest = (e: React.FormEvent) => {
     e.preventDefault();
-    setActiveRequest({
-      status: "Searching for driver",
-      estimatedWait: "5-10 minutes",
-      nearbyDrivers: 3,
-    });
+    const newRide = {
+      id: Date.now(),
+      date: new Date().toISOString(),
+      pickup: rideRequest.pickup,
+      dropoff: rideRequest.dropoff,
+      driver: "Pending",
+      status: "Upcoming" as const,
+    };
+    dispatch(setActiveRide(newRide));
     toast({
       title: "Ride Requested",
       description: "Looking for available drivers...",
@@ -137,11 +147,7 @@ export default function StudentRides() {
   };
 
   const handleCancelRequest = () => {
-    setActiveRequest({
-      status: "Cancelled",
-      estimatedWait: "0",
-      nearbyDrivers: 0,
-    });
+    dispatch(setActiveRide(null));
     toast({
       title: "Ride Cancelled",
       description: "Your ride request has been cancelled.",
