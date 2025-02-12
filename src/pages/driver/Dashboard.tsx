@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import DriverSidebar from "@/components/driver/DriverSidebar";
@@ -75,30 +74,36 @@ const DriverDashboard = () => {
           </div>
 
           {/* Map Section */}
-          <Card className={`transition-all duration-300 ${isMapExpanded ? 'fixed inset-4 z-50' : ''}`}>
+          <Card className={`transition-all duration-300 ${isMapExpanded ? 'fixed inset-4 z-50 shadow-2xl' : 'hover:shadow-lg'}`}>
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
               <CardTitle className="flex items-center gap-2">
-                <MapIcon className="h-5 w-5" />
-                Live Map View
+                <MapIcon className="h-5 w-5 text-primary" />
+                <span className="bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+                  Live Map View
+                </span>
               </CardTitle>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={toggleMapSize}
-                className="hover:bg-gray-100"
+                className="hover:bg-primary/10 transition-colors duration-200"
               >
-                {isMapExpanded ? <Minimize2 /> : <Maximize2 />}
+                {isMapExpanded ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
               </Button>
             </CardHeader>
-            <CardContent>
-              <div className={`transition-all duration-300 ${isMapExpanded ? 'h-[calc(100vh-8rem)]' : 'h-[400px]'}`}>
+            <CardContent className="p-0">
+              <div 
+                className={`transition-all duration-500 ease-in-out transform ${
+                  isMapExpanded ? 'h-[calc(100vh-8rem)]' : 'h-[400px]'
+                }`}
+              >
                 <RideMap
                   pickup=""
                   dropoff=""
                   mode="driver"
                   driverLocation={driverLocation}
                   nearbyDrivers={nearbyDrivers}
-                  className="w-full h-full"
+                  className="w-full h-full rounded-b-lg"
                 />
               </div>
             </CardContent>

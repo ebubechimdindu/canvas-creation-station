@@ -5,6 +5,8 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Driver } from '@/types';
+import { Card } from '../ui/card';
+import { Loader2, Sun, Moon } from 'lucide-react';
 
 interface RideMapProps {
   pickup: string;
@@ -34,31 +36,45 @@ const RideMap = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const driverMarker = useRef<mapboxgl.Marker | null>(null);
-  const [mapboxToken, setMapboxToken] = useState('');
-  const [isTokenSet, setIsTokenSet] = useState(false);
+  const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const [mapStyle, setMapStyle] = useState<'light' | 'dark'>('light');
+  const [isLoading, setIsLoading] = useState(true);
   const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
 
   useEffect(() => {
-    if (!mapboxToken || !mapContainer.current) return;
+    if (!mapContainer.current) return;
 
-    mapboxgl.accessToken = mapboxToken;
-    
+    // Initialize map with style based on time of day
+    const hour = new Date().getHours();
+    const initialStyle = hour >= 18 || hour < 6 ? 'dark' : 'light';
+    setMapStyle(initialStyle);
+
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
+      style: `mapbox://styles/mapbox/${initialStyle}-v11`,
+      center: driverLocation ? [driverLocation.lng, driverLocation.lat] : [3.4470, 6.4552],
       zoom: 12,
-      center: [3.4470, 6.4552], // Default to Lagos coordinates
+      pitchWithRotate: true,
+      pitch: 45,
     });
 
-    // Add navigation controls
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    // Add navigation controls with elegant styling
+    const nav = new mapboxgl.NavigationControl({
+      visualizePitch: true,
+      showZoom: true,
+      showCompass: true,
+    });
+    map.current.addControl(nav, 'top-right');
 
     // Add fullscreen control
     map.current.addControl(new mapboxgl.FullscreenControl());
 
-    if (showRoutePath) {
-      // Add source and layer for the route
-      map.current.on('load', () => {
+    // Initialize route layer when map loads
+    map.current.on('load', () => {
+      setIsMapLoaded(true);
+      setIsLoading(false);
+
+      if (showRoutePath) {
         map.current?.addSource('route', {
           type: 'geojson',
           data: {
@@ -82,18 +98,49 @@ const RideMap = ({
           paint: {
             'line-color': '#3b82f6',
             'line-width': 4,
-            'line-opacity': 0.75
+            'line-opacity': 0.75,
+            'line-gradient': [
+              'interpolate',
+              ['linear'],
+              ['line-progress'],
+              0, '#3b82f6',
+              1, '#10b981'
+            ]
           }
         });
 
-        // Get coordinates and update route
+        // Add animated route glow effect
+        map.current?.addLayer({
+          id: 'route-glow',
+          type: 'line',
+          source: 'route',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#3b82f6',
+            'line-width': 8,
+            'line-opacity': 0.15,
+            'line-blur': 2
+          }
+        });
+
         getCoordinatesAndUpdateRoute();
+      }
+
+      // Add atmosphere effect
+      map.current?.setFog({
+        'horizon-blend': 0.1,
+        'star-intensity': 0.15,
+        'space-color': '#000000',
+        'color': mapStyle === 'dark' ? '#242424' : '#ffffff'
       });
-    }
+    });
 
     // Handle driver mode specific features
     if (mode === 'driver') {
-      // Enable location tracking
+      // Add geolocation control with custom styling
       map.current.addControl(
         new mapboxgl.GeolocateControl({
           positionOptions: {
@@ -116,37 +163,65 @@ const RideMap = ({
     return () => {
       map.current?.remove();
     };
-  }, [mapboxToken, pickup, dropoff, showRoutePath, mode]);
+  }, []);
 
-  // Handle driver location updates
+  // Handle map style toggle
+  const toggleMapStyle = () => {
+    const newStyle = mapStyle === 'light' ? 'dark' : 'light';
+    setMapStyle(newStyle);
+    map.current?.setStyle(`mapbox://styles/mapbox/${newStyle}-v11`);
+  };
+
+  // Handle driver location updates with smooth animation
   useEffect(() => {
     if (!map.current || !driverLocation) return;
 
     if (!driverMarker.current) {
       const el = document.createElement('div');
       el.className = 'driver-marker';
-      el.style.backgroundColor = '#4ade80';
-      el.style.width = '20px';
-      el.style.height = '20px';
-      el.style.borderRadius = '50%';
-      el.style.border = '2px solid white';
-      el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+      el.style.cssText = `
+        background-color: #4ade80;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        cursor: pointer;
+        transition: all 0.3s ease;
+      `;
 
-      driverMarker.current = new mapboxgl.Marker(el)
+      // Add pulse animation
+      const pulse = document.createElement('div');
+      pulse.style.cssText = `
+        position: absolute;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background-color: #4ade8050;
+        transform: translate(-5px, -5px);
+        animation: pulse 2s infinite;
+      `;
+      el.appendChild(pulse);
+
+      driverMarker.current = new mapboxgl.Marker({
+        element: el,
+        rotationAlignment: 'map'
+      })
         .setLngLat([driverLocation.lng, driverLocation.lat])
         .addTo(map.current);
     } else {
       driverMarker.current.setLngLat([driverLocation.lng, driverLocation.lat]);
     }
 
-    // Animate to new position
+    // Smooth camera animation
     map.current.easeTo({
       center: [driverLocation.lng, driverLocation.lat],
-      duration: 1000
+      duration: 2000,
+      easing: (t) => t * (2 - t) // Smooth easing function
     });
   }, [driverLocation]);
 
-  // Handle nearby drivers updates
+  // Handle nearby drivers with animated markers
   useEffect(() => {
     if (!map.current) return;
 
@@ -154,17 +229,20 @@ const RideMap = ({
     Object.values(markersRef.current).forEach(marker => marker.remove());
     markersRef.current = {};
 
-    // Add new markers
+    // Add new markers with animation
     nearbyDrivers.forEach(driver => {
       if (driver.currentLocation) {
         const el = document.createElement('div');
         el.className = 'nearby-driver-marker';
-        el.style.backgroundColor = driver.status === 'available' ? '#4ade80' : '#ef4444';
-        el.style.width = '12px';
-        el.style.height = '12px';
-        el.style.borderRadius = '50%';
-        el.style.border = '2px solid white';
-        el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+        el.style.cssText = `
+          background-color: ${driver.status === 'available' ? '#4ade80' : '#ef4444'};
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          border: 2px solid white;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+          animation: bounce 1s infinite;
+        `;
 
         const marker = new mapboxgl.Marker(el)
           .setLngLat([driver.currentLocation.lng, driver.currentLocation.lat])
@@ -175,128 +253,61 @@ const RideMap = ({
     });
   }, [nearbyDrivers]);
 
-  const getCoordinatesAndUpdateRoute = async () => {
-    if (!mapboxToken) return;
-
-    try {
-      // Get coordinates for pickup and dropoff
-      const pickupCoords = await getCoordinates(pickup);
-      const dropoffCoords = await getCoordinates(dropoff);
-
-      if (pickupCoords && dropoffCoords) {
-        // Add markers
-        new mapboxgl.Marker({ color: '#22c55e' })
-          .setLngLat(pickupCoords)
-          .addTo(map.current!);
-
-        new mapboxgl.Marker({ color: '#ef4444' })
-          .setLngLat(dropoffCoords)
-          .addTo(map.current!);
-
-        // Get route
-        const route = await getRoute(pickupCoords, dropoffCoords);
-        
-        if (route) {
-          // Update the route layer
-          (map.current?.getSource('route') as mapboxgl.GeoJSONSource)?.setData({
-            type: 'Feature',
-            properties: {},
-            geometry: {
-              type: 'LineString',
-              coordinates: route.geometry.coordinates
-            }
-          });
-
-          // Fit bounds to show the entire route
-          const bounds = new mapboxgl.LngLatBounds();
-          route.geometry.coordinates.forEach((coord) => {
-            bounds.extend(coord as mapboxgl.LngLatLike);
-          });
-          
-          map.current?.fitBounds(bounds, {
-            padding: 50,
-            duration: 1000
-          });
-
-          // Calculate and return distance and duration
-          if (onRouteCalculated) {
-            const distance = route.distance / 1000; // Convert to km
-            const duration = route.duration / 60; // Convert to minutes
-            onRouteCalculated(distance, duration);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error updating route:', error);
-    }
-  };
-
-  const getCoordinates = async (location: string): Promise<[number, number] | null> => {
-    try {
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(location)}.json?access_token=${mapboxToken}`
-      );
-      const data = await response.json();
-      if (data.features?.length > 0) {
-        return data.features[0].center;
-      }
-      return null;
-    } catch (error) {
-      console.error('Error getting coordinates:', error);
-      return null;
-    }
-  };
-
-  const getRoute = async (start: [number, number], end: [number, number]) => {
-    try {
-      const response = await fetch(
-        `https://api.mapbox.com/directions/v5/mapbox/driving/${start[0]},${start[1]};${end[0]},${end[1]}?geometries=geojson&access_token=${mapboxToken}`
-      );
-      const data = await response.json();
-      return data.routes[0];
-    } catch (error) {
-      console.error('Error getting route:', error);
-      return null;
-    }
-  };
-
-  const handleTokenSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsTokenSet(true);
-  };
-
-  if (!isTokenSet) {
+  if (isLoading) {
     return (
-      <form onSubmit={handleTokenSubmit} className="space-y-4 p-4 border rounded-lg">
-        <p className="text-sm text-muted-foreground">
-          Please enter your Mapbox public token to view the map. You can get one at{" "}
-          <a 
-            href="https://www.mapbox.com" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-primary hover:underline"
-          >
-            mapbox.com
-          </a>
-        </p>
-        <Input
-          type="text"
-          placeholder="Enter your Mapbox token"
-          value={mapboxToken}
-          onChange={(e) => setMapboxToken(e.target.value)}
-          required
-        />
-        <Button type="submit">Set Token</Button>
-      </form>
+      <Card className={`relative ${className} min-h-[300px] flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100`}>
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+          <p className="text-sm text-muted-foreground">Loading map...</p>
+        </div>
+      </Card>
     );
   }
 
   return (
     <div className={`relative rounded-lg overflow-hidden ${className}`}>
       <div ref={mapContainer} className="w-full h-full min-h-[300px]" />
+      
+      {/* Map Controls */}
+      <div className="absolute top-4 left-4 space-y-2">
+        <Button
+          variant="secondary"
+          size="icon"
+          className="bg-white/90 backdrop-blur-sm hover:bg-white"
+          onClick={toggleMapStyle}
+        >
+          {mapStyle === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+        </Button>
+      </div>
+
+      {/* Custom CSS for animations */}
+      <style jsx>{`
+        @keyframes pulse {
+          0% {
+            transform: translate(-5px, -5px) scale(1);
+            opacity: 0.8;
+          }
+          70% {
+            transform: translate(-5px, -5px) scale(2);
+            opacity: 0;
+          }
+          100% {
+            transform: translate(-5px, -5px) scale(1);
+            opacity: 0;
+          }
+        }
+
+        @keyframes bounce {
+          0%, 100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-4px);
+          }
+        }
+      `}</style>
     </div>
   );
 };
 
 export default RideMap;
-
