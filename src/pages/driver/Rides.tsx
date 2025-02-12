@@ -23,6 +23,7 @@ import { SearchFilters } from "@/components/rides/SearchFilters";
 import RideDetailsModal from "@/components/rides/RideDetailsModal";
 import { useAppDispatch } from "@/hooks/redux";
 import { markPaymentReceived } from "@/features/rides/ridesSlice";
+import type { Ride } from "@/types";
 
 const DriverRides = () => {
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
