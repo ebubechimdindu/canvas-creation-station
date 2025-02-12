@@ -125,8 +125,6 @@ const RideMap = ({
             'line-blur': 2
           }
         });
-
-        getCoordinatesAndUpdateRoute();
       }
 
       // Add atmosphere effect
@@ -280,32 +278,34 @@ const RideMap = ({
         </Button>
       </div>
 
-      {/* Custom CSS for animations */}
-      <style jsx>{`
-        @keyframes pulse {
-          0% {
-            transform: translate(-5px, -5px) scale(1);
-            opacity: 0.8;
+      {/* Animation Styles */}
+      <style>
+        {`
+          @keyframes pulse {
+            0% {
+              transform: translate(-5px, -5px) scale(1);
+              opacity: 0.8;
+            }
+            70% {
+              transform: translate(-5px, -5px) scale(2);
+              opacity: 0;
+            }
+            100% {
+              transform: translate(-5px, -5px) scale(1);
+              opacity: 0;
+            }
           }
-          70% {
-            transform: translate(-5px, -5px) scale(2);
-            opacity: 0;
-          }
-          100% {
-            transform: translate(-5px, -5px) scale(1);
-            opacity: 0;
-          }
-        }
 
-        @keyframes bounce {
-          0%, 100% {
-            transform: translateY(0);
+          @keyframes bounce {
+            0%, 100% {
+              transform: translateY(0);
+            }
+            50% {
+              transform: translateY(-4px);
+            }
           }
-          50% {
-            transform: translateY(-4px);
-          }
-        }
-      `}</style>
+        `}
+      </style>
     </div>
   );
 };
