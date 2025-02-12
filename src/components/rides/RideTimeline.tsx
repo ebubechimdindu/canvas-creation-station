@@ -1,7 +1,7 @@
-
 import { CheckCircle, Clock, MapPin, XCircle } from "lucide-react";
 import type { Ride } from "@/types";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface RideTimelineProps {
   ride: Ride;
