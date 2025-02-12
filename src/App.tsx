@@ -16,6 +16,10 @@ import DriverRegister from "./pages/auth/DriverRegister";
 import StudentDashboard from "./pages/student/Dashboard";
 import StudentRides from "./pages/student/Rides";
 import StudentSettings from "./pages/student/Settings";
+import DriverDashboard from "./pages/driver/Dashboard";
+import DriverRides from "./pages/driver/Rides";
+import DriverSettings from "./pages/driver/Settings";
+import DriverEarnings from "./pages/driver/Earnings";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,6 +49,10 @@ const App = () => {
                 <Route path="/student/dashboard" element={<StudentDashboard />} />
                 <Route path="/student/rides" element={<StudentRides />} />
                 <Route path="/student/settings" element={<StudentSettings />} />
+                <Route path="/driver/dashboard" element={<DriverDashboard />} />
+                <Route path="/driver/rides" element={<DriverRides />} />
+                <Route path="/driver/settings" element={<DriverSettings />} />
+                <Route path="/driver/earnings" element={<DriverEarnings />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
