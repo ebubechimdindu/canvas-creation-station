@@ -4,16 +4,20 @@ import { useToast } from "@/hooks/use-toast";
 import DriverSidebar from "@/components/driver/DriverSidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Car, DollarSign, Star, Users } from "lucide-react";
+import { Car, DollarSign, Star, Users, Map as MapIcon, Maximize2, Minimize2 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { setError, updateDriverStatus } from "@/features/rides/ridesSlice";
 import { Skeleton } from "@/components/ui/skeleton";
+import RideMap from "@/components/map/RideMap";
+import { useLocationUpdates } from "@/hooks/use-location-updates";
 
 const DriverDashboard = () => {
   const { toast } = useToast();
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(true);
   const { error, driverStatus } = useAppSelector((state) => state.rides);
+  const [isMapExpanded, setIsMapExpanded] = useState(false);
+  const { driverLocation, nearbyDrivers } = useLocationUpdates("current-driver");
 
   useEffect(() => {
     // Simulate initial data loading
@@ -31,6 +35,10 @@ const DriverDashboard = () => {
       title: "Status Updated",
       description: `You are now ${newStatus}`,
     });
+  };
+
+  const toggleMapSize = () => {
+    setIsMapExpanded(!isMapExpanded);
   };
 
   if (error) {
@@ -66,8 +74,38 @@ const DriverDashboard = () => {
             <p className="text-gray-600">Welcome back, John</p>
           </div>
 
+          {/* Map Section */}
+          <Card className={`transition-all duration-300 ${isMapExpanded ? 'fixed inset-4 z-50' : ''}`}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <CardTitle className="flex items-center gap-2">
+                <MapIcon className="h-5 w-5" />
+                Live Map View
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleMapSize}
+                className="hover:bg-gray-100"
+              >
+                {isMapExpanded ? <Minimize2 /> : <Maximize2 />}
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className={`transition-all duration-300 ${isMapExpanded ? 'h-[calc(100vh-8rem)]' : 'h-[400px]'}`}>
+                <RideMap
+                  pickup=""
+                  dropoff=""
+                  mode="driver"
+                  driverLocation={driverLocation}
+                  nearbyDrivers={nearbyDrivers}
+                  className="w-full h-full"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Status Toggle */}
-          <Card>
+          <Card className={isMapExpanded ? 'hidden' : ''}>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -94,7 +132,7 @@ const DriverDashboard = () => {
           </Card>
 
           {/* Stats Grid */}
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className={`grid gap-6 sm:grid-cols-2 lg:grid-cols-4 ${isMapExpanded ? 'hidden' : ''}`}>
             {['Total Rides', "Today's Earnings", 'Rating', 'Active Hours'].map((stat, index) => (
               <Card key={stat} className="animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
                 <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
@@ -133,7 +171,7 @@ const DriverDashboard = () => {
           </div>
 
           {/* Recent Activity */}
-          <Card>
+          <Card className={isMapExpanded ? 'hidden' : ''}>
             <CardHeader>
               <CardTitle>Recent Activity</CardTitle>
             </CardHeader>
@@ -158,4 +196,3 @@ const DriverDashboard = () => {
 };
 
 export default DriverDashboard;
-
