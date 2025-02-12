@@ -1,8 +1,10 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { Driver } from '@/types';
 
 interface RideMapProps {
   pickup: string;
@@ -10,6 +12,11 @@ interface RideMapProps {
   className?: string;
   showRoutePath?: boolean;
   onRouteCalculated?: (distance: number, duration: number) => void;
+  mode?: 'student' | 'driver';
+  driverLocation?: Driver['currentLocation'];
+  nearbyDrivers?: Driver[];
+  onDriverLocationUpdate?: (lat: number, lng: number) => void;
+  showNearbyRequests?: boolean;
 }
 
 const RideMap = ({ 
@@ -17,12 +24,19 @@ const RideMap = ({
   dropoff, 
   className = "",
   showRoutePath = true,
-  onRouteCalculated 
+  onRouteCalculated,
+  mode = 'student',
+  driverLocation,
+  nearbyDrivers = [],
+  onDriverLocationUpdate,
+  showNearbyRequests = false
 }: RideMapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
+  const driverMarker = useRef<mapboxgl.Marker | null>(null);
   const [mapboxToken, setMapboxToken] = useState('');
   const [isTokenSet, setIsTokenSet] = useState(false);
+  const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
 
   useEffect(() => {
     if (!mapboxToken || !mapContainer.current) return;
@@ -45,7 +59,6 @@ const RideMap = ({
     if (showRoutePath) {
       // Add source and layer for the route
       map.current.on('load', () => {
-        // Add the route layer
         map.current?.addSource('route', {
           type: 'geojson',
           data: {
@@ -78,11 +91,89 @@ const RideMap = ({
       });
     }
 
+    // Handle driver mode specific features
+    if (mode === 'driver') {
+      // Enable location tracking
+      map.current.addControl(
+        new mapboxgl.GeolocateControl({
+          positionOptions: {
+            enableHighAccuracy: true
+          },
+          trackUserLocation: true,
+          showUserHeading: true
+        })
+      );
+
+      // Add click handler for driver location updates
+      if (onDriverLocationUpdate) {
+        map.current.on('click', (e) => {
+          onDriverLocationUpdate(e.lngLat.lng, e.lngLat.lat);
+        });
+      }
+    }
+
     // Cleanup
     return () => {
       map.current?.remove();
     };
-  }, [mapboxToken, pickup, dropoff, showRoutePath]);
+  }, [mapboxToken, pickup, dropoff, showRoutePath, mode]);
+
+  // Handle driver location updates
+  useEffect(() => {
+    if (!map.current || !driverLocation) return;
+
+    if (!driverMarker.current) {
+      const el = document.createElement('div');
+      el.className = 'driver-marker';
+      el.style.backgroundColor = '#4ade80';
+      el.style.width = '20px';
+      el.style.height = '20px';
+      el.style.borderRadius = '50%';
+      el.style.border = '2px solid white';
+      el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+
+      driverMarker.current = new mapboxgl.Marker(el)
+        .setLngLat([driverLocation.lng, driverLocation.lat])
+        .addTo(map.current);
+    } else {
+      driverMarker.current.setLngLat([driverLocation.lng, driverLocation.lat]);
+    }
+
+    // Animate to new position
+    map.current.easeTo({
+      center: [driverLocation.lng, driverLocation.lat],
+      duration: 1000
+    });
+  }, [driverLocation]);
+
+  // Handle nearby drivers updates
+  useEffect(() => {
+    if (!map.current) return;
+
+    // Remove old markers
+    Object.values(markersRef.current).forEach(marker => marker.remove());
+    markersRef.current = {};
+
+    // Add new markers
+    nearbyDrivers.forEach(driver => {
+      if (driver.currentLocation) {
+        const el = document.createElement('div');
+        el.className = 'nearby-driver-marker';
+        el.style.backgroundColor = driver.status === 'available' ? '#4ade80' : '#ef4444';
+        el.style.width = '12px';
+        el.style.height = '12px';
+        el.style.borderRadius = '50%';
+        el.style.border = '2px solid white';
+        el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+
+        const marker = new mapboxgl.Marker(el)
+          .setLngLat([driver.currentLocation.lng, driver.currentLocation.lat])
+          .addTo(map.current!);
+
+        markersRef.current[driver.id] = marker;
+      }
+    });
+  }, [nearbyDrivers]);
 
   const getCoordinatesAndUpdateRoute = async () => {
     if (!mapboxToken) return;
@@ -208,3 +299,4 @@ const RideMap = ({
 };
 
 export default RideMap;
+

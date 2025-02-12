@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   email: string;
@@ -16,6 +15,13 @@ export interface Driver {
     bankName: string;
     accountNumber: string;
     accountName: string;
+  };
+  currentLocation?: {
+    lat: number;
+    lng: number;
+    heading: number;
+    speed: number;
+    timestamp: string;
   };
 }
 
@@ -35,6 +41,16 @@ export interface Ride {
     confirmedAt?: string;
   };
   notes?: string;
+  eta?: {
+    minutes: number;
+    distance: number;
+    lastUpdated: string;
+  };
+  route?: {
+    coordinates: [number, number][];
+    duration: number;
+    distance: number;
+  };
 }
 
 export interface StudentSettings {
