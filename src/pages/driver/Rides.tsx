@@ -27,7 +27,8 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Calendar, Filter, MapPin, Clock, CheckCircle, XCircle } from "lucide-react";
-import RideMap from "@/components/map/RideMap";
+import { RideStatusBadge } from "@/components/rides/RideStatusBadge";
+import { SearchFilters } from "@/components/rides/SearchFilters";
 import RideDetailsModal from "@/components/rides/RideDetailsModal";
 import type { Ride } from "@/types";
 
@@ -35,13 +36,27 @@ const DriverRides = () => {
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState<Ride['status'] | 'all'>('all');
+  const [searchFilters, setSearchFilters] = useState({
+    searchTerm: "",
+    date: null,
+    status: "all"
+  });
 
   const { toast } = useToast();
   const rides = useAppSelector((state) => state.rides.history);
 
-  const filteredRides = rides.filter(ride => 
-    statusFilter === 'all' ? true : ride.status === statusFilter
-  );
+  const filteredRides = rides.filter(ride => {
+    const matchesStatus = searchFilters.status === 'all' || ride.status === searchFilters.status;
+    const matchesSearch = searchFilters.searchTerm
+      ? ride.pickup.toLowerCase().includes(searchFilters.searchTerm.toLowerCase()) ||
+        ride.dropoff.toLowerCase().includes(searchFilters.searchTerm.toLowerCase())
+      : true;
+    const matchesDate = searchFilters.date
+      ? new Date(ride.date).toDateString() === new Date(searchFilters.date).toDateString()
+      : true;
+
+    return matchesStatus && matchesSearch && matchesDate;
+  });
 
   const updateRideStatus = (rideId: number, newStatus: Ride['status']) => {
     // In a real app, this would dispatch an action to update the ride status
@@ -56,6 +71,26 @@ const DriverRides = () => {
     setShowDetailsModal(true);
   };
 
+  const handleSearch = (filters: any) => {
+    setSearchFilters(filters);
+    toast({
+      title: "Filters Applied",
+      description: "The ride list has been updated based on your filters.",
+    });
+  };
+
+  const handleResetFilters = () => {
+    setSearchFilters({
+      searchTerm: "",
+      date: null,
+      status: "all"
+    });
+    toast({
+      title: "Filters Reset",
+      description: "All filters have been cleared.",
+    });
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
       <DriverSidebar />
@@ -67,17 +102,17 @@ const DriverRides = () => {
               <h1 className="text-3xl font-bold text-gray-900">Rides Management</h1>
               <p className="text-gray-600">View and manage your rides</p>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" className="gap-2">
-                <Filter className="h-4 w-4" />
-                Filter
-              </Button>
-              <Button variant="outline" className="gap-2">
-                <Calendar className="h-4 w-4" />
-                Date Range
-              </Button>
-            </div>
           </div>
+
+          {/* Search Filters */}
+          <Card>
+            <CardContent className="pt-6">
+              <SearchFilters
+                onSearch={handleSearch}
+                onReset={handleResetFilters}
+              />
+            </CardContent>
+          </Card>
 
           {/* Status Filter Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -119,131 +154,92 @@ const DriverRides = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRides.map((ride) => (
-                    <TableRow 
-                      key={ride.id}
-                      className="cursor-pointer hover:bg-gray-50"
-                      onClick={() => handleRideClick(ride)}
-                    >
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-gray-500" />
-                          {new Date(ride.date).toLocaleDateString()}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-gray-500" />
-                          {ride.pickup}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-gray-500" />
-                          {ride.dropoff}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                          ${
-                            ride.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                            ride.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-                            ride.status === 'Upcoming' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
-                          }`
-                        }>
-                          {ride.status}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                          ${ride.payment?.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`
-                        }>
-                          {ride.payment?.status === 'paid' ? 'Paid' : 'Pending'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          {ride.status === 'Upcoming' && (
-                            <>
-                              <Button
-                                size="sm"
-                                className="gap-1"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  updateRideStatus(ride.id, 'In Progress');
-                                }}
-                              >
-                                <CheckCircle className="h-4 w-4" />
-                                Start
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                className="gap-1"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  updateRideStatus(ride.id, 'Cancelled');
-                                }}
-                              >
-                                <XCircle className="h-4 w-4" />
-                                Cancel
-                              </Button>
-                            </>
-                          )}
-                          {ride.status === 'In Progress' && (
-                            <Button
-                              size="sm"
-                              className="gap-1"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                updateRideStatus(ride.id, 'Completed');
-                              }}
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                              Complete
-                            </Button>
-                          )}
+                  {filteredRides.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8">
+                        <div className="flex flex-col items-center gap-2">
+                          <Calendar className="h-8 w-8 text-muted-foreground" />
+                          <p className="text-muted-foreground">No rides found</p>
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-
-              <div className="mt-4">
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious href="#" />
-                    </PaginationItem>
-                    <PaginationItem>
-                      <PaginationLink href="#" isActive>1</PaginationLink>
-                    </PaginationItem>
-                    <PaginationItem>
-                      <PaginationLink href="#">2</PaginationLink>
-                    </PaginationItem>
-                    <PaginationItem>
-                      <PaginationLink href="#">3</PaginationLink>
-                    </PaginationItem>
-                    <PaginationItem>
-                      <PaginationNext href="#" />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <RideDetailsModal 
-          ride={selectedRide}
-          open={showDetailsModal}
-          onOpenChange={setShowDetailsModal}
-        />
-      </main>
-    </div>
-  );
-};
-
-export default DriverRides;
+                  ) : (
+                    filteredRides.map((ride) => (
+                      <TableRow 
+                        key={ride.id}
+                        className="cursor-pointer hover:bg-gray-50"
+                        onClick={() => handleRideClick(ride)}
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-gray-500" />
+                            {new Date(ride.date).toLocaleDateString()}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-gray-500" />
+                            {ride.pickup}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-gray-500" />
+                            {ride.dropoff}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <RideStatusBadge status={ride.status} />
+                        </TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                            ${ride.payment?.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`
+                          }>
+                            {ride.payment?.status === 'paid' ? 'Paid' : 'Pending'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            {ride.status === 'Upcoming' && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  className="gap-1"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateRideStatus(ride.id, 'In Progress');
+                                  }}
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                  Start
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  className="gap-1"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateRideStatus(ride.id, 'Cancelled');
+                                  }}
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                  Cancel
+                                </Button>
+                              </>
+                            )}
+                            {ride.status === 'In Progress' && (
+                              <Button
+                                size="sm"
+                                className="gap-1"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updateRideStatus(ride.id, 'Completed');
+                                }}
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                                Complete
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </Table
