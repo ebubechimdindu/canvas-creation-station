@@ -18,53 +18,31 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ChartContainer } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Download, DollarSign, TrendingUp, Calendar } from "lucide-react";
-
-const mockEarnings = [
-  { date: "2024-02-01", amount: 120 },
-  { date: "2024-02-02", amount: 85 },
-  { date: "2024-02-03", amount: 150 },
-  { date: "2024-02-04", amount: 95 },
-  { date: "2024-02-05", amount: 180 },
-  { date: "2024-02-06", amount: 135 },
-  { date: "2024-02-07", amount: 160 },
-];
 
 const mockTransactions = [
   {
     id: 1,
     date: "2024-02-07",
     type: "Ride Payment",
-    amount: 45,
+    amount: 45000,
     status: "completed",
   },
   {
     id: 2,
     date: "2024-02-07",
     type: "Bonus",
-    amount: 15,
+    amount: 15000,
     status: "completed",
   },
   {
     id: 3,
     date: "2024-02-06",
     type: "Ride Payment",
-    amount: 35,
+    amount: 35000,
     status: "completed",
   },
 ];
-
-const chartConfig = {
-  amount: {
-    theme: {
-      light: "#8B5CF6",
-      dark: "#A78BFA",
-    },
-    label: "Amount",
-  },
-};
 
 const DriverEarnings = () => {
   const [timeframe, setTimeframe] = useState<"daily" | "weekly" | "monthly">("daily");
@@ -104,7 +82,7 @@ const DriverEarnings = () => {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">$160.00</div>
+                <div className="text-2xl font-bold">₦160,000.00</div>
                 <p className="text-xs text-muted-foreground">
                   +20% from yesterday
                 </p>
@@ -118,7 +96,7 @@ const DriverEarnings = () => {
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">$925.00</div>
+                <div className="text-2xl font-bold">₦925,000.00</div>
                 <p className="text-xs text-muted-foreground">
                   +5% from last week
                 </p>
@@ -132,44 +110,13 @@ const DriverEarnings = () => {
                 <Calendar className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">$3,240.00</div>
+                <div className="text-2xl font-bold">₦3,240,000.00</div>
                 <p className="text-xs text-muted-foreground">
                   +12% from last month
                 </p>
               </CardContent>
             </Card>
           </div>
-
-          {/* Earnings Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Earnings Overview</CardTitle>
-              <CardDescription>Your earnings over time</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[300px]">
-                <ChartContainer config={chartConfig}>
-                  <BarChart data={mockEarnings}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="date" 
-                      tickFormatter={(value) => new Date(value).toLocaleDateString()} 
-                    />
-                    <YAxis />
-                    <Tooltip 
-                      labelFormatter={(value) => new Date(value).toLocaleDateString()}
-                      formatter={(value) => [`$${value}`, "Earnings"]}
-                    />
-                    <Bar 
-                      dataKey="amount" 
-                      fill="#8B5CF6" 
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                </ChartContainer>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Recent Transactions */}
           <Card>
@@ -194,7 +141,7 @@ const DriverEarnings = () => {
                         {new Date(transaction.date).toLocaleDateString()}
                       </TableCell>
                       <TableCell>{transaction.type}</TableCell>
-                      <TableCell>${transaction.amount.toFixed(2)}</TableCell>
+                      <TableCell>₦{transaction.amount.toLocaleString()}</TableCell>
                       <TableCell>
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                           {transaction.status}
