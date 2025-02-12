@@ -17,21 +17,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-import { Calendar, Filter, MapPin, Clock, CheckCircle, XCircle, DollarSign } from "lucide-react";
+import { Calendar, MapPin, Clock, CheckCircle, XCircle, DollarSign } from "lucide-react";
 import { RideStatusBadge } from "@/components/rides/RideStatusBadge";
 import { SearchFilters } from "@/components/rides/SearchFilters";
 import RideDetailsModal from "@/components/rides/RideDetailsModal";
-import type { Ride } from "@/types";
 import { useAppDispatch } from "@/hooks/redux";
-import { markPaymentReceived } from "@/redux/slices/rides";
+import { markPaymentReceived } from "@/features/rides/ridesSlice";
 
 const DriverRides = () => {
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
