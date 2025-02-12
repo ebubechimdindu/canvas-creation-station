@@ -56,6 +56,16 @@ const mockTransactions = [
   },
 ];
 
+const chartConfig = {
+  amount: {
+    theme: {
+      light: "#8B5CF6",
+      dark: "#A78BFA",
+    },
+    label: "Amount",
+  },
+};
+
 const DriverEarnings = () => {
   const [timeframe, setTimeframe] = useState<"daily" | "weekly" | "monthly">("daily");
   const { toast } = useToast();
@@ -138,7 +148,7 @@ const DriverEarnings = () => {
             </CardHeader>
             <CardContent>
               <div className="h-[300px]">
-                <ChartContainer>
+                <ChartContainer config={chartConfig}>
                   <BarChart data={mockEarnings}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis 
