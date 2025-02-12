@@ -31,6 +31,13 @@ const ridesSlice = createSlice({
     updateDrivers: (state, action: PayloadAction<Driver[]>) => {
       state.availableDrivers = action.payload;
     },
+    markPaymentReceived: (state, action: PayloadAction<number>) => {
+      const ride = state.history.find(ride => ride.id === action.payload);
+      if (ride && ride.payment) {
+        ride.payment.status = 'paid';
+        ride.payment.confirmedAt = new Date().toISOString();
+      }
+    },
     setError: (state, action: PayloadAction<string>) => {
       state.error = action.payload;
       state.status = 'failed';
@@ -38,5 +45,11 @@ const ridesSlice = createSlice({
   },
 });
 
-export const { setActiveRide, addToHistory, updateDrivers, setError } = ridesSlice.actions;
+export const { 
+  setActiveRide, 
+  addToHistory, 
+  updateDrivers, 
+  markPaymentReceived,
+  setError 
+} = ridesSlice.actions;
 export default ridesSlice.reducer;

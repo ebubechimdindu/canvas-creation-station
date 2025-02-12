@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAppSelector } from "@/hooks/redux";
 import { useToast } from "@/hooks/use-toast";
@@ -26,11 +25,13 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Calendar, Filter, MapPin, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Calendar, Filter, MapPin, Clock, CheckCircle, XCircle, DollarSign } from "lucide-react";
 import { RideStatusBadge } from "@/components/rides/RideStatusBadge";
 import { SearchFilters } from "@/components/rides/SearchFilters";
 import RideDetailsModal from "@/components/rides/RideDetailsModal";
 import type { Ride } from "@/types";
+import { useAppDispatch } from "@/hooks/redux";
+import { markPaymentReceived } from "@/redux/slices/rides";
 
 const DriverRides = () => {
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
@@ -44,6 +45,7 @@ const DriverRides = () => {
 
   const { toast } = useToast();
   const rides = useAppSelector((state) => state.rides.history);
+  const dispatch = useAppDispatch();
 
   const filteredRides = rides.filter(ride => {
     const matchesStatus = searchFilters.status === 'all' || ride.status === searchFilters.status;
@@ -63,6 +65,14 @@ const DriverRides = () => {
     toast({
       title: "Status Updated",
       description: `Ride #${rideId} status has been updated to ${newStatus}`,
+    });
+  };
+
+  const handlePaymentReceived = (rideId: number) => {
+    dispatch(markPaymentReceived(rideId));
+    toast({
+      title: "Payment Marked as Received",
+      description: "The ride payment has been marked as received.",
     });
   };
 
@@ -200,14 +210,27 @@ const DriverRides = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            {ride.status === 'Upcoming' && (
+                            {ride.status === 'Completed' && ride.payment?.status === 'pending' && (
+                              <Button
+                                size="sm"
+                                className="gap-1"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePaymentReceived(ride.id);
+                                }}
+                              >
+                                <DollarSign className="h-4 w-4" />
+                                Mark Paid
+                              </Button>
+                            )}
+                            {ride.status === "Upcoming" && (
                               <>
                                 <Button
                                   size="sm"
                                   className="gap-1"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    updateRideStatus(ride.id, 'In Progress');
+                                    updateRideStatus(ride.id, "In Progress");
                                   }}
                                 >
                                   <CheckCircle className="h-4 w-4" />
@@ -219,7 +242,7 @@ const DriverRides = () => {
                                   className="gap-1"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    updateRideStatus(ride.id, 'Cancelled');
+                                    updateRideStatus(ride.id, "Cancelled");
                                   }}
                                 >
                                   <XCircle className="h-4 w-4" />
@@ -227,13 +250,13 @@ const DriverRides = () => {
                                 </Button>
                               </>
                             )}
-                            {ride.status === 'In Progress' && (
+                            {ride.status === "In Progress" && (
                               <Button
                                 size="sm"
                                 className="gap-1"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  updateRideStatus(ride.id, 'Completed');
+                                  updateRideStatus(ride.id, "Completed");
                                 }}
                               >
                                 <CheckCircle className="h-4 w-4" />
