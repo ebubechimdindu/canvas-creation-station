@@ -1,4 +1,3 @@
-
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { Ride, Driver } from '../../types';
 
@@ -9,6 +8,16 @@ interface RidesState {
   status: 'idle' | 'loading' | 'succeeded' | 'failed';
   error: string | null;
   driverStatus: 'available' | 'offline' | 'busy';
+  earnings: {
+    status: 'idle' | 'loading' | 'succeeded' | 'failed';
+    error: string | null;
+    data: {
+      daily: number;
+      weekly: number;
+      monthly: number;
+      transactions: any[];
+    };
+  };
 }
 
 const initialState: RidesState = {
@@ -18,6 +27,16 @@ const initialState: RidesState = {
   status: 'idle',
   error: null,
   driverStatus: 'offline',
+  earnings: {
+    status: 'idle',
+    error: null,
+    data: {
+      daily: 0,
+      weekly: 0,
+      monthly: 0,
+      transactions: [],
+    },
+  },
 };
 
 const ridesSlice = createSlice({
@@ -47,6 +66,23 @@ const ridesSlice = createSlice({
     updateDriverStatus: (state, action: PayloadAction<'available' | 'offline' | 'busy'>) => {
       state.driverStatus = action.payload;
     },
+    setEarningsLoading: (state) => {
+      state.earnings.status = 'loading';
+    },
+    setEarningsSuccess: (state, action: PayloadAction<{
+      daily: number;
+      weekly: number;
+      monthly: number;
+      transactions: any[];
+    }>) => {
+      state.earnings.status = 'succeeded';
+      state.earnings.data = action.payload;
+      state.earnings.error = null;
+    },
+    setEarningsError: (state, action: PayloadAction<string>) => {
+      state.earnings.status = 'failed';
+      state.earnings.error = action.payload;
+    },
   },
 });
 
@@ -56,8 +92,10 @@ export const {
   updateDrivers, 
   markPaymentReceived,
   setError,
-  updateDriverStatus
+  updateDriverStatus,
+  setEarningsLoading,
+  setEarningsSuccess,
+  setEarningsError,
 } = ridesSlice.actions;
 
 export default ridesSlice.reducer;
-
