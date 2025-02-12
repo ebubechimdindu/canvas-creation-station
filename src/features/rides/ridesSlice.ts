@@ -8,6 +8,7 @@ interface RidesState {
   availableDrivers: Driver[];
   status: 'idle' | 'loading' | 'succeeded' | 'failed';
   error: string | null;
+  driverStatus: 'available' | 'offline' | 'busy';
 }
 
 const initialState: RidesState = {
@@ -16,6 +17,7 @@ const initialState: RidesState = {
   availableDrivers: [],
   status: 'idle',
   error: null,
+  driverStatus: 'offline',
 };
 
 const ridesSlice = createSlice({
@@ -38,9 +40,12 @@ const ridesSlice = createSlice({
         ride.payment.confirmedAt = new Date().toISOString();
       }
     },
-    setError: (state, action: PayloadAction<string>) => {
+    setError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload;
-      state.status = 'failed';
+      state.status = action.payload ? 'failed' : 'idle';
+    },
+    updateDriverStatus: (state, action: PayloadAction<'available' | 'offline' | 'busy'>) => {
+      state.driverStatus = action.payload;
     },
   },
 });
@@ -50,6 +55,9 @@ export const {
   addToHistory, 
   updateDrivers, 
   markPaymentReceived,
-  setError 
+  setError,
+  updateDriverStatus
 } = ridesSlice.actions;
+
 export default ridesSlice.reducer;
+
