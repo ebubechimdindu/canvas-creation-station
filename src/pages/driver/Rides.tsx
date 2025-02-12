@@ -242,4 +242,23 @@ const DriverRides = () => {
                             )}
                           </div>
                         </TableCell>
-                      </Table
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+
+      <RideDetailsModal
+        ride={selectedRide}
+        open={showDetailsModal}
+        onOpenChange={setShowDetailsModal}
+      />
+    </div>
+  );
+};
+
+export default DriverRides;
