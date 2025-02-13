@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -99,11 +98,10 @@ export const useSupabaseAuth = () => {
 
       if (signInError) {
         // Check specifically for email not confirmed error
-        const errorBody = JSON.parse((signInError as any).message);
-        if (errorBody?.code === 'email_not_confirmed') {
+        if (signInError.message.includes('Email not confirmed')) {
           toast({
             title: "Email Not Verified",
-            description: "Please check your email and click the verification link before logging in. Need a new link? Use the resend option below.",
+            description: "Please check your email and click the verification link before logging in.",
             variant: "destructive",
           });
           navigate('/auth/verify');
