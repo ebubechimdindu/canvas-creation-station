@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -57,11 +58,13 @@ export const useSupabaseAuth = () => {
         email,
         password,
         options: {
+          emailRedirectTo: undefined,
           data: {
             full_name: fullName,
             driver_license_number: driverId,
             phone_number: phone,
-          }
+          },
+          shouldCreateUser: true
         }
       });
 
