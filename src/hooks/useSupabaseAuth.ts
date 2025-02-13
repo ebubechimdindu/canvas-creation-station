@@ -69,15 +69,7 @@ export const useSupabaseAuth = () => {
 
       if (authError || !authData.user) throw authError || new Error('Registration failed');
 
-      // 2. Sign in immediately after signup to ensure we have a valid session
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (signInError) throw signInError;
-
-      // 3. Upload profile picture
+      // 2. Upload profile picture - store temporary path for later use
       const fileExt = profilePicture.name.split('.').pop();
       const filePath = `${authData.user.id}/${crypto.randomUUID()}.${fileExt}`;
 
@@ -87,7 +79,7 @@ export const useSupabaseAuth = () => {
 
       if (uploadError) throw uploadError;
 
-      // 4. Create driver profile with the user's ID
+      // 3. Create driver profile with the user's ID
       const { error: profileError } = await supabase
         .from('driver_profiles')
         .insert({
