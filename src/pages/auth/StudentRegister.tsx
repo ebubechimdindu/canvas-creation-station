@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, ArrowRight, User, Mail, Phone, GraduationCap, Building2, Camera, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
 
 const StudentRegister = () => {
   const [step, setStep] = useState(1);
@@ -20,7 +20,9 @@ const StudentRegister = () => {
     level: "",
     profilePicture: null as File | null,
   });
+  
   const { toast } = useToast();
+  const { registerStudent, isLoading } = useStudentAuth();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -33,22 +35,63 @@ const StudentRegister = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validateForm = () => {
+    if (formData.password !== formData.confirmPassword) {
+      toast({
+        title: "Password Mismatch",
+        description: "The passwords you entered don't match.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Will implement actual registration logic in Phase 2
-    toast({
-      title: "Registration Attempted",
-      description: "Registration functionality will be implemented in Phase 2",
+    if (!validateForm()) return;
+
+    await registerStudent({
+      email: formData.email,
+      password: formData.password,
+      fullName: formData.fullName,
+      studentId: formData.studentId,
+      phone: formData.phone,
+      department: formData.department,
+      level: formData.level,
+      profilePicture: formData.profilePicture,
     });
   };
 
-  const nextStep = () => setStep(prev => Math.min(prev + 1, 3));
+  const nextStep = () => {
+    // Validate current step before proceeding
+    if (step === 1) {
+      if (!formData.fullName || !formData.studentId || !formData.email || !formData.phone) {
+        toast({
+          title: "Missing Information",
+          description: "Please fill in all required fields.",
+          variant: "destructive",
+        });
+        return;
+      }
+    } else if (step === 2) {
+      if (!formData.department || !formData.level) {
+        toast({
+          title: "Missing Information",
+          description: "Please select your department and level.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    setStep(prev => Math.min(prev + 1, 3));
+  };
+  
   const prevStep = () => setStep(prev => Math.max(prev - 1, 1));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-8 animate-fade-in">
-        {/* Back Button */}
         <Link 
           to="/auth/student/login"
           className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors"
@@ -57,7 +100,6 @@ const StudentRegister = () => {
           Back to Login
         </Link>
 
-        {/* Header */}
         <div className="text-center">
           <div className="bg-purple-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
             <User className="w-8 h-8 text-purple-600" />
@@ -66,7 +108,6 @@ const StudentRegister = () => {
           <p className="mt-2 text-gray-600">Create your Campus Rides account</p>
         </div>
 
-        {/* Progress Indicator */}
         <div className="flex justify-between mb-8">
           {[1, 2, 3].map((num) => (
             <div
@@ -78,7 +119,6 @@ const StudentRegister = () => {
           ))}
         </div>
 
-        {/* Registration Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           {step === 1 && (
             <div className="space-y-4 animate-fade-in">
@@ -275,6 +315,7 @@ const StudentRegister = () => {
                 variant="outline"
                 onClick={prevStep}
                 className="w-full"
+                disabled={isLoading}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Previous
@@ -286,6 +327,7 @@ const StudentRegister = () => {
                 type="button"
                 onClick={nextStep}
                 className="w-full"
+                disabled={isLoading}
               >
                 Next
                 <ArrowRight className="w-4 h-4 ml-2" />
@@ -294,8 +336,9 @@ const StudentRegister = () => {
               <Button
                 type="submit"
                 className="w-full"
+                disabled={isLoading}
               >
-                Complete Registration
+                {isLoading ? "Registering..." : "Complete Registration"}
               </Button>
             )}
           </div>

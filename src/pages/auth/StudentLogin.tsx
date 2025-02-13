@@ -6,20 +6,17 @@ import { useToast } from "@/hooks/use-toast";
 import { User, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
 
 const StudentLogin = () => {
   const [studentId, setStudentId] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const { toast } = useToast();
+  const { loginStudent, isLoading } = useStudentAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Will implement actual auth logic in Phase 2
-    toast({
-      title: "Login Attempted",
-      description: "Authentication will be implemented in Phase 2",
-    });
+    await loginStudent(studentId, password);
   };
 
   return (
@@ -95,9 +92,10 @@ const StudentLogin = () => {
           <Button 
             type="submit"
             className="w-full gap-2 hover:scale-105 transition-transform duration-300"
+            disabled={isLoading}
           >
             <User className="w-5 h-5" />
-            Login
+            {isLoading ? "Logging in..." : "Login"}
           </Button>
 
           <p className="text-center text-sm text-gray-600">
