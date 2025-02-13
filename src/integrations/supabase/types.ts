@@ -9,6 +9,51 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      campus_locations: {
+        Row: {
+          building_code: string | null
+          category: Database["public"]["Enums"]["location_category"]
+          common_names: string[] | null
+          coordinates: unknown
+          created_at: string
+          description: string | null
+          entrance_points: Json[] | null
+          id: string
+          is_active: boolean | null
+          is_verified: boolean | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          building_code?: string | null
+          category: Database["public"]["Enums"]["location_category"]
+          common_names?: string[] | null
+          coordinates: unknown
+          created_at?: string
+          description?: string | null
+          entrance_points?: Json[] | null
+          id?: string
+          is_active?: boolean | null
+          is_verified?: boolean | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          building_code?: string | null
+          category?: Database["public"]["Enums"]["location_category"]
+          common_names?: string[] | null
+          coordinates?: unknown
+          created_at?: string
+          description?: string | null
+          entrance_points?: Json[] | null
+          id?: string
+          is_active?: boolean | null
+          is_verified?: boolean | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       driver_profiles: {
         Row: {
           created_at: string
@@ -41,6 +86,47 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      location_feedback: {
+        Row: {
+          created_at: string
+          description: string | null
+          feedback_type: string
+          id: string
+          location_id: string | null
+          status: string | null
+          submitted_by: string
+          suggested_coordinates: unknown | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          feedback_type: string
+          id?: string
+          location_id?: string | null
+          status?: string | null
+          submitted_by: string
+          suggested_coordinates?: unknown | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          feedback_type?: string
+          id?: string
+          location_id?: string | null
+          status?: string | null
+          submitted_by?: string
+          suggested_coordinates?: unknown | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_feedback_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "campus_locations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       student_profiles: {
         Row: {
@@ -89,7 +175,12 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      location_category:
+        | "academic"
+        | "residence"
+        | "common_area"
+        | "administrative"
+        | "pickup_point"
     }
     CompositeTypes: {
       [_ in never]: never
