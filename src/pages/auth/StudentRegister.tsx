@@ -1,8 +1,9 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, ArrowRight, User, Mail, Phone, GraduationCap, Building2, Camera, Lock } from "lucide-react";
+import { ArrowLeft, ArrowRight, User, Mail, Phone, GraduationCap, Building2, Camera, Lock, Eye, EyeOff } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
@@ -20,6 +21,9 @@ const StudentRegister = () => {
     level: "",
     profilePicture: null as File | null,
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   
   const { toast } = useToast();
   const { registerStudent, isLoading } = useStudentAuth();
@@ -31,7 +35,21 @@ const StudentRegister = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFormData(prev => ({ ...prev, profilePicture: e.target.files![0] }));
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File Too Large",
+          description: "Please upload an image smaller than 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
+      setFormData(prev => ({ ...prev, profilePicture: file }));
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -64,7 +82,6 @@ const StudentRegister = () => {
   };
 
   const nextStep = () => {
-    // Validate current step before proceeding
     if (step === 1) {
       if (!formData.fullName || !formData.studentId || !formData.email || !formData.phone) {
         toast({
@@ -101,7 +118,7 @@ const StudentRegister = () => {
         </Link>
 
         <div className="text-center">
-          <div className="bg-purple-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+          <div className="bg-purple-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 transform transition-transform hover:scale-105 duration-300">
             <User className="w-8 h-8 text-purple-600" />
           </div>
           <h2 className="text-3xl font-bold text-gray-900">Student Registration</h2>
@@ -132,7 +149,7 @@ const StudentRegister = () => {
                   type="text"
                   value={formData.fullName}
                   onChange={handleInputChange}
-                  className="mt-1"
+                  className="mt-1 transition-transform duration-300 focus:translate-y-[-2px]"
                   placeholder="Enter your full name"
                   required
                 />
@@ -148,7 +165,7 @@ const StudentRegister = () => {
                   type="text"
                   value={formData.studentId}
                   onChange={handleInputChange}
-                  className="mt-1"
+                  className="mt-1 transition-transform duration-300 focus:translate-y-[-2px]"
                   placeholder="Enter your student ID"
                   required
                 />
@@ -164,7 +181,7 @@ const StudentRegister = () => {
                   type="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="mt-1"
+                  className="mt-1 transition-transform duration-300 focus:translate-y-[-2px]"
                   placeholder="Enter your email"
                   required
                 />
@@ -180,7 +197,7 @@ const StudentRegister = () => {
                   type="tel"
                   value={formData.phone}
                   onChange={handleInputChange}
-                  className="mt-1"
+                  className="mt-1 transition-transform duration-300 focus:translate-y-[-2px]"
                   placeholder="Enter your phone number"
                   required
                 />
@@ -232,26 +249,44 @@ const StudentRegister = () => {
               </div>
 
               <div>
-                <label htmlFor="profilePicture" className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700">
                   Profile Picture (Optional)
                 </label>
-                <div className="mt-1 flex items-center justify-center w-full">
-                  <label
-                    htmlFor="profile-upload"
-                    className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
-                  >
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <Camera className="w-8 h-8 mb-2 text-gray-500" />
-                      <p className="text-sm text-gray-500">Click to upload photo</p>
+                <div className="mt-1 flex flex-col items-center justify-center">
+                  {previewUrl ? (
+                    <div className="relative w-32 h-32 mb-4">
+                      <img
+                        src={previewUrl}
+                        alt="Profile preview"
+                        className="w-full h-full object-cover rounded-full"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, profilePicture: null }));
+                          setPreviewUrl(null);
+                        }}
+                        className="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition-colors"
+                      >
+                        ×
+                      </button>
                     </div>
-                    <input
-                      id="profile-upload"
-                      type="file"
-                      className="hidden"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                    />
-                  </label>
+                  ) : (
+                    <label
+                      htmlFor="profile-upload"
+                      className="flex flex-col items-center justify-center w-32 h-32 border-2 border-gray-300 border-dashed rounded-full cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors"
+                    >
+                      <Camera className="w-8 h-8 text-gray-500 mb-2" />
+                      <span className="text-sm text-gray-500">Upload Photo</span>
+                    </label>
+                  )}
+                  <input
+                    id="profile-upload"
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                  />
                 </div>
               </div>
             </div>
@@ -263,32 +298,50 @@ const StudentRegister = () => {
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                   Password
                 </label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  className="mt-1"
-                  placeholder="Create a password"
-                  required
-                />
+                <div className="relative mt-1">
+                  <Input
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className="pr-10 transition-transform duration-300 focus:translate-y-[-2px]"
+                    placeholder="Create a password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
               </div>
 
               <div>
                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
                   Confirm Password
                 </label>
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  className="mt-1"
-                  placeholder="Confirm your password"
-                  required
-                />
+                <div className="relative mt-1">
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    className="pr-10 transition-transform duration-300 focus:translate-y-[-2px]"
+                    placeholder="Confirm your password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center">
@@ -314,7 +367,7 @@ const StudentRegister = () => {
                 type="button"
                 variant="outline"
                 onClick={prevStep}
-                className="w-full"
+                className="w-full hover:scale-105 transition-transform duration-300"
                 disabled={isLoading}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
@@ -326,7 +379,7 @@ const StudentRegister = () => {
               <Button
                 type="button"
                 onClick={nextStep}
-                className="w-full"
+                className="w-full hover:scale-105 transition-transform duration-300"
                 disabled={isLoading}
               >
                 Next
@@ -335,7 +388,7 @@ const StudentRegister = () => {
             ) : (
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full hover:scale-105 transition-transform duration-300"
                 disabled={isLoading}
               >
                 {isLoading ? "Registering..." : "Complete Registration"}

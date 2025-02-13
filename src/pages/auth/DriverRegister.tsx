@@ -100,7 +100,7 @@ const DriverRegister = () => {
         </Link>
 
         <div className="text-center">
-          <div className="bg-purple-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+          <div className="bg-purple-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 transform transition-transform hover:scale-105 duration-300">
             <ShieldCheck className="w-8 h-8 text-purple-600" />
           </div>
           <h2 className="text-3xl font-bold text-gray-900">Driver Registration</h2>
@@ -259,7 +259,10 @@ const DriverRegister = () => {
               )}
             />
 
-            <Button type="submit" className="w-full">
+            <Button 
+              type="submit" 
+              className="w-full hover:scale-105 transition-transform duration-300"
+            >
               Complete Registration
             </Button>
           </form>
