@@ -12,6 +12,29 @@ export const useSupabaseAuth = () => {
   const { toast } = useToast();
   const dispatch = useAppDispatch();
 
+  const resendVerificationEmail = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Verification Email Sent",
+        description: "Please check your inbox for the verification link.",
+      });
+    } catch (error) {
+      console.error('Error resending verification:', error);
+      toast({
+        title: "Failed to Resend",
+        description: "Could not resend verification email. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const registerDriver = async ({
     email,
     password,
@@ -98,20 +121,19 @@ export const useSupabaseAuth = () => {
       });
 
       if (signInError) {
-        // Parse the error body to get the actual error code
-        try {
-          const errorBody = JSON.parse((signInError as any).body);
-          if (errorBody?.code === 'email_not_confirmed') {
-            toast({
-              title: "Email Not Verified",
-              description: "Please check your email and click the verification link before logging in.",
-              variant: "destructive",
-            });
-            navigate('/auth/verify');
-            return;
+        // Handle the 400 status code specifically for email confirmation
+        if (signInError.status === 400) {
+          try {
+            const errorBody = JSON.parse(signInError.body);
+            if (errorBody?.code === 'email_not_confirmed') {
+              await resendVerificationEmail(email);
+              navigate('/auth/verify');
+              return;
+            }
+          } catch {
+            // If parsing fails, throw the original error
+            throw signInError;
           }
-        } catch {
-          // If parsing fails, fallback to the default error handling
         }
         throw signInError;
       }
@@ -161,5 +183,6 @@ export const useSupabaseAuth = () => {
     registerDriver,
     loginDriver,
     isLoading,
+    resendVerificationEmail,
   };
 };
