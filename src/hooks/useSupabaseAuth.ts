@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -58,7 +57,6 @@ export const useSupabaseAuth = () => {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/verify`,
           data: {
             full_name: fullName,
             driver_license_number: driverId,
@@ -69,15 +67,7 @@ export const useSupabaseAuth = () => {
 
       if (authError || !authData.user) throw authError || new Error('Registration failed');
 
-      // 2. Sign in immediately to get a valid session
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (signInError) throw signInError;
-
-      // 3. Upload profile picture
+      // 2. Upload profile picture
       const fileExt = profilePicture.name.split('.').pop();
       const filePath = `${authData.user.id}/${crypto.randomUUID()}.${fileExt}`;
 
@@ -87,7 +77,7 @@ export const useSupabaseAuth = () => {
 
       if (uploadError) throw uploadError;
 
-      // 4. Create driver profile with the user's ID
+      // 3. Create driver profile with the user's ID
       const { error: profileError } = await supabase
         .from('driver_profiles')
         .insert({
@@ -101,12 +91,20 @@ export const useSupabaseAuth = () => {
 
       if (profileError) throw profileError;
 
+      // 4. Update Redux store with user information
+      dispatch(login({
+        id: authData.user.id,
+        email: authData.user.email!,
+        name: fullName,
+        role: 'driver'
+      }));
+
       toast({
         title: "Registration Successful",
-        description: "Please check your email to verify your account.",
+        description: "Welcome to Campus Rides!",
       });
 
-      navigate('/auth/verify');
+      navigate('/driver/dashboard');
 
     } catch (error) {
       console.error('Registration error:', error);
