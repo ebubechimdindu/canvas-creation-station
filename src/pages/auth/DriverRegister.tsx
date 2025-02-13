@@ -9,7 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useSupabaseAuth } from "@/hooks/use-supabase-auth";
+import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 
 const formSchema = z.object({
   fullName: z.string().min(2, "Name must be at least 2 characters"),
