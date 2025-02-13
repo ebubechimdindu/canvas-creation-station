@@ -1,10 +1,16 @@
 
-import { Middleware } from '@reduxjs/toolkit';
+import { Middleware, Action } from '@reduxjs/toolkit';
 import { RootState } from '../store';
 
-export const authMiddleware: Middleware<{}, RootState> = store => next => action => {
+// Define a type for our actions
+interface AuthAction extends Action {
+  type: string;
+  payload?: any;
+}
+
+export const authMiddleware: Middleware = (store) => (next) => (action: AuthAction) => {
   const result = next(action);
-  const state = store.getState();
+  const state = store.getState() as RootState;
 
   // Handle auth-related actions
   if (action.type.startsWith('auth/')) {

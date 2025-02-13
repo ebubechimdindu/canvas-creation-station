@@ -13,5 +13,7 @@ export const store = configureStore({
     getDefaultMiddleware().concat(authMiddleware),
 });
 
+// Infer the `RootState` and `AppDispatch` types from the store itself
+// This prevents circular type references
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
