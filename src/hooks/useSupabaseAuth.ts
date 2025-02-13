@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -121,19 +120,11 @@ export const useSupabaseAuth = () => {
       });
 
       if (signInError) {
-        // Handle the 400 status code specifically for email confirmation
-        if (signInError.status === 400) {
-          try {
-            const errorBody = JSON.parse(signInError.body);
-            if (errorBody?.code === 'email_not_confirmed') {
-              await resendVerificationEmail(email);
-              navigate('/auth/verify');
-              return;
-            }
-          } catch {
-            // If parsing fails, throw the original error
-            throw signInError;
-          }
+        // Check for email confirmation error
+        if (signInError.message.includes('Email not confirmed')) {
+          await resendVerificationEmail(email);
+          navigate('/auth/verify');
+          return;
         }
         throw signInError;
       }
