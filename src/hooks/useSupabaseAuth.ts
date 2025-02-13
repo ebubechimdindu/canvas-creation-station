@@ -41,9 +41,9 @@ export const useSupabaseAuth = () => {
 
       if (authError || !authData.user) throw authError || new Error('Registration failed');
 
-      // 2. Upload profile picture
+      // 2. Upload profile picture - using userId in the path for RLS
       const fileExt = profilePicture.name.split('.').pop();
-      const filePath = `${authData.user.id}-${Math.random()}.${fileExt}`;
+      const filePath = `${authData.user.id}/${crypto.randomUUID()}.${fileExt}`;
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('driver-profiles')
