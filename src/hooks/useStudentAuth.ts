@@ -135,27 +135,48 @@ export const useStudentAuth = () => {
   const loginStudent = async (studentId: string, password: string) => {
     try {
       setIsLoading(true);
+      console.log('Attempting login with student ID:', studentId);
 
-      // 1. Get email from student_id
-      const { data: studentData, error: studentError } = await supabase
+      // 1. Get user profile by student ID
+      const { data: studentProfile, error: profileError } = await supabase
         .from('student_profiles')
-        .select('id')
+        .select('*')
         .eq('student_id', studentId)
         .single();
 
-      if (studentError) {
-        throw new Error('Student ID not found');
+      if (profileError) {
+        console.error('Profile lookup error:', profileError);
+        throw new Error('Student ID not found. Please check your ID and try again.');
       }
 
-      // 2. Sign in with Supabase Auth
+      if (!studentProfile) {
+        throw new Error('Student profile not found');
+      }
+
+      console.log('Found student profile:', studentProfile);
+
+      // 2. Get auth user by ID to get their email
+      const { data: { user: authUser }, error: authUserError } = await supabase.auth.admin.getUserById(
+        studentProfile.id
+      );
+
+      if (authUserError || !authUser?.email) {
+        console.error('Auth user lookup error:', authUserError);
+        throw new Error('Could not find associated account');
+      }
+
+      console.log('Found auth user:', authUser);
+
+      // 3. Sign in with email and password
       const { data: { user }, error: signInError } = await supabase.auth.signInWithPassword({
-        email: studentId, // Using student ID as email for now
+        email: authUser.email,
         password,
       });
 
       if (signInError) {
+        console.error('Sign in error:', signInError);
         if (signInError.message.includes('Email not confirmed')) {
-          await resendVerificationEmail(studentId);
+          await resendVerificationEmail(authUser.email);
           navigate('/auth/verify');
           return;
         }
@@ -164,26 +185,17 @@ export const useStudentAuth = () => {
 
       if (!user) throw new Error('Login failed');
 
-      // 3. Fetch student profile
-      const { data: profile, error: profileError } = await supabase
-        .from('student_profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (profileError) throw profileError;
-
       // 4. Update Redux store
       dispatch(login({
         id: user.id,
-        email: user.email!,
-        name: profile.full_name,
+        email: user.email,
+        name: studentProfile.full_name,
         role: 'student'
       }));
 
       toast({
         title: "Login Successful",
-        description: `Welcome back, ${profile.full_name}!`,
+        description: `Welcome back, ${studentProfile.full_name}!`,
       });
 
       navigate('/student/dashboard');
