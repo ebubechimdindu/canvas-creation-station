@@ -59,12 +59,25 @@ export const useSupabaseAuth = () => {
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/verify`,
+          data: {
+            full_name: fullName,
+            driver_license_number: driverId,
+            phone_number: phone,
+          }
         }
       });
 
       if (authError || !authData.user) throw authError || new Error('Registration failed');
 
-      // 2. Upload profile picture
+      // 2. Sign in immediately after signup to ensure we have a valid session
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (signInError) throw signInError;
+
+      // 3. Upload profile picture
       const fileExt = profilePicture.name.split('.').pop();
       const filePath = `${authData.user.id}/${crypto.randomUUID()}.${fileExt}`;
 
@@ -74,7 +87,7 @@ export const useSupabaseAuth = () => {
 
       if (uploadError) throw uploadError;
 
-      // 3. Create driver profile with the user's ID
+      // 4. Create driver profile with the user's ID
       const { error: profileError } = await supabase
         .from('driver_profiles')
         .insert({
