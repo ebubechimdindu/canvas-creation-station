@@ -41,21 +41,24 @@ const LocationManager = ({ onLocationSelect, mode = 'view' }: LocationManagerPro
 
       if (error) throw error;
 
-      // Transform the data to match our CampusLocation type
       const transformedLocations: CampusLocation[] = data.map(location => ({
         id: location.id,
         name: location.name,
         description: location.description,
         category: location.category,
         coordinates: {
-          lat: location.coordinates[1], // PostgreSQL POINT is stored as [x, y] where x is longitude
+          lat: location.coordinates[1],
           lng: location.coordinates[0]
         },
         isActive: location.is_active,
         isVerified: location.is_verified,
         buildingCode: location.building_code,
         commonNames: location.common_names,
-        entrancePoints: location.entrance_points,
+        entrancePoints: location.entrance_points?.map((point: any) => ({
+          lat: point.lat,
+          lng: point.lng,
+          description: point.description
+        })) || [],
         createdAt: location.created_at,
         updatedAt: location.updated_at
       }));
