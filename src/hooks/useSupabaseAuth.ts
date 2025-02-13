@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -131,14 +132,24 @@ export const useSupabaseAuth = () => {
 
       if (!user) throw new Error('Login failed');
 
-      // 2. Fetch driver profile
+      // 2. Fetch driver profile using maybeSingle() instead of single()
       const { data: profile, error: profileError } = await supabase
         .from('driver_profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (profileError) throw profileError;
+
+      // Check if profile exists
+      if (!profile) {
+        toast({
+          title: "Profile Not Found",
+          description: "No driver profile found. Please contact support.",
+          variant: "destructive",
+        });
+        throw new Error('Driver profile not found');
+      }
 
       // 3. Update Redux store
       dispatch(login({
