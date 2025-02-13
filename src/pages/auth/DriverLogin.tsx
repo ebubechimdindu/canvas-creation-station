@@ -2,24 +2,20 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
 import { Car, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 
 const DriverLogin = () => {
-  const [driverId, setDriverId] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const { toast } = useToast();
+  const { loginDriver, isLoading } = useSupabaseAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Will implement actual auth logic in Phase 2
-    toast({
-      title: "Login Attempted",
-      description: "Authentication will be implemented in Phase 2",
-    });
+    await loginDriver(email, password);
   };
 
   return (
@@ -47,16 +43,16 @@ const DriverLogin = () => {
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           <div className="space-y-4">
             <div>
-              <label htmlFor="driverId" className="block text-sm font-medium text-gray-700">
-                Driver ID
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                Email Address
               </label>
               <Input
-                id="driverId"
-                type="text"
-                value={driverId}
-                onChange={(e) => setDriverId(e.target.value)}
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="mt-1"
-                placeholder="Enter your driver ID"
+                placeholder="Enter your email"
                 required
               />
             </div>
@@ -95,9 +91,14 @@ const DriverLogin = () => {
           <Button 
             type="submit"
             className="w-full gap-2 hover:scale-105 transition-transform duration-300"
+            disabled={isLoading}
           >
-            <Car className="w-5 h-5" />
-            Login
+            {isLoading ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+            ) : (
+              <Car className="w-5 h-5" />
+            )}
+            {isLoading ? 'Logging in...' : 'Login'}
           </Button>
 
           <p className="text-center text-sm text-gray-600">

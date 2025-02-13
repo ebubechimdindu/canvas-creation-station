@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useSupabaseAuth } from "@/hooks/use-supabase-auth";
 
 const formSchema = z.object({
   fullName: z.string().min(2, "Name must be at least 2 characters"),
@@ -33,6 +33,7 @@ const DriverRegister = () => {
   const [profilePicture, setProfilePicture] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const { toast } = useToast();
+  const { registerDriver, isLoading } = useSupabaseAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -50,6 +51,14 @@ const DriverRegister = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({
+          title: "File Too Large",
+          description: "Please upload an image smaller than 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
       setProfilePicture(file);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -59,7 +68,7 @@ const DriverRegister = () => {
     }
   };
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!profilePicture) {
       toast({
         title: "Profile Picture Required",
@@ -69,20 +78,19 @@ const DriverRegister = () => {
       return;
     }
 
-    // Will implement actual registration logic in Phase 2
-    console.log("Form values:", values);
-    console.log("Profile picture:", profilePicture);
-    
-    toast({
-      title: "Registration Attempted",
-      description: "Registration functionality will be implemented in Phase 2",
+    await registerDriver({
+      email: values.email,
+      password: values.password,
+      fullName: values.fullName,
+      driverId: values.driverId,
+      phone: values.phone,
+      profilePicture,
     });
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-8 animate-fade-in">
-        {/* Back Button */}
         <Link 
           to="/auth/driver/login"
           className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors"
@@ -91,7 +99,6 @@ const DriverRegister = () => {
           Back to Login
         </Link>
 
-        {/* Header */}
         <div className="text-center">
           <div className="bg-purple-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
             <ShieldCheck className="w-8 h-8 text-purple-600" />
@@ -100,10 +107,8 @@ const DriverRegister = () => {
           <p className="mt-2 text-gray-600">Create your Campus Rides driver account</p>
         </div>
 
-        {/* Registration Form */}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Profile Picture Upload */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
                 Profile Picture
@@ -146,7 +151,6 @@ const DriverRegister = () => {
               </div>
             </div>
 
-            {/* Personal Information Fields */}
             <FormField
               control={form.control}
               name="fullName"
@@ -231,7 +235,6 @@ const DriverRegister = () => {
               )}
             />
 
-            {/* Terms and Conditions */}
             <FormField
               control={form.control}
               name="terms"
@@ -256,7 +259,6 @@ const DriverRegister = () => {
               )}
             />
 
-            {/* Submit Button */}
             <Button type="submit" className="w-full">
               Complete Registration
             </Button>
