@@ -97,7 +97,22 @@ export const useSupabaseAuth = () => {
         password,
       });
 
-      if (signInError || !user) throw signInError || new Error('Login failed');
+      if (signInError) {
+        // Check specifically for email not confirmed error
+        const errorBody = JSON.parse((signInError as any).message);
+        if (errorBody?.code === 'email_not_confirmed') {
+          toast({
+            title: "Email Not Verified",
+            description: "Please check your email and click the verification link before logging in. Need a new link? Use the resend option below.",
+            variant: "destructive",
+          });
+          navigate('/auth/verify');
+          return;
+        }
+        throw signInError;
+      }
+
+      if (!user) throw new Error('Login failed');
 
       // 2. Fetch driver profile
       const { data: profile, error: profileError } = await supabase
