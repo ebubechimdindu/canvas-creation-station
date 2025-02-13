@@ -99,6 +99,7 @@ export const useStudentAuth = () => {
           department,
           level,
           profile_picture_url: profilePictureUrl,
+          email: email, // Add email to the profile
         });
 
       if (profileError) throw profileError;
@@ -137,7 +138,7 @@ export const useStudentAuth = () => {
       setIsLoading(true);
       console.log('Attempting login with student ID:', studentId);
 
-      // 1. Get user profile by student ID
+      // 1. Get user profile by student ID to get the email
       const { data: studentProfile, error: profileError } = await supabase
         .from('student_profiles')
         .select('*')
@@ -155,28 +156,16 @@ export const useStudentAuth = () => {
 
       console.log('Found student profile:', studentProfile);
 
-      // 2. Get auth user by ID to get their email
-      const { data: { user: authUser }, error: authUserError } = await supabase.auth.admin.getUserById(
-        studentProfile.id
-      );
-
-      if (authUserError || !authUser?.email) {
-        console.error('Auth user lookup error:', authUserError);
-        throw new Error('Could not find associated account');
-      }
-
-      console.log('Found auth user:', authUser);
-
-      // 3. Sign in with email and password
+      // 2. Sign in with email and password
       const { data: { user }, error: signInError } = await supabase.auth.signInWithPassword({
-        email: authUser.email,
+        email: studentProfile.email,
         password,
       });
 
       if (signInError) {
         console.error('Sign in error:', signInError);
         if (signInError.message.includes('Email not confirmed')) {
-          await resendVerificationEmail(authUser.email);
+          await resendVerificationEmail(studentProfile.email);
           navigate('/auth/verify');
           return;
         }
@@ -185,10 +174,10 @@ export const useStudentAuth = () => {
 
       if (!user) throw new Error('Login failed');
 
-      // 4. Update Redux store
+      // 3. Update Redux store
       dispatch(login({
         id: user.id,
-        email: user.email,
+        email: user.email!,
         name: studentProfile.full_name,
         role: 'student'
       }));
