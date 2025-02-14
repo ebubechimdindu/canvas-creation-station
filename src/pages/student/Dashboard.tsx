@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { navigationMenuTriggerStyle } from "@/components/ui/navigation-menu";
 import { Button } from "@/components/ui/button";
@@ -24,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import MapboxLocationManager from "@/components/locations/MapboxLocationManager";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -85,6 +85,10 @@ const StudentDashboard = () => {
     });
   };
 
+  const handleLocationSelect = (lat: number, lng: number) => {
+    console.log("Selected location:", { lat, lng });
+  };
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gradient-to-br from-[#F1F0FB] to-white dark:from-gray-900 dark:to-gray-800 transition-colors duration-500">
@@ -140,18 +144,8 @@ const StudentDashboard = () => {
                         </div>
                       </div>
                       <div className="space-y-4">
-                        <Label>Location Preview</Label>
-                        <div className="relative aspect-square rounded-lg overflow-hidden bg-[#F1F0FB] border hover:shadow-lg transition-shadow duration-300">
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="text-center space-y-2">
-                              <MapPin className="h-8 w-8 text-primary animate-bounce" />
-                              <p className="text-sm text-muted-foreground">
-                                Select a location to preview
-                              </p>
-                            </div>
-                          </div>
-                          <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent to-background/10" />
-                        </div>
+                        <Label>Location Selection</Label>
+                        <MapboxLocationManager onCoordinatesSelect={handleLocationSelect} />
                       </div>
                     </div>
                     <div className="space-y-2">
@@ -302,17 +296,7 @@ const StudentDashboard = () => {
                         </span>
                       </div>
                     </div>
-                    <div className="relative aspect-video md:aspect-square rounded-lg overflow-hidden bg-[#F1F0FB] border">
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-center space-y-2">
-                          <Car className="h-8 w-8 text-primary mx-auto animate-bounce" />
-                          <p className="text-sm text-muted-foreground">
-                            Searching for nearby drivers...
-                          </p>
-                        </div>
-                      </div>
-                      <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent to-background/10" />
-                    </div>
+                    <MapboxLocationManager />
                   </div>
                 </CardContent>
               </Card>
