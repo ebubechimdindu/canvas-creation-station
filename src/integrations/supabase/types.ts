@@ -1196,6 +1196,12 @@ export type Database = {
         }
         Returns: string
       }
+      get_secret: {
+        Args: {
+          name: string
+        }
+        Returns: string
+      }
       gettransactionid: {
         Args: Record<PropertyKey, never>
         Returns: unknown

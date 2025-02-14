@@ -48,7 +48,7 @@ const RideMap = ({
     const fetchMapboxToken = async () => {
       try {
         const { data, error } = await supabase
-          .rpc('get_secret', { name: 'MAPBOX_ACCESS_TOKEN' });
+          .rpc<string>('get_secret', { name: 'MAPBOX_ACCESS_TOKEN' });
 
         if (error) {
           console.error('Error fetching Mapbox token:', error);
