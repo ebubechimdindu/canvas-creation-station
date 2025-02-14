@@ -3458,6 +3458,7 @@ export type Database = {
         | "common_area"
         | "administrative"
         | "pickup_point"
+      location_type: "pickup_point" | "dropoff_point" | "campus_boundary"
       ride_status:
         | "pending"
         | "accepted"
