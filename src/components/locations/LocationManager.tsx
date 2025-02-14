@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { type CampusLocation, type LocationCategory } from '@/types/locations';
+import { type CampusLocation, type LocationType } from '@/types/locations';
 import { Loader2, MapPin, Plus } from 'lucide-react';
 
 interface LocationManagerProps {
@@ -24,7 +24,7 @@ interface LocationManagerProps {
 const LocationManager = ({ onLocationSelect, mode = 'view' }: LocationManagerProps) => {
   const [locations, setLocations] = useState<CampusLocation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState<LocationCategory | 'all'>('all');
+  const [selectedType, setSelectedType] = useState<LocationType | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
@@ -41,21 +41,24 @@ const LocationManager = ({ onLocationSelect, mode = 'view' }: LocationManagerPro
 
       if (error) throw error;
 
-      // Transform the data to match our CampusLocation type
       const transformedLocations: CampusLocation[] = data.map(location => ({
         id: location.id,
         name: location.name,
         description: location.description,
-        category: location.category,
+        locationType: location.location_type,
         coordinates: {
-          lat: location.coordinates[1], // PostgreSQL POINT is stored as [x, y] where x is longitude
+          lat: location.coordinates[1],
           lng: location.coordinates[0]
         },
         isActive: location.is_active,
         isVerified: location.is_verified,
         buildingCode: location.building_code,
         commonNames: location.common_names,
-        entrancePoints: location.entrance_points,
+        entrancePoints: location.entrance_points?.map((point: any) => ({
+          lat: point.lat,
+          lng: point.lng,
+          description: point.description
+        })),
         createdAt: location.created_at,
         updatedAt: location.updated_at
       }));
@@ -74,12 +77,12 @@ const LocationManager = ({ onLocationSelect, mode = 'view' }: LocationManagerPro
   };
 
   const filteredLocations = locations.filter(location => {
-    const matchesCategory = selectedCategory === 'all' || location.category === selectedCategory;
+    const matchesType = selectedType === 'all' || location.locationType === selectedType;
     const matchesSearch = location.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       location.buildingCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       location.commonNames?.some(name => name.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    return matchesCategory && matchesSearch;
+    return matchesType && matchesSearch;
   });
 
   if (isLoading) {
@@ -116,21 +119,19 @@ const LocationManager = ({ onLocationSelect, mode = 'view' }: LocationManagerPro
               />
             </div>
             <div className="w-[200px]">
-              <Label htmlFor="category">Category</Label>
+              <Label htmlFor="type">Location Type</Label>
               <Select
-                value={selectedCategory}
-                onValueChange={(value) => setSelectedCategory(value as LocationCategory | 'all')}
+                value={selectedType}
+                onValueChange={(value) => setSelectedType(value as LocationType | 'all')}
               >
-                <SelectTrigger id="category">
-                  <SelectValue placeholder="Select category" />
+                <SelectTrigger id="type">
+                  <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="academic">Academic</SelectItem>
-                  <SelectItem value="residence">Residence</SelectItem>
-                  <SelectItem value="common_area">Common Area</SelectItem>
-                  <SelectItem value="administrative">Administrative</SelectItem>
+                  <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="pickup_point">Pickup Point</SelectItem>
+                  <SelectItem value="dropoff_point">Dropoff Point</SelectItem>
+                  <SelectItem value="campus_boundary">Campus Boundary</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -154,7 +155,7 @@ const LocationManager = ({ onLocationSelect, mode = 'view' }: LocationManagerPro
                       <h3 className="font-medium">{location.name}</h3>
                       <p className="text-sm text-muted-foreground">
                         {location.buildingCode && `${location.buildingCode} • `}
-                        {location.category.replace('_', ' ')}
+                        {location.locationType.replace('_', ' ')}
                       </p>
                     </div>
                     {location.isVerified && (

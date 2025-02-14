@@ -6,7 +6,7 @@ export interface CampusLocation {
   id: string;
   name: string;
   description?: string;
-  category: LocationCategory;
+  locationType: LocationType;
   coordinates: {
     lat: number;
     lng: number;
