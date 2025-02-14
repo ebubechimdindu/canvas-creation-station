@@ -29,11 +29,11 @@ const MapboxLocationManager = ({
   const [mapStyle, setMapStyle] = useState<'streets' | 'satellite'>('streets');
   const { toast } = useToast();
   const selectedMarker = useRef<mapboxgl.Marker | null>(null);
-  const { isLoaded, error } = useMap();
+  const { isLoaded, error, mapboxToken } = useMap();
 
-  // Initialize map
+  // Initialize map when the container is ready and we have the token
   useEffect(() => {
-    if (!mapContainer.current || map.current || !isLoaded) return;
+    if (!mapContainer.current || map.current || !isLoaded || !mapboxToken) return;
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
@@ -73,15 +73,21 @@ const MapboxLocationManager = ({
     return () => {
       map.current?.remove();
     };
-  }, [isLoaded, mapStyle]);
+  }, [isLoaded, mapStyle, mapboxToken]);
+
+  // Update map style when it changes
+  useEffect(() => {
+    if (!map.current) return;
+    map.current.setStyle(`mapbox://styles/mapbox/${mapStyle}-v12`);
+  }, [mapStyle]);
 
   const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
+    if (!searchQuery.trim() || !mapboxToken) return;
 
     try {
       const query = `${searchQuery} Babcock University Ilishan-Remo`;
       const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=3.7181,6.8917&access_token=${mapboxgl.accessToken}`
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=3.7181,6.8917&access_token=${mapboxToken}`
       );
 
       const data = await response.json();

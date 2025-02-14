@@ -167,13 +167,13 @@ const StudentDashboard = () => {
   };
 
   const handleLocationSelect = (lat: number, lng: number, isPickup = true) => {
-    const MAPBOX_ACCESS_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
-    if (!MAPBOX_ACCESS_TOKEN) {
-      console.error('Mapbox access token not found');
+    const { mapboxToken } = useMap();
+    if (!mapboxToken) {
+      console.error('Mapbox token not found');
       return;
     }
 
-    fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${MAPBOX_ACCESS_TOKEN}`)
+    fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${mapboxToken}`)
       .then(response => response.json())
       .then(data => {
         const address = data.features[0]?.place_name || 'Unknown location';

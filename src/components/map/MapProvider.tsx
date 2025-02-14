@@ -27,7 +27,6 @@ export const MapProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const initializeMapbox = async () => {
       try {
-        console.log('Initializing Mapbox...');
         const { data, error } = await supabase
           .rpc('get_secret', { name: 'MAPBOX_ACCESS_TOKEN' }) as { data: string | null; error: unknown };
 
@@ -43,7 +42,6 @@ export const MapProvider = ({ children }: { children: React.ReactNode }) => {
           return;
         }
 
-        console.log('Mapbox token retrieved successfully');
         mapboxgl.accessToken = data;
         setMapboxToken(data);
         setIsLoaded(true);
