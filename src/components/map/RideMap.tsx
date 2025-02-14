@@ -48,14 +48,14 @@ const RideMap = ({
     const fetchMapboxToken = async () => {
       try {
         const { data, error } = await supabase
-          .rpc<string>('get_secret', { name: 'MAPBOX_ACCESS_TOKEN' });
+          .rpc<string, { name: string }>('get_secret', { name: 'MAPBOX_ACCESS_TOKEN' });
 
         if (error) {
           console.error('Error fetching Mapbox token:', error);
           return;
         }
 
-        if (data) {
+        if (typeof data === 'string') {
           setMapboxToken(data);
           mapboxgl.accessToken = data;
           initializeMap();
