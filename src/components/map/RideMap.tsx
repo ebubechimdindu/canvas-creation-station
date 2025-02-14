@@ -7,8 +7,7 @@ import { Button } from '../ui/button';
 import { Driver } from '@/types';
 import { Card } from '../ui/card';
 import { Loader2, Sun, Moon } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import type { Database } from '@/integrations/supabase/types';
+import { useMap } from './MapProvider';
 
 interface RideMapProps {
   pickup: string;
@@ -42,35 +41,20 @@ const RideMap = ({
   const [mapStyle, setMapStyle] = useState<'light' | 'dark'>('light');
   const [isLoading, setIsLoading] = useState(true);
   const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
-  const [mapboxToken, setMapboxToken] = useState<string>('');
+  const { isLoaded: isMapboxLoaded, error: mapError } = useMap();
 
-  // Fetch Mapbox token from Supabase
+  // Initialize map
   useEffect(() => {
-    const fetchMapboxToken = async () => {
-      try {
-        const { data, error } = await supabase
-          .rpc('get_secret', { name: 'MAPBOX_ACCESS_TOKEN' }) as { data: string | null; error: unknown };
+    if (!mapContainer.current || map.current || !isMapboxLoaded) {
+      console.log('Map initialization conditions not met:', {
+        containerExists: !!mapContainer.current,
+        mapExists: !!map.current,
+        isMapboxLoaded
+      });
+      return;
+    }
 
-        if (error) {
-          console.error('Error fetching Mapbox token:', error);
-          return;
-        }
-
-        if (typeof data === 'string') {
-          setMapboxToken(data);
-          mapboxgl.accessToken = data;
-          initializeMap();
-        }
-      } catch (err) {
-        console.error('Failed to fetch Mapbox token:', err);
-      }
-    };
-
-    fetchMapboxToken();
-  }, []);
-
-  const initializeMap = () => {
-    if (!mapContainer.current || map.current) return;
+    console.log('Initializing map instance...');
 
     const hour = new Date().getHours();
     const initialStyle = hour >= 18 || hour < 6 ? 'dark' : 'light';
@@ -94,6 +78,7 @@ const RideMap = ({
     map.current.addControl(new mapboxgl.FullscreenControl());
 
     map.current.on('load', () => {
+      console.log('Map loaded successfully');
       setIsMapLoaded(true);
       setIsLoading(false);
 
@@ -174,7 +159,12 @@ const RideMap = ({
         });
       }
     }
-  };
+
+    return () => {
+      console.log('Cleaning up map instance');
+      map.current?.remove();
+    };
+  }, [isMapboxLoaded, mapStyle, mode, driverLocation, showRoutePath]);
 
   // Update nearby drivers markers
   useEffect(() => {
@@ -208,7 +198,18 @@ const RideMap = ({
     });
   }, [nearbyDrivers, isMapLoaded]);
 
-  if (isLoading) {
+  if (mapError) {
+    return (
+      <Card className={`${className} p-4 text-center text-red-500`}>
+        <p>{mapError}</p>
+        <p className="text-sm mt-2 text-muted-foreground">
+          Please contact support if this issue persists.
+        </p>
+      </Card>
+    );
+  }
+
+  if (isLoading || !isMapboxLoaded) {
     return (
       <Card className={`relative ${className} min-h-[300px] flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100`}>
         <div className="text-center space-y-4">

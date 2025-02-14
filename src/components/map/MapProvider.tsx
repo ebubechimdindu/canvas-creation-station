@@ -8,11 +8,13 @@ import { Loader2 } from 'lucide-react';
 interface MapContextType {
   isLoaded: boolean;
   error: string | null;
+  mapboxToken: string | null;
 }
 
 const MapContext = createContext<MapContextType>({
   isLoaded: false,
   error: null,
+  mapboxToken: null,
 });
 
 export const useMap = () => useContext(MapContext);
@@ -20,10 +22,12 @@ export const useMap = () => useContext(MapContext);
 export const MapProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mapboxToken, setMapboxToken] = useState<string | null>(null);
 
   useEffect(() => {
     const initializeMapbox = async () => {
       try {
+        console.log('Initializing Mapbox...');
         const { data, error } = await supabase
           .rpc('get_secret', { name: 'MAPBOX_ACCESS_TOKEN' }) as { data: string | null; error: unknown };
 
@@ -39,7 +43,9 @@ export const MapProvider = ({ children }: { children: React.ReactNode }) => {
           return;
         }
 
+        console.log('Mapbox token retrieved successfully');
         mapboxgl.accessToken = data;
+        setMapboxToken(data);
         setIsLoaded(true);
       } catch (err) {
         console.error('Failed to initialize Mapbox:', err);
@@ -66,14 +72,14 @@ export const MapProvider = ({ children }: { children: React.ReactNode }) => {
       <Card className="p-4">
         <div className="flex items-center justify-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin" />
-          <p>Loading map...</p>
+          <p>Loading map configuration...</p>
         </div>
       </Card>
     );
   }
 
   return (
-    <MapContext.Provider value={{ isLoaded, error }}>
+    <MapContext.Provider value={{ isLoaded, error, mapboxToken }}>
       {children}
     </MapContext.Provider>
   );
