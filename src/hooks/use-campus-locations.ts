@@ -3,12 +3,14 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { type CampusLocation } from '@/types/locations';
 import { useToast } from './use-toast';
+import { useAuth } from './useAuth';
 
 export function useCampusLocations() {
   const [locations, setLocations] = useState<CampusLocation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchLocations();
@@ -67,6 +69,10 @@ export function useCampusLocations() {
     }
   ) => {
     try {
+      if (!user) {
+        throw new Error('You must be logged in to submit feedback');
+      }
+
       const { error: feedbackError } = await supabase
         .from('location_feedback')
         .insert({
@@ -75,7 +81,8 @@ export function useCampusLocations() {
           description: feedback.description,
           suggested_coordinates: feedback.suggestedCoordinates 
             ? `(${feedback.suggestedCoordinates.lng},${feedback.suggestedCoordinates.lat})`
-            : null
+            : null,
+          submitted_by: user.id
         });
 
       if (feedbackError) throw feedbackError;
