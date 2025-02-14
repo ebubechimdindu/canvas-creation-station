@@ -12,12 +12,16 @@ type DriverLocation = {
   timestamp: string;
 };
 
+// Define the PostGIS point type
+type PostGISPoint = {
+  type: 'Point';
+  coordinates: [number, number]; // [longitude, latitude]
+}
+
 // Define the shape of the data we expect from Supabase
 type SupabaseDriverLocation = {
   id: number;
-  location: {
-    coordinates: [number, number];
-  };
+  location: PostGISPoint;
   heading: number | null;
   speed: number | null;
   is_online: boolean | null;
@@ -61,7 +65,7 @@ export const useLocationUpdates = (mode: 'current-driver' | 'all-drivers') => {
         if (!data) return;
 
         // Transform the data into the expected format
-        const transformedData = data.map(item => ({
+        const transformedData = (data as unknown as SupabaseDriverLocation[]).map(item => ({
           id: item.driver_id,
           currentLocation: {
             lat: item.location.coordinates[1],
