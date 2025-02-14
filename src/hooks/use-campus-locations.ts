@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { type CampusLocation } from '@/types/locations';
+import { type CampusLocation, type LocationType } from '@/types/locations';
 import { useToast } from './use-toast';
 import { useAuth } from './useAuth';
 
@@ -32,18 +32,18 @@ export function useCampusLocations() {
         id: location.id,
         name: location.name,
         description: location.description,
-        locationType: location.location_type,
+        locationType: location.location_type as LocationType,
         coordinates: {
-          lat: location.coordinates[1],
-          lng: location.coordinates[0]
+          lat: Number(location.coordinates[1]),
+          lng: Number(location.coordinates[0])
         },
         isActive: location.is_active,
         isVerified: location.is_verified,
         buildingCode: location.building_code,
         commonNames: location.common_names,
         entrancePoints: location.entrance_points?.map((point: any) => ({
-          lat: point.lat,
-          lng: point.lng,
+          lat: Number(point.lat),
+          lng: Number(point.lng),
           description: point.description
         })),
         createdAt: location.created_at,

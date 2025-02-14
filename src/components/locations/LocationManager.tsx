@@ -45,18 +45,18 @@ const LocationManager = ({ onLocationSelect, mode = 'view' }: LocationManagerPro
         id: location.id,
         name: location.name,
         description: location.description,
-        locationType: location.location_type,
+        locationType: location.location_type as LocationType,
         coordinates: {
-          lat: location.coordinates[1],
-          lng: location.coordinates[0]
+          lat: Number(location.coordinates[1]),
+          lng: Number(location.coordinates[0])
         },
         isActive: location.is_active,
         isVerified: location.is_verified,
         buildingCode: location.building_code,
         commonNames: location.common_names,
         entrancePoints: location.entrance_points?.map((point: any) => ({
-          lat: point.lat,
-          lng: point.lng,
+          lat: Number(point.lat),
+          lng: Number(point.lng),
           description: point.description
         })),
         createdAt: location.created_at,
