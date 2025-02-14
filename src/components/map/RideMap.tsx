@@ -46,18 +46,22 @@ const RideMap = ({
   // Fetch Mapbox token from Supabase
   useEffect(() => {
     const fetchMapboxToken = async () => {
-      const { data: { secret: token }, error } = await supabase
-        .rpc('get_secret', { name: 'MAPBOX_ACCESS_TOKEN' });
+      try {
+        const { data, error } = await supabase
+          .rpc('get_secret', { name: 'MAPBOX_ACCESS_TOKEN' });
 
-      if (error) {
-        console.error('Error fetching Mapbox token:', error);
-        return;
-      }
+        if (error) {
+          console.error('Error fetching Mapbox token:', error);
+          return;
+        }
 
-      if (token) {
-        setMapboxToken(token);
-        mapboxgl.accessToken = token;
-        initializeMap();
+        if (data) {
+          setMapboxToken(data);
+          mapboxgl.accessToken = data;
+          initializeMap();
+        }
+      } catch (err) {
+        console.error('Failed to fetch Mapbox token:', err);
       }
     };
 
