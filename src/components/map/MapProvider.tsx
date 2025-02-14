@@ -27,20 +27,27 @@ export const MapProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const initializeMapbox = async () => {
       try {
-        const { data: token, error: rpcError } = await supabase
-          .rpc('get_secret', { name: 'MAPBOX_ACCESS_TOKEN' });
+        // Direct query to secrets table instead of RPC
+        const { data, error } = await supabase
+          .from('secrets')
+          .select('value')
+          .eq('name', 'MAPBOX_ACCESS_TOKEN')
+          .single();
 
-        if (rpcError) {
-          console.error('Error fetching Mapbox token:', rpcError);
+        if (error) {
+          console.error('Error fetching Mapbox token:', error);
           setError('Failed to load map configuration');
           return;
         }
 
-        if (!token) {
+        if (!data?.value) {
           console.error('No Mapbox token found');
           setError('Invalid map configuration - token not found');
           return;
         }
+
+        const token = data.value;
+        console.log('Successfully fetched Mapbox token'); // Debug log
 
         // Set the token globally for mapbox-gl
         mapboxgl.accessToken = token;
