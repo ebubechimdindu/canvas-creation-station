@@ -8,6 +8,7 @@ import { Driver } from '@/types';
 import { Card } from '../ui/card';
 import { Loader2, Sun, Moon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 
 interface RideMapProps {
   pickup: string;
@@ -48,7 +49,7 @@ const RideMap = ({
     const fetchMapboxToken = async () => {
       try {
         const { data, error } = await supabase
-          .rpc<string, { name: string }>('get_secret', { name: 'MAPBOX_ACCESS_TOKEN' });
+          .rpc('get_secret', { name: 'MAPBOX_ACCESS_TOKEN' }) as { data: string | null; error: unknown };
 
         if (error) {
           console.error('Error fetching Mapbox token:', error);
