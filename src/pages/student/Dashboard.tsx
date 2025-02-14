@@ -24,6 +24,9 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import MapboxLocationManager from "@/components/locations/MapboxLocationManager";
+import { useAppDispatch } from "@/hooks/redux";
+import { setActiveRide } from "@/features/rides/ridesSlice";
+import { supabase } from "@/integrations/supabase/client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +39,12 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+interface RideLocation {
+  lat: number;
+  lng: number;
+  address: string;
+}
+
 const StudentDashboard = () => {
   const [isRequestOpen, setIsRequestOpen] = useState(false);
   const [activeRequest, setActiveRequest] = useState<{
@@ -44,49 +53,135 @@ const StudentDashboard = () => {
     nearbyDrivers: number;
   } | null>(null);
   const { toast } = useToast();
+  const dispatch = useAppDispatch();
   const [rideRequest, setRideRequest] = useState({
     pickup: "",
     dropoff: "",
     notes: "",
     specialRequirements: "",
+    pickupLocation: null as RideLocation | null,
+    dropoffLocation: null as RideLocation | null,
   });
 
-  const handleRideRequest = (e: React.FormEvent) => {
+  const handleRideRequest = async (e: React.FormEvent) => {
     e.preventDefault();
-    setActiveRequest({
-      status: "Searching for driver",
-      estimatedWait: "5-10 minutes",
-      nearbyDrivers: 3,
-    });
-    toast({
-      title: "Ride Requested",
-      description: "Looking for available drivers...",
-    });
-    setIsRequestOpen(false);
+    
+    if (!rideRequest.pickupLocation || !rideRequest.dropoffLocation) {
+      toast({
+        title: "Missing Locations",
+        description: "Please select both pickup and dropoff locations on the map",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Create the ride request in Supabase
+      const { data: rideData, error: rideError } = await supabase
+        .from('ride_requests')
+        .insert({
+          student_id: (await supabase.auth.getUser()).data.user?.id,
+          pickup_location: `POINT(${rideRequest.pickupLocation.lng} ${rideRequest.pickupLocation.lat})`,
+          dropoff_location: `POINT(${rideRequest.dropoffLocation.lng} ${rideRequest.dropoffLocation.lat})`,
+          pickup_address: rideRequest.pickupLocation.address,
+          dropoff_address: rideRequest.dropoffLocation.address,
+          status: 'pending',
+          notes: rideRequest.notes,
+          special_requirements: rideRequest.specialRequirements,
+        })
+        .select()
+        .single();
+
+      if (rideError) throw rideError;
+
+      // Update local state
+      setActiveRequest({
+        status: "Searching for driver",
+        estimatedWait: "5-10 minutes",
+        nearbyDrivers: 3,
+      });
+
+      // Update Redux store
+      dispatch(setActiveRide({
+        id: rideData.id,
+        date: new Date().toISOString(),
+        pickup: rideRequest.pickupLocation.address,
+        dropoff: rideRequest.dropoffLocation.address,
+        status: 'Upcoming',
+        driver: '',
+        payment: {
+          method: 'cash',
+          status: 'pending',
+          amount: 0
+        }
+      }));
+
+      toast({
+        title: "Ride Requested",
+        description: "Looking for available drivers...",
+      });
+      
+      setIsRequestOpen(false);
+    } catch (error) {
+      console.error('Error creating ride request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create ride request. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleCancelRequest = () => {
-    setActiveRequest(null);
-    toast({
-      title: "Ride Cancelled",
-      description: "Your ride request has been cancelled.",
-    });
+  const handleCancelRequest = async () => {
+    try {
+      // Update the ride request status in Supabase
+      const { error } = await supabase
+        .from('ride_requests')
+        .update({ status: 'cancelled' })
+        .eq('student_id', (await supabase.auth.getUser()).data.user?.id)
+        .eq('status', 'pending');
+
+      if (error) throw error;
+
+      setActiveRequest(null);
+      dispatch(setActiveRide(null));
+
+      toast({
+        title: "Ride Cancelled",
+        description: "Your ride request has been cancelled.",
+      });
+    } catch (error) {
+      console.error('Error cancelling ride:', error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel ride. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleDriverRequest = (driverName: string) => {
-    setActiveRequest({
-      status: `Requesting ${driverName}`,
-      estimatedWait: "2-5 minutes",
-      nearbyDrivers: 1,
-    });
-    toast({
-      title: "Driver Requested",
-      description: `Sending request to ${driverName}...`,
-    });
-  };
-
-  const handleLocationSelect = (lat: number, lng: number) => {
-    console.log("Selected location:", { lat, lng });
+  const handleLocationSelect = (lat: number, lng: number, isPickup = true) => {
+    // Reverse geocode the coordinates to get the address
+    fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${mapboxgl.accessToken}`)
+      .then(response => response.json())
+      .then(data => {
+        const address = data.features[0]?.place_name || 'Unknown location';
+        const location: RideLocation = { lat, lng, address };
+        
+        setRideRequest(prev => ({
+          ...prev,
+          [isPickup ? 'pickupLocation' : 'dropoffLocation']: location,
+          [isPickup ? 'pickup' : 'dropoff']: address,
+        }));
+      })
+      .catch(error => {
+        console.error('Error getting address:', error);
+        toast({
+          title: "Error",
+          description: "Failed to get location address",
+          variant: "destructive"
+        });
+      });
   };
 
   return (
