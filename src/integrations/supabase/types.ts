@@ -12,7 +12,6 @@ export type Database = {
       campus_locations: {
         Row: {
           building_code: string | null
-          category: Database["public"]["Enums"]["location_type"]
           common_names: string[] | null
           coordinates: unknown
           created_at: string
@@ -27,7 +26,6 @@ export type Database = {
         }
         Insert: {
           building_code?: string | null
-          category: Database["public"]["Enums"]["location_type"]
           common_names?: string[] | null
           coordinates: unknown
           created_at?: string
@@ -42,7 +40,6 @@ export type Database = {
         }
         Update: {
           building_code?: string | null
-          category?: Database["public"]["Enums"]["location_type"]
           common_names?: string[] | null
           coordinates?: unknown
           created_at?: string
