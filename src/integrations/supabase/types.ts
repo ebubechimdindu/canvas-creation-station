@@ -98,6 +98,7 @@ export type Database = {
           driver_license_number: string
           full_name: string
           id: string
+          max_search_radius_km: number | null
           phone_number: string
           profile_picture_url: string | null
           status: string
@@ -108,6 +109,7 @@ export type Database = {
           driver_license_number: string
           full_name: string
           id: string
+          max_search_radius_km?: number | null
           phone_number: string
           profile_picture_url?: string | null
           status?: string
@@ -118,6 +120,7 @@ export type Database = {
           driver_license_number?: string
           full_name?: string
           id?: string
+          max_search_radius_km?: number | null
           phone_number?: string
           profile_picture_url?: string | null
           status?: string
