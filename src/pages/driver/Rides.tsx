@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAppSelector } from "@/hooks/redux";
 import { useToast } from "@/hooks/use-toast";
@@ -306,4 +305,3 @@ const DriverRides = () => {
 };
 
 export default DriverRides;
-

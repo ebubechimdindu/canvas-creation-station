@@ -257,9 +257,11 @@ export default function StudentRides() {
                               dropoff={rideRequest.dropoff}
                               className="w-full h-full"
                               showRoutePath={true}
-                              onRouteCalculated={(distance, duration) => {
-                                console.log('Route calculated:', { distance, duration });
-                              }}
+                              mode="student"
+                              nearbyDrivers={availableDrivers?.map(driver => ({
+                                lat: driver.currentLocation?.lat || 0,
+                                lng: driver.currentLocation?.lng || 0
+                              })).filter(loc => loc.lat !== 0 && loc.lng !== 0)}
                             />
                           </div>
                         </div>
@@ -366,7 +368,10 @@ export default function StudentRides() {
                           className="w-full h-full"
                           showRoutePath={true}
                           mode="student"
-                          nearbyDrivers={availableDrivers}
+                          nearbyDrivers={availableDrivers?.map(driver => ({
+                            lat: driver.currentLocation?.lat || 0,
+                            lng: driver.currentLocation?.lng || 0
+                          })).filter(loc => loc.lat !== 0 && loc.lng !== 0)}
                         />
                       </div>
                     </div>

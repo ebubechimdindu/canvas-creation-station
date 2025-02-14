@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import RideMap from "@/components/map/RideMap";
 import { useLocationUpdates } from "@/hooks/use-location-updates";
 import { useDriverLocation } from "@/hooks/use-driver-location";
+import type { Driver } from "@/types";
 
 const DriverDashboard = () => {
   const { toast } = useToast();
@@ -113,8 +114,10 @@ const DriverDashboard = () => {
                   pickup=""
                   dropoff=""
                   mode="driver"
-                  driverLocation={driverLocation}
-                  nearbyDrivers={nearbyDrivers}
+                  nearbyDrivers={nearbyDrivers?.map(driver => ({
+                    lat: driver.currentLocation?.lat || 0,
+                    lng: driver.currentLocation?.lng || 0
+                  })).filter(loc => loc.lat !== 0 && loc.lng !== 0)}
                   className="w-full h-full rounded-b-lg"
                 />
               </div>
