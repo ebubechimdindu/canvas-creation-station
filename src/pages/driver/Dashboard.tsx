@@ -9,8 +9,6 @@ import { setError, updateDriverStatus } from "@/features/rides/ridesSlice";
 import { Skeleton } from "@/components/ui/skeleton";
 import RideMap from "@/components/map/RideMap";
 import { useLocationUpdates } from "@/hooks/use-location-updates";
-import { useDriverLocation } from "@/hooks/use-driver-location";
-import type { Driver } from "@/types";
 
 const DriverDashboard = () => {
   const { toast } = useToast();
@@ -19,7 +17,6 @@ const DriverDashboard = () => {
   const { error, driverStatus } = useAppSelector((state) => state.rides);
   const [isMapExpanded, setIsMapExpanded] = useState(false);
   const { driverLocation, nearbyDrivers } = useLocationUpdates("current-driver");
-  const { error: locationError } = useDriverLocation();
 
   useEffect(() => {
     // Simulate initial data loading
@@ -29,16 +26,6 @@ const DriverDashboard = () => {
 
     return () => clearTimeout(timer);
   }, []);
-
-  useEffect(() => {
-    if (locationError) {
-      toast({
-        title: "Location Error",
-        description: locationError,
-        variant: "destructive",
-      });
-    }
-  }, [locationError, toast]);
 
   const toggleAvailability = () => {
     const newStatus = driverStatus === 'available' ? 'offline' : 'available';
@@ -114,10 +101,8 @@ const DriverDashboard = () => {
                   pickup=""
                   dropoff=""
                   mode="driver"
-                  nearbyDrivers={nearbyDrivers?.map(driver => ({
-                    lat: driver.currentLocation?.lat || 0,
-                    lng: driver.currentLocation?.lng || 0
-                  })).filter(loc => loc.lat !== 0 && loc.lng !== 0)}
+                  driverLocation={driverLocation}
+                  nearbyDrivers={nearbyDrivers}
                   className="w-full h-full rounded-b-lg"
                 />
               </div>

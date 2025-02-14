@@ -39,11 +39,7 @@ export function useCampusLocations() {
         isVerified: location.is_verified,
         buildingCode: location.building_code,
         commonNames: location.common_names,
-        entrancePoints: location.entrance_points?.map((point: any) => ({
-          lat: point.lat,
-          lng: point.lng,
-          description: point.description
-        })) || [],
+        entrancePoints: location.entrance_points,
         createdAt: location.created_at,
         updatedAt: location.updated_at
       }));
@@ -71,11 +67,6 @@ export function useCampusLocations() {
     }
   ) => {
     try {
-      const user = await supabase.auth.getUser();
-      if (!user.data.user) {
-        throw new Error('User must be authenticated to submit feedback');
-      }
-
       const { error: feedbackError } = await supabase
         .from('location_feedback')
         .insert({
@@ -84,8 +75,7 @@ export function useCampusLocations() {
           description: feedback.description,
           suggested_coordinates: feedback.suggestedCoordinates 
             ? `(${feedback.suggestedCoordinates.lng},${feedback.suggestedCoordinates.lat})`
-            : null,
-          submitted_by: user.data.user.id
+            : null
         });
 
       if (feedbackError) throw feedbackError;

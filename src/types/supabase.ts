@@ -1,3 +1,4 @@
+
 export type Json =
   | string
   | number
@@ -37,48 +38,6 @@ export interface Database {
           phone_number?: string
           profile_picture_url?: string | null
           status?: 'pending_verification' | 'verified' | 'suspended'
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      ride_requests: {
-        Row: {
-          id: number
-          student_id: string
-          pickup_location: unknown
-          dropoff_location: unknown
-          pickup_address: string
-          dropoff_address: string
-          status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'cancelled'
-          notes: string | null
-          special_requirements: string | null
-          driver_id: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          student_id: string
-          pickup_location: unknown
-          dropoff_location: unknown
-          pickup_address: string
-          dropoff_address: string
-          status?: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'cancelled'
-          notes?: string | null
-          special_requirements?: string | null
-          driver_id?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          student_id?: string
-          pickup_location?: unknown
-          dropoff_location?: unknown
-          pickup_address?: string
-          dropoff_address?: string
-          status?: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'cancelled'
-          notes?: string | null
-          special_requirements?: string | null
-          driver_id?: string | null
           created_at?: string
           updated_at?: string
         }
