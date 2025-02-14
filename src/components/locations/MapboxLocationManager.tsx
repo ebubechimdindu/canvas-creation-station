@@ -7,22 +7,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { type CampusLocation, type LocationCategory } from '@/types/locations';
+import { type CampusLocation } from '@/types/locations';
 import { Loader2, MapPin, Search, Layers } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { useMap } from '../map/MapProvider';
 
 interface MapboxLocationManagerProps {
   onLocationSelect?: (location: CampusLocation) => void;
   onCoordinatesSelect?: (lat: number, lng: number) => void;
+  className?: string;
 }
 
-const MapboxLocationManager = ({ onLocationSelect, onCoordinatesSelect }: MapboxLocationManagerProps) => {
+const MapboxLocationManager = ({ 
+  onLocationSelect, 
+  onCoordinatesSelect,
+  className = ""
+}: MapboxLocationManagerProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,10 +29,11 @@ const MapboxLocationManager = ({ onLocationSelect, onCoordinatesSelect }: Mapbox
   const [mapStyle, setMapStyle] = useState<'streets' | 'satellite'>('streets');
   const { toast } = useToast();
   const selectedMarker = useRef<mapboxgl.Marker | null>(null);
+  const { isLoaded, error } = useMap();
 
   // Initialize map
   useEffect(() => {
-    if (!mapContainer.current) return;
+    if (!mapContainer.current || map.current || !isLoaded) return;
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
@@ -44,33 +44,26 @@ const MapboxLocationManager = ({ onLocationSelect, onCoordinatesSelect }: Mapbox
       pitch: 45,
     });
 
-    // Add navigation controls
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-
-    // Add scale control
     map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-right');
 
     map.current.on('load', () => {
       setIsLoading(false);
     });
 
-    // Add click handler for coordinate selection
     map.current.on('click', (e) => {
       const { lng, lat } = e.lngLat;
       
-      // Remove previous marker if it exists
       if (selectedMarker.current) {
         selectedMarker.current.remove();
       }
 
-      // Create new marker
       selectedMarker.current = new mapboxgl.Marker({ color: '#FF0000' })
         .setLngLat([lng, lat])
         .addTo(map.current!);
 
       onCoordinatesSelect?.(lat, lng);
 
-      // Show coordinates in toast
       toast({
         title: 'Location Selected',
         description: `Latitude: ${lat.toFixed(6)}, Longitude: ${lng.toFixed(6)}`,
@@ -80,20 +73,12 @@ const MapboxLocationManager = ({ onLocationSelect, onCoordinatesSelect }: Mapbox
     return () => {
       map.current?.remove();
     };
-  }, [mapStyle]);
+  }, [isLoaded, mapStyle]);
 
-  // Function to handle map style toggle
-  const toggleMapStyle = () => {
-    const newStyle = mapStyle === 'streets' ? 'satellite' : 'streets';
-    setMapStyle(newStyle);
-  };
-
-  // Function to search for a location
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
 
     try {
-      // Build the search query with Babcock University context
       const query = `${searchQuery} Babcock University Ilishan-Remo`;
       const response = await fetch(
         `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=3.7181,6.8917&access_token=${mapboxgl.accessToken}`
@@ -105,17 +90,14 @@ const MapboxLocationManager = ({ onLocationSelect, onCoordinatesSelect }: Mapbox
         const location = data.features[0];
         const [lng, lat] = location.center;
 
-        // Remove previous marker if it exists
         if (selectedMarker.current) {
           selectedMarker.current.remove();
         }
 
-        // Add marker for the found location
         selectedMarker.current = new mapboxgl.Marker({ color: '#FF0000' })
           .setLngLat([lng, lat])
           .addTo(map.current!);
 
-        // Fly to the location
         map.current?.flyTo({
           center: [lng, lat],
           zoom: 18,
@@ -145,14 +127,40 @@ const MapboxLocationManager = ({ onLocationSelect, onCoordinatesSelect }: Mapbox
     }
   };
 
+  if (error) {
+    return (
+      <Card className={className}>
+        <CardContent className="p-4 text-center text-red-500">
+          <p>{error}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isLoading || !isLoaded) {
+    return (
+      <Card className={className}>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <p>Loading map...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card className="w-full">
+    <Card className={className}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="text-xl font-bold">Campus Location Manager</CardTitle>
         <Button
           variant="outline"
           size="icon"
-          onClick={toggleMapStyle}
+          onClick={() => {
+            const newStyle = mapStyle === 'streets' ? 'satellite' : 'streets';
+            setMapStyle(newStyle);
+          }}
           className="ml-2"
         >
           <Layers className="h-4 w-4" />
@@ -178,11 +186,6 @@ const MapboxLocationManager = ({ onLocationSelect, onCoordinatesSelect }: Mapbox
         </div>
 
         <div className="relative w-full h-[400px] rounded-lg overflow-hidden">
-          {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-50">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          )}
           <div ref={mapContainer} className="w-full h-full" />
         </div>
 
