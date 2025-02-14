@@ -33,12 +33,14 @@ export const MapProvider = ({ children }: { children: React.ReactNode }) => {
           return;
         }
 
-        if (typeof data === 'string') {
-          mapboxgl.accessToken = data;
-          setIsLoaded(true);
-        } else {
-          setError('Invalid map configuration');
+        if (!data) {
+          console.error('No Mapbox token found');
+          setError('Invalid map configuration - token not found');
+          return;
         }
+
+        mapboxgl.accessToken = data;
+        setIsLoaded(true);
       } catch (err) {
         console.error('Failed to initialize Mapbox:', err);
         setError('Failed to initialize map');
@@ -52,6 +54,9 @@ export const MapProvider = ({ children }: { children: React.ReactNode }) => {
     return (
       <Card className="p-4 text-center text-red-500">
         <p>{error}</p>
+        <p className="text-sm mt-2 text-muted-foreground">
+          Please contact support if this issue persists.
+        </p>
       </Card>
     );
   }
