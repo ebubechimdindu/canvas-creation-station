@@ -40,6 +40,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { MapProvider } from '@/components/map/MapProvider';
+import { useMap } from '@/components/map/MapProvider';
 
 interface RideLocation {
   lat: number;

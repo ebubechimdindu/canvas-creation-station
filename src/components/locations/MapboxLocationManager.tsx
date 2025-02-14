@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -14,13 +13,26 @@ import { useMap } from '../map/MapProvider';
 interface MapboxLocationManagerProps {
   onLocationSelect?: (location: CampusLocation) => void;
   onCoordinatesSelect?: (lat: number, lng: number) => void;
+  onRouteCalculated?: (distance: number, duration: number) => void;
   className?: string;
+  initialView?: {
+    pickup: string;
+    dropoff: string;
+  };
+  showRoutePath?: boolean;
+  mode?: 'student' | 'driver';
+  nearbyDrivers?: Array<{ lat: number; lng: number }>;
 }
 
 const MapboxLocationManager = ({ 
   onLocationSelect, 
   onCoordinatesSelect,
-  className = ""
+  onRouteCalculated,
+  className = "",
+  initialView,
+  showRoutePath,
+  mode,
+  nearbyDrivers
 }: MapboxLocationManagerProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -31,7 +43,6 @@ const MapboxLocationManager = ({
   const selectedMarker = useRef<mapboxgl.Marker | null>(null);
   const { isLoaded, error, mapboxToken } = useMap();
 
-  // Initialize map when the container is ready and we have the token
   useEffect(() => {
     if (!mapContainer.current || map.current || !isLoaded || !mapboxToken) return;
 
@@ -49,7 +60,18 @@ const MapboxLocationManager = ({
 
     map.current.on('load', () => {
       setIsLoading(false);
+      if (initialView && showRoutePath) {
+        drawRoute(initialView.pickup, initialView.dropoff);
+      }
     });
+
+    if (mode === 'driver' && nearbyDrivers) {
+      nearbyDrivers.forEach(driver => {
+        new mapboxgl.Marker({ color: '#00FF00' })
+          .setLngLat([driver.lng, driver.lat])
+          .addTo(map.current!);
+      });
+    }
 
     map.current.on('click', (e) => {
       const { lng, lat } = e.lngLat;
@@ -73,9 +95,106 @@ const MapboxLocationManager = ({
     return () => {
       map.current?.remove();
     };
-  }, [isLoaded, mapStyle, mapboxToken]);
+  }, [isLoaded, mapStyle, mapboxToken, initialView, showRoutePath, mode, nearbyDrivers]);
 
-  // Update map style when it changes
+  const drawRoute = async (pickup: string, dropoff: string) => {
+    if (!map.current || !mapboxToken) return;
+
+    try {
+      const pickupCoords = await geocode(pickup);
+      const dropoffCoords = await geocode(dropoff);
+
+      if (!pickupCoords || !dropoffCoords) {
+        toast({
+          title: 'Error',
+          description: 'Could not find locations',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      const response = await fetch(
+        `https://api.mapbox.com/directions/v5/mapbox/driving/${pickupCoords.join(',')};${dropoffCoords.join(',')}?geometries=geojson&access_token=${mapboxToken}`
+      );
+
+      const data = await response.json();
+
+      if (data.routes?.[0]) {
+        const route = data.routes[0];
+        const distance = route.distance / 1000; // Convert to kilometers
+        const duration = route.duration / 60; // Convert to minutes
+
+        onRouteCalculated?.(distance, duration);
+
+        if (map.current.getSource('route')) {
+          (map.current.getSource('route') as mapboxgl.GeoJSONSource).setData({
+            type: 'Feature',
+            properties: {},
+            geometry: route.geometry
+          });
+        } else {
+          map.current.addLayer({
+            id: 'route',
+            type: 'line',
+            source: {
+              type: 'geojson',
+              data: {
+                type: 'Feature',
+                properties: {},
+                geometry: route.geometry
+              }
+            },
+            layout: {
+              'line-join': 'round',
+              'line-cap': 'round'
+            },
+            paint: {
+              'line-color': '#3b82f6',
+              'line-width': 4,
+              'line-opacity': 0.75
+            }
+          });
+        }
+
+        // Fit map to route bounds
+        const coordinates = route.geometry.coordinates;
+        const bounds = coordinates.reduce((bounds, coord) => {
+          return bounds.extend(coord as [number, number]);
+        }, new mapboxgl.LngLatBounds(coordinates[0], coordinates[0]));
+
+        map.current.fitBounds(bounds, {
+          padding: 50
+        });
+      }
+    } catch (error) {
+      console.error('Error drawing route:', error);
+      toast({
+        title: 'Error',
+        description: 'Could not draw route',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const geocode = async (location: string): Promise<[number, number] | null> => {
+    if (!mapboxToken) return null;
+
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(location)}.json?proximity=3.7181,6.8917&access_token=${mapboxToken}`
+      );
+      const data = await response.json();
+      
+      if (data.features?.[0]?.center) {
+        return data.features[0].center;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error geocoding:', error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     if (!map.current) return;
     map.current.setStyle(`mapbox://styles/mapbox/${mapStyle}-v12`);
