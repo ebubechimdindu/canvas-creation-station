@@ -14,13 +14,13 @@ type DriverLocation = {
 
 // Define the shape of the data we expect from Supabase
 type SupabaseDriverLocation = {
-  id: string;
+  id: number;
   location: {
     coordinates: [number, number];
   };
   heading: number | null;
   speed: number | null;
-  is_online: boolean;
+  is_online: boolean | null;
   driver_id: string;
   driver_profiles?: {
     full_name: string | null;
@@ -61,7 +61,7 @@ export const useLocationUpdates = (mode: 'current-driver' | 'all-drivers') => {
         if (!data) return;
 
         // Transform the data into the expected format
-        const transformedData = (data as SupabaseDriverLocation[]).map(item => ({
+        const transformedData = data.map(item => ({
           id: item.driver_id,
           currentLocation: {
             lat: item.location.coordinates[1],
