@@ -486,7 +486,7 @@ const StudentDashboard = () => {
                         </div>
                         <Button
                           size="sm"
-                          onClick={() => handleDriverRequest(driver.name)}
+                          onClick={() => setIsRequestOpen(true)}
                           disabled={activeRequest !== null}
                           className="hover:scale-105 transition-transform duration-200"
                         >
