@@ -7,6 +7,7 @@ import { Button } from '../ui/button';
 import { Driver } from '@/types';
 import { Card } from '../ui/card';
 import { Loader2, Sun, Moon } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface RideMapProps {
   pickup: string;
@@ -40,11 +41,32 @@ const RideMap = ({
   const [mapStyle, setMapStyle] = useState<'light' | 'dark'>('light');
   const [isLoading, setIsLoading] = useState(true);
   const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
+  const [mapboxToken, setMapboxToken] = useState<string>('');
 
+  // Fetch Mapbox token from Supabase
   useEffect(() => {
-    if (!mapContainer.current) return;
+    const fetchMapboxToken = async () => {
+      const { data: { secret: token }, error } = await supabase
+        .rpc('get_secret', { name: 'MAPBOX_ACCESS_TOKEN' });
 
-    // Initialize map with style based on time of day
+      if (error) {
+        console.error('Error fetching Mapbox token:', error);
+        return;
+      }
+
+      if (token) {
+        setMapboxToken(token);
+        mapboxgl.accessToken = token;
+        initializeMap();
+      }
+    };
+
+    fetchMapboxToken();
+  }, []);
+
+  const initializeMap = () => {
+    if (!mapContainer.current || map.current) return;
+
     const hour = new Date().getHours();
     const initialStyle = hour >= 18 || hour < 6 ? 'dark' : 'light';
     setMapStyle(initialStyle);
@@ -58,18 +80,14 @@ const RideMap = ({
       pitch: 45,
     });
 
-    // Add navigation controls with elegant styling
-    const nav = new mapboxgl.NavigationControl({
+    map.current.addControl(new mapboxgl.NavigationControl({
       visualizePitch: true,
       showZoom: true,
       showCompass: true,
-    });
-    map.current.addControl(nav, 'top-right');
+    }), 'top-right');
 
-    // Add fullscreen control
     map.current.addControl(new mapboxgl.FullscreenControl());
 
-    // Initialize route layer when map loads
     map.current.on('load', () => {
       setIsMapLoaded(true);
       setIsLoading(false);
@@ -109,7 +127,6 @@ const RideMap = ({
           }
         });
 
-        // Add animated route glow effect
         map.current?.addLayer({
           id: 'route-glow',
           type: 'line',
@@ -127,7 +144,6 @@ const RideMap = ({
         });
       }
 
-      // Add atmosphere effect
       map.current?.setFog({
         'horizon-blend': 0.1,
         'star-intensity': 0.15,
@@ -136,9 +152,7 @@ const RideMap = ({
       });
     });
 
-    // Handle driver mode specific features
     if (mode === 'driver') {
-      // Add geolocation control with custom styling
       map.current.addControl(
         new mapboxgl.GeolocateControl({
           positionOptions: {
@@ -149,85 +163,23 @@ const RideMap = ({
         })
       );
 
-      // Add click handler for driver location updates
       if (onDriverLocationUpdate) {
         map.current.on('click', (e) => {
-          onDriverLocationUpdate(e.lngLat.lng, e.lngLat.lat);
+          onDriverLocationUpdate(e.lngLat.lat, e.lngLat.lng);
         });
       }
     }
-
-    // Cleanup
-    return () => {
-      map.current?.remove();
-    };
-  }, []);
-
-  // Handle map style toggle
-  const toggleMapStyle = () => {
-    const newStyle = mapStyle === 'light' ? 'dark' : 'light';
-    setMapStyle(newStyle);
-    map.current?.setStyle(`mapbox://styles/mapbox/${newStyle}-v11`);
   };
 
-  // Handle driver location updates with smooth animation
+  // Update nearby drivers markers
   useEffect(() => {
-    if (!map.current || !driverLocation) return;
-
-    if (!driverMarker.current) {
-      const el = document.createElement('div');
-      el.className = 'driver-marker';
-      el.style.cssText = `
-        background-color: #4ade80;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        border: 3px solid white;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        cursor: pointer;
-        transition: all 0.3s ease;
-      `;
-
-      // Add pulse animation
-      const pulse = document.createElement('div');
-      pulse.style.cssText = `
-        position: absolute;
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        background-color: #4ade8050;
-        transform: translate(-5px, -5px);
-        animation: pulse 2s infinite;
-      `;
-      el.appendChild(pulse);
-
-      driverMarker.current = new mapboxgl.Marker({
-        element: el,
-        rotationAlignment: 'map'
-      })
-        .setLngLat([driverLocation.lng, driverLocation.lat])
-        .addTo(map.current);
-    } else {
-      driverMarker.current.setLngLat([driverLocation.lng, driverLocation.lat]);
-    }
-
-    // Smooth camera animation
-    map.current.easeTo({
-      center: [driverLocation.lng, driverLocation.lat],
-      duration: 2000,
-      easing: (t) => t * (2 - t) // Smooth easing function
-    });
-  }, [driverLocation]);
-
-  // Handle nearby drivers with animated markers
-  useEffect(() => {
-    if (!map.current) return;
+    if (!map.current || !isMapLoaded) return;
 
     // Remove old markers
     Object.values(markersRef.current).forEach(marker => marker.remove());
     markersRef.current = {};
 
-    // Add new markers with animation
+    // Add new markers for nearby drivers
     nearbyDrivers.forEach(driver => {
       if (driver.currentLocation) {
         const el = document.createElement('div');
@@ -249,7 +201,7 @@ const RideMap = ({
         markersRef.current[driver.id] = marker;
       }
     });
-  }, [nearbyDrivers]);
+  }, [nearbyDrivers, isMapLoaded]);
 
   if (isLoading) {
     return (
@@ -266,19 +218,21 @@ const RideMap = ({
     <div className={`relative rounded-lg overflow-hidden ${className}`}>
       <div ref={mapContainer} className="w-full h-full min-h-[300px]" />
       
-      {/* Map Controls */}
       <div className="absolute top-4 left-4 space-y-2">
         <Button
           variant="secondary"
           size="icon"
           className="bg-white/90 backdrop-blur-sm hover:bg-white"
-          onClick={toggleMapStyle}
+          onClick={() => {
+            const newStyle = mapStyle === 'light' ? 'dark' : 'light';
+            setMapStyle(newStyle);
+            map.current?.setStyle(`mapbox://styles/mapbox/${newStyle}-v11`);
+          }}
         >
           {mapStyle === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
         </Button>
       </div>
 
-      {/* Animation Styles */}
       <style>
         {`
           @keyframes pulse {

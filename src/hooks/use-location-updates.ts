@@ -29,6 +29,7 @@ type SupabaseDriverLocation = {
   driver_profiles?: {
     full_name: string | null;
     profile_picture_url: string | null;
+    max_search_radius_km: number | null;
   } | null;
 };
 
@@ -51,7 +52,8 @@ export const useLocationUpdates = (mode: 'current-driver' | 'all-drivers') => {
             driver_id,
             driver_profiles (
               full_name,
-              profile_picture_url
+              profile_picture_url,
+              max_search_radius_km
             )
           `)
           .eq('is_online', true);
@@ -83,7 +85,8 @@ export const useLocationUpdates = (mode: 'current-driver' | 'all-drivers') => {
             accountNumber: '',
             accountName: '',
           },
-          profilePicture: item.driver_profiles?.profile_picture_url || undefined
+          profilePicture: item.driver_profiles?.profile_picture_url || undefined,
+          searchRadius: item.driver_profiles?.max_search_radius_km || 5 // Default 5km if not set
         }));
 
         setNearbyDrivers(transformedData);
