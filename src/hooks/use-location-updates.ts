@@ -4,8 +4,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { Driver } from '@/types';
 import { toast } from '@/hooks/use-toast';
 
+type DriverLocation = {
+  lat: number;
+  lng: number;
+  heading: number;
+  speed: number;
+};
+
 export const useLocationUpdates = (mode: 'current-driver' | 'all-drivers') => {
-  const [driverLocation, setDriverLocation] = useState<Driver['currentLocation'] | null>(null);
+  const [driverLocation, setDriverLocation] = useState<DriverLocation | null>(null);
   const [nearbyDrivers, setNearbyDrivers] = useState<Driver[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,20 +26,22 @@ export const useLocationUpdates = (mode: 'current-driver' | 'all-drivers') => {
             location,
             heading,
             speed,
-            status,
+            is_online,
             driver_id,
             driver_profiles (
               full_name,
               profile_picture_url
             )
           `)
-          .neq('status', 'offline');
+          .eq('is_online', true);
 
         if (fetchError) {
           console.error('Error fetching driver locations:', fetchError);
           setError('Failed to fetch driver locations');
           return;
         }
+
+        if (!data) return;
 
         // Transform the data into the expected format
         const transformedData = data.map(item => ({
@@ -41,20 +50,32 @@ export const useLocationUpdates = (mode: 'current-driver' | 'all-drivers') => {
             lat: parseFloat(item.location.coordinates[1]),
             lng: parseFloat(item.location.coordinates[0]),
             heading: item.heading || 0,
-            speed: item.speed || 0
+            speed: item.speed || 0,
           },
-          name: item.driver_profiles.full_name,
-          status: item.status,
-          profilePicture: item.driver_profiles.profile_picture_url
+          name: item.driver_profiles?.full_name || 'Unknown Driver',
+          rating: 0, // Default value as per Driver type
+          distance: 0, // Default value as per Driver type
+          status: item.is_online ? 'available' : 'offline',
+          accountDetails: {
+            bankName: '',
+            accountNumber: '',
+            accountName: '',
+          },
+          profilePicture: item.driver_profiles?.profile_picture_url
         }));
 
         setNearbyDrivers(transformedData);
 
         // If we're tracking a specific driver, set their location
-        if (mode === 'current-driver') {
+        if (mode === 'current-driver' && transformedData.length > 0) {
           const currentDriver = transformedData[0];
-          if (currentDriver) {
-            setDriverLocation(currentDriver.currentLocation);
+          if (currentDriver?.currentLocation) {
+            setDriverLocation({
+              lat: currentDriver.currentLocation.lat,
+              lng: currentDriver.currentLocation.lng,
+              heading: currentDriver.currentLocation.heading,
+              speed: currentDriver.currentLocation.speed,
+            });
           }
         }
       } catch (err) {

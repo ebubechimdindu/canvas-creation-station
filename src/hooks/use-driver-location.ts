@@ -22,7 +22,8 @@ export const useDriverLocation = () => {
             location: `POINT(${longitude} ${latitude})`,
             heading,
             speed,
-            status: driverStatus,
+            is_online: driverStatus !== 'offline',
+            driver_id: (await supabase.auth.getUser()).data.user?.id,
           }, {
             onConflict: 'driver_id'
           });
