@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import DriverSidebar from "@/components/driver/DriverSidebar";
@@ -39,6 +38,11 @@ const DriverDashboard = () => {
 
   const toggleMapSize = () => {
     setIsMapExpanded(!isMapExpanded);
+  };
+
+  const handleDriverLocationUpdate = (lat: number, lng: number) => {
+    // In a real app, this would update the driver's location in the database
+    console.log('Driver location updated:', { lat, lng });
   };
 
   if (error) {
@@ -104,6 +108,7 @@ const DriverDashboard = () => {
                   mode="driver"
                   driverLocation={driverLocation}
                   nearbyDrivers={nearbyDrivers}
+                  onDriverLocationUpdate={handleDriverLocationUpdate}
                   className="w-full h-full rounded-b-lg"
                 />
               </div>

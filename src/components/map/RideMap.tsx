@@ -1,10 +1,12 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer } from '@react-google-maps/api';
+
+import React, { useCallback, useEffect, useState, useRef } from 'react';
+import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer, Autocomplete } from '@react-google-maps/api';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Driver } from '@/types';
 import { Card } from '../ui/card';
-import { Loader2, Sun, Moon } from 'lucide-react';
+import { Loader2, Sun, Moon, MapPin } from 'lucide-react';
+import { Label } from '../ui/label';
 
 const containerStyle = {
   width: '100%',
@@ -18,6 +20,8 @@ const defaultCenter = {
   lng: 3.4470
 };
 
+const libraries: ("places" | "geometry" | "drawing" | "visualization")[] = ["places", "geometry"];
+
 interface RideMapProps {
   pickup: string;
   dropoff: string;
@@ -29,6 +33,7 @@ interface RideMapProps {
   nearbyDrivers?: Driver[];
   onDriverLocationUpdate?: (lat: number, lng: number) => void;
   showNearbyRequests?: boolean;
+  onLocationSelect?: (type: 'pickup' | 'dropoff', location: { address: string; lat: number; lng: number }) => void;
 }
 
 const RideMap = ({ 
@@ -41,19 +46,57 @@ const RideMap = ({
   driverLocation,
   nearbyDrivers = [],
   onDriverLocationUpdate,
-  showNearbyRequests = false
+  showNearbyRequests = false,
+  onLocationSelect
 }: RideMapProps) => {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
   const [mapStyle, setMapStyle] = useState<'default' | 'dark'>('default');
   const [isLoading, setIsLoading] = useState(true);
-  const [driverMarker, setDriverMarker] = useState<google.maps.Marker | null>(null);
+  const [markers, setMarkers] = useState<{
+    pickup?: google.maps.LatLng;
+    dropoff?: google.maps.LatLng;
+  }>({});
+  
+  const pickupAutocomplete = useRef<google.maps.places.Autocomplete | null>(null);
+  const dropoffAutocomplete = useRef<google.maps.places.Autocomplete | null>(null);
 
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
+  const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
-    libraries: ['places', 'geometry']
+    libraries
   });
+
+  const calculateRoute = useCallback(() => {
+    if (!markers.pickup || !markers.dropoff) return;
+
+    const directionsService = new google.maps.DirectionsService();
+    directionsService.route(
+      {
+        origin: markers.pickup.toJSON(),
+        destination: markers.dropoff.toJSON(),
+        travelMode: google.maps.TravelMode.DRIVING,
+      },
+      (result, status) => {
+        if (status === google.maps.DirectionsStatus.OK && result) {
+          setDirections(result);
+          
+          if (onRouteCalculated && result.routes[0]?.legs[0]) {
+            const { distance, duration } = result.routes[0].legs[0];
+            onRouteCalculated(
+              distance?.value ? distance.value / 1000 : 0,
+              duration?.value ? duration.value / 60 : 0
+            );
+          }
+        }
+      }
+    );
+  }, [markers, onRouteCalculated]);
+
+  useEffect(() => {
+    if (markers.pickup && markers.dropoff) {
+      calculateRoute();
+    }
+  }, [markers, calculateRoute]);
 
   const onLoad = useCallback((map: google.maps.Map) => {
     setMap(map);
@@ -64,101 +107,77 @@ const RideMap = ({
     setMap(null);
   }, []);
 
-  useEffect(() => {
-    if (!isLoaded || !pickup || !dropoff || !showRoutePath) return;
+  const handlePlaceSelect = useCallback((type: 'pickup' | 'dropoff') => {
+    const autocomplete = type === 'pickup' ? pickupAutocomplete.current : dropoffAutocomplete.current;
+    const place = autocomplete?.getPlace();
+    
+    if (place?.geometry?.location) {
+      const location = new google.maps.LatLng(
+        place.geometry.location.lat(),
+        place.geometry.location.lng()
+      );
+      
+      setMarkers(prev => ({
+        ...prev,
+        [type]: location
+      }));
 
-    const directionsService = new google.maps.DirectionsService();
-
-    directionsService.route(
-      {
-        origin: pickup,
-        destination: dropoff,
-        travelMode: google.maps.TravelMode.DRIVING,
-      },
-      (result, status) => {
-        if (status === google.maps.DirectionsStatus.OK && result) {
-          setDirections(result);
-          
-          if (onRouteCalculated) {
-            const route = result.routes[0];
-            if (route.legs.length > 0) {
-              const leg = route.legs[0];
-              onRouteCalculated(
-                leg.distance?.value || 0 / 1000, // Convert to km
-                leg.duration?.value || 0 / 60 // Convert to minutes
-              );
-            }
-          }
-        }
-      }
-    );
-  }, [isLoaded, pickup, dropoff, showRoutePath, onRouteCalculated]);
-
-  useEffect(() => {
-    if (!isLoaded || !map || !driverLocation) return;
-
-    const position = new google.maps.LatLng(driverLocation.lat, driverLocation.lng);
-
-    if (!driverMarker) {
-      const marker = new google.maps.Marker({
-        position,
-        map,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 8,
-          fillColor: '#4ade80',
-          fillOpacity: 1,
-          strokeColor: '#ffffff',
-          strokeWeight: 2,
-        }
-      });
-      setDriverMarker(marker);
-    } else {
-      driverMarker.setPosition(position);
-    }
-
-    map.panTo(position);
-  }, [isLoaded, map, driverLocation, driverMarker]);
-
-  useEffect(() => {
-    if (!isLoaded || !map) return;
-
-    nearbyDrivers.forEach(driver => {
-      if (driver.currentLocation) {
-        new google.maps.Marker({
-          position: new google.maps.LatLng(
-            driver.currentLocation.lat,
-            driver.currentLocation.lng
-          ),
-          map,
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 6,
-            fillColor: driver.status === 'available' ? '#4ade80' : '#ef4444',
-            fillOpacity: 1,
-            strokeColor: '#ffffff',
-            strokeWeight: 2,
-          }
+      if (onLocationSelect) {
+        onLocationSelect(type, {
+          address: place.formatted_address || '',
+          lat: location.lat(),
+          lng: location.lng()
         });
       }
-    });
-  }, [isLoaded, map, nearbyDrivers]);
 
-  const toggleMapStyle = () => {
-    const newStyle = mapStyle === 'default' ? 'dark' : 'default';
-    setMapStyle(newStyle);
-    
-    if (map) {
-      map.setOptions({
-        styles: newStyle === 'dark' ? [
-          { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-          { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-          { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-          // ... Add more dark mode styles as needed
-        ] : []
-      });
+      if (map) {
+        map.panTo(location);
+        map.setZoom(15);
+      }
     }
-  };
+  }, [map, onLocationSelect]);
+
+  const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
+    if (!e.latLng) return;
+
+    if (mode === 'driver' && onDriverLocationUpdate) {
+      onDriverLocationUpdate(e.latLng.lat(), e.latLng.lng());
+      return;
+    }
+
+    // For student mode, allow clicking to set locations
+    const geocoder = new google.maps.Geocoder();
+    geocoder.geocode({ location: e.latLng }, (results, status) => {
+      if (status === 'OK' && results?.[0]) {
+        const address = results[0].formatted_address;
+        const locationType = !markers.pickup ? 'pickup' : !markers.dropoff ? 'dropoff' : null;
+
+        if (locationType && onLocationSelect) {
+          onLocationSelect(locationType, {
+            address,
+            lat: e.latLng!.lat(),
+            lng: e.latLng!.lng()
+          });
+
+          setMarkers(prev => ({
+            ...prev,
+            [locationType]: e.latLng!
+          }));
+        }
+      }
+    });
+  }, [mode, onDriverLocationUpdate, markers, onLocationSelect]);
+
+  if (loadError) {
+    return (
+      <Card className={`${className} min-h-[300px] flex items-center justify-center`}>
+        <div className="text-center space-y-2">
+          <p className="text-red-500">Error loading map</p>
+          <p className="text-sm text-muted-foreground">{loadError.message}</p>
+        </div>
+      </Card>
+    );
+  }
 
   if (!isLoaded || isLoading) {
     return (
@@ -172,19 +191,52 @@ const RideMap = ({
   }
 
   return (
-    <div className={`relative rounded-lg overflow-hidden ${className}`}>
+    <div className={`relative ${className}`}>
+      {mode === 'student' && (
+        <div className="absolute top-4 left-4 right-4 z-10 space-y-2">
+          <div className="bg-white/95 backdrop-blur-sm p-4 rounded-lg shadow-lg space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="pickup-location">Pickup Location</Label>
+              <Autocomplete
+                onLoad={auto => pickupAutocomplete.current = auto}
+                onPlaceChanged={() => handlePlaceSelect('pickup')}
+              >
+                <Input
+                  id="pickup-location"
+                  placeholder="Enter pickup location"
+                  className="w-full"
+                />
+              </Autocomplete>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dropoff-location">Dropoff Location</Label>
+              <Autocomplete
+                onLoad={auto => dropoffAutocomplete.current = auto}
+                onPlaceChanged={() => handlePlaceSelect('dropoff')}
+              >
+                <Input
+                  id="dropoff-location"
+                  placeholder="Enter dropoff location"
+                  className="w-full"
+                />
+              </Autocomplete>
+            </div>
+          </div>
+        </div>
+      )}
+
       <GoogleMap
         mapContainerStyle={containerStyle}
-        center={driverLocation || defaultCenter}
+        center={driverLocation || markers.pickup || defaultCenter}
         zoom={14}
         onLoad={onLoad}
         onUnmount={onUnmount}
+        onClick={handleMapClick}
         options={{
           styles: mapStyle === 'dark' ? [
             { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
             { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
             { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-            // ... Add more dark mode styles as needed
           ] : [],
           disableDefaultUI: false,
           zoomControl: true,
@@ -192,12 +244,58 @@ const RideMap = ({
           streetViewControl: true,
           fullscreenControl: true,
         }}
-        onClick={(e) => {
-          if (mode === 'driver' && onDriverLocationUpdate && e.latLng) {
-            onDriverLocationUpdate(e.latLng.lng(), e.latLng.lat());
-          }
-        }}
       >
+        {markers.pickup && (
+          <Marker
+            position={markers.pickup}
+            icon={{
+              url: '/pickup-marker.svg',
+              scaledSize: new google.maps.Size(40, 40)
+            }}
+          />
+        )}
+
+        {markers.dropoff && (
+          <Marker
+            position={markers.dropoff}
+            icon={{
+              url: '/dropoff-marker.svg',
+              scaledSize: new google.maps.Size(40, 40)
+            }}
+          />
+        )}
+
+        {driverLocation && (
+          <Marker
+            position={driverLocation}
+            icon={{
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 8,
+              fillColor: '#4ade80',
+              fillOpacity: 1,
+              strokeColor: '#ffffff',
+              strokeWeight: 2,
+            }}
+          />
+        )}
+
+        {nearbyDrivers.map((driver, index) => (
+          driver.currentLocation && (
+            <Marker
+              key={driver.id || index}
+              position={driver.currentLocation}
+              icon={{
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 6,
+                fillColor: driver.status === 'available' ? '#4ade80' : '#ef4444',
+                fillOpacity: 1,
+                strokeColor: '#ffffff',
+                strokeWeight: 2,
+              }}
+            />
+          )
+        ))}
+
         {directions && showRoutePath && (
           <DirectionsRenderer
             directions={directions}
@@ -212,13 +310,13 @@ const RideMap = ({
           />
         )}
       </GoogleMap>
-      
-      <div className="absolute top-4 left-4 space-y-2">
+
+      <div className="absolute top-4 right-4 space-y-2">
         <Button
           variant="secondary"
           size="icon"
           className="bg-white/90 backdrop-blur-sm hover:bg-white"
-          onClick={toggleMapStyle}
+          onClick={() => setMapStyle(prev => prev === 'default' ? 'dark' : 'default')}
         >
           {mapStyle === 'default' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
         </Button>
@@ -228,3 +326,4 @@ const RideMap = ({
 };
 
 export default RideMap;
+

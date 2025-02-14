@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { navigationMenuTriggerStyle } from "@/components/ui/navigation-menu";
 import { Button } from "@/components/ui/button";
@@ -51,6 +50,10 @@ const StudentDashboard = () => {
     notes: "",
     specialRequirements: "",
   });
+  const [selectedLocations, setSelectedLocations] = useState<{
+    pickup?: { address: string; lat: number; lng: number };
+    dropoff?: { address: string; lat: number; lng: number };
+  }>({});
 
   const handleRideRequest = (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,6 +87,20 @@ const StudentDashboard = () => {
       title: "Driver Requested",
       description: `Sending request to ${driverName}...`,
     });
+  };
+
+  const handleLocationSelect = (
+    type: 'pickup' | 'dropoff',
+    location: { address: string; lat: number; lng: number }
+  ) => {
+    setSelectedLocations(prev => ({
+      ...prev,
+      [type]: location
+    }));
+    setRideRequest(prev => ({
+      ...prev,
+      [type]: location.address
+    }));
   };
 
   return (
@@ -143,13 +160,15 @@ const StudentDashboard = () => {
                       <div className="space-y-4">
                         <Label>Location Preview</Label>
                         <RideMap
-                          pickup={rideRequest.pickup}
-                          dropoff={rideRequest.dropoff}
+                          pickup={selectedLocations.pickup?.address || ''}
+                          dropoff={selectedLocations.dropoff?.address || ''}
                           className="aspect-square rounded-lg overflow-hidden"
                           showRoutePath={true}
                           onRouteCalculated={(distance, duration) => {
                             console.log(`Distance: ${distance}km, Duration: ${duration}min`);
                           }}
+                          onLocationSelect={handleLocationSelect}
+                          mode="student"
                         />
                       </div>
                     </div>
@@ -302,8 +321,8 @@ const StudentDashboard = () => {
                       </div>
                     </div>
                     <RideMap 
-                      pickup={rideRequest.pickup}
-                      dropoff={rideRequest.dropoff}
+                      pickup={selectedLocations.pickup?.address || ''}
+                      dropoff={selectedLocations.dropoff?.address || ''}
                       className="aspect-video md:aspect-square rounded-lg overflow-hidden"
                       showRoutePath={true}
                       showNearbyRequests={true}
