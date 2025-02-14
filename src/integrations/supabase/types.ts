@@ -21,6 +21,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_verified: boolean | null
+          location_type: string
           name: string
           updated_at: string
         }
@@ -35,6 +36,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_verified?: boolean | null
+          location_type: string
           name: string
           updated_at?: string
         }
@@ -49,6 +51,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_verified?: boolean | null
+          location_type?: string
           name?: string
           updated_at?: string
         }
