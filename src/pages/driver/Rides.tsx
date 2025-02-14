@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useAppSelector } from "@/hooks/redux";
 import { useToast } from "@/hooks/use-toast";
@@ -23,7 +24,7 @@ import { SearchFilters } from "@/components/rides/SearchFilters";
 import RideDetailsModal from "@/components/rides/RideDetailsModal";
 import { useAppDispatch } from "@/hooks/redux";
 import { markPaymentReceived } from "@/features/rides/ridesSlice";
-import type { Ride } from "@/types";
+import type { Ride, Driver } from "@/types";
 import { useLocationUpdates } from "@/hooks/use-location-updates";
 import RideMap from "@/components/map/RideMap";
 
@@ -128,7 +129,10 @@ const DriverRides = () => {
                 pickup=""
                 dropoff=""
                 className="w-full h-full rounded-lg"
-                nearbyDrivers={nearbyDrivers}
+                nearbyDrivers={nearbyDrivers?.map(driver => ({
+                  lat: driver.currentLocation?.lat || 0,
+                  lng: driver.currentLocation?.lng || 0
+                })).filter(loc => loc.lat !== 0 && loc.lng !== 0)}
                 showNearbyRequests={true}
               />
             </CardContent>
