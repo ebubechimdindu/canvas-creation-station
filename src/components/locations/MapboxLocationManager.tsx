@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -51,7 +52,7 @@ const MapboxLocationManager = ({
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: `mapbox://styles/mapbox/${mapStyle}-v12`,
-      center: [3.7181, 6.8917], // Babcock University center
+      center: [3.7163, 6.8906], // Updated Babcock University coordinates
       zoom: 16,
       pitchWithRotate: true,
       pitch: 45,
@@ -182,8 +183,9 @@ const MapboxLocationManager = ({
     if (!mapboxToken) return null;
 
     try {
+      const query = `${location} Babcock University, Ilishan-Remo, Ogun State, Nigeria`;
       const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(location)}.json?proximity=3.7181,6.8917&access_token=${mapboxToken}`
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=3.7163,6.8906&access_token=${mapboxToken}`
       );
       const data = await response.json();
       
@@ -206,9 +208,9 @@ const MapboxLocationManager = ({
     if (!searchQuery.trim() || !mapboxToken) return;
 
     try {
-      const query = `${searchQuery} Babcock University Ilishan-Remo`;
+      const query = `${searchQuery} Babcock University, Ilishan-Remo, Ogun State, Nigeria`;
       const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=3.7181,6.8917&access_token=${mapboxToken}`
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=3.7163,6.8906&access_token=${mapboxToken}`
       );
 
       const data = await response.json();
@@ -325,3 +327,4 @@ const MapboxLocationManager = ({
 };
 
 export default MapboxLocationManager;
+
