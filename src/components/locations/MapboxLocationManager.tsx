@@ -22,6 +22,7 @@ interface MapboxLocationManagerProps {
   showRoutePath?: boolean;
   mode?: 'student' | 'driver';
   nearbyDrivers?: Array<{ lat: number; lng: number }>;
+  showNearbyRequests?: boolean;
 }
 
 const MapboxLocationManager = ({ 
@@ -32,7 +33,8 @@ const MapboxLocationManager = ({
   initialView,
   showRoutePath,
   mode,
-  nearbyDrivers
+  nearbyDrivers,
+  showNearbyRequests
 }: MapboxLocationManagerProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);

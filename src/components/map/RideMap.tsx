@@ -10,6 +10,7 @@ interface RideMapProps {
   mode?: 'student' | 'driver';
   nearbyDrivers?: Array<{ lat: number; lng: number }>;
   onRouteCalculated?: (distance: number, duration: number) => void;
+  showNearbyRequests?: boolean; // Added this prop
 }
 
 const RideMap: React.FC<RideMapProps> = ({
@@ -19,7 +20,8 @@ const RideMap: React.FC<RideMapProps> = ({
   showRoutePath,
   mode,
   nearbyDrivers,
-  onRouteCalculated
+  onRouteCalculated,
+  showNearbyRequests
 }) => {
   return (
     <MapboxLocationManager
@@ -32,6 +34,7 @@ const RideMap: React.FC<RideMapProps> = ({
       mode={mode}
       nearbyDrivers={nearbyDrivers}
       onRouteCalculated={onRouteCalculated}
+      showNearbyRequests={showNearbyRequests}
     />
   );
 };
