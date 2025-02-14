@@ -9,6 +9,23 @@ type DriverLocation = {
   lng: number;
   heading: number;
   speed: number;
+  timestamp: string;
+};
+
+// Define the shape of the data we expect from Supabase
+type SupabaseDriverLocation = {
+  id: string;
+  location: {
+    coordinates: [number, number];
+  };
+  heading: number | null;
+  speed: number | null;
+  is_online: boolean;
+  driver_id: string;
+  driver_profiles?: {
+    full_name: string | null;
+    profile_picture_url: string | null;
+  } | null;
 };
 
 export const useLocationUpdates = (mode: 'current-driver' | 'all-drivers') => {
@@ -44,24 +61,25 @@ export const useLocationUpdates = (mode: 'current-driver' | 'all-drivers') => {
         if (!data) return;
 
         // Transform the data into the expected format
-        const transformedData = data.map(item => ({
+        const transformedData = (data as SupabaseDriverLocation[]).map(item => ({
           id: item.driver_id,
           currentLocation: {
-            lat: parseFloat(item.location.coordinates[1]),
-            lng: parseFloat(item.location.coordinates[0]),
+            lat: item.location.coordinates[1],
+            lng: item.location.coordinates[0],
             heading: item.heading || 0,
             speed: item.speed || 0,
+            timestamp: new Date().toISOString(),
           },
           name: item.driver_profiles?.full_name || 'Unknown Driver',
           rating: 0, // Default value as per Driver type
           distance: 0, // Default value as per Driver type
-          status: item.is_online ? 'available' : 'offline',
+          status: item.is_online ? 'available' as const : 'offline' as const,
           accountDetails: {
             bankName: '',
             accountNumber: '',
             accountName: '',
           },
-          profilePicture: item.driver_profiles?.profile_picture_url
+          profilePicture: item.driver_profiles?.profile_picture_url || undefined
         }));
 
         setNearbyDrivers(transformedData);
@@ -75,6 +93,7 @@ export const useLocationUpdates = (mode: 'current-driver' | 'all-drivers') => {
               lng: currentDriver.currentLocation.lng,
               heading: currentDriver.currentLocation.heading,
               speed: currentDriver.currentLocation.speed,
+              timestamp: currentDriver.currentLocation.timestamp,
             });
           }
         }
