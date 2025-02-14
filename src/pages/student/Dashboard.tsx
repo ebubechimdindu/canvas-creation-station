@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
-import { MapPin, Calendar, Clock, Activity, Car, X, Star, MessageCircle, Bell } from "lucide-react";
+import { MapPin, Calendar, Clock, Activity, Car, X, Star } from "lucide-react";
+import mapboxgl from 'mapbox-gl';
 import {
   Dialog,
   DialogContent,
@@ -76,11 +77,13 @@ const StudentDashboard = () => {
     }
 
     try {
-      // Create the ride request in Supabase
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user?.id) throw new Error('Not authenticated');
+
       const { data: rideData, error: rideError } = await supabase
         .from('ride_requests')
         .insert({
-          student_id: (await supabase.auth.getUser()).data.user?.id,
+          student_id: user.user.id,
           pickup_location: `POINT(${rideRequest.pickupLocation.lng} ${rideRequest.pickupLocation.lat})`,
           dropoff_location: `POINT(${rideRequest.dropoffLocation.lng} ${rideRequest.dropoffLocation.lat})`,
           pickup_address: rideRequest.pickupLocation.address,
@@ -134,11 +137,13 @@ const StudentDashboard = () => {
 
   const handleCancelRequest = async () => {
     try {
-      // Update the ride request status in Supabase
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user?.id) throw new Error('Not authenticated');
+
       const { error } = await supabase
         .from('ride_requests')
         .update({ status: 'cancelled' })
-        .eq('student_id', (await supabase.auth.getUser()).data.user?.id)
+        .eq('student_id', user.user.id)
         .eq('status', 'pending');
 
       if (error) throw error;
@@ -161,8 +166,13 @@ const StudentDashboard = () => {
   };
 
   const handleLocationSelect = (lat: number, lng: number, isPickup = true) => {
-    // Reverse geocode the coordinates to get the address
-    fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${mapboxgl.accessToken}`)
+    const MAPBOX_ACCESS_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+    if (!MAPBOX_ACCESS_TOKEN) {
+      console.error('Mapbox access token not found');
+      return;
+    }
+
+    fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${MAPBOX_ACCESS_TOKEN}`)
       .then(response => response.json())
       .then(data => {
         const address = data.features[0]?.place_name || 'Unknown location';
