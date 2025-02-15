@@ -1,9 +1,6 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
-import { supabase } from '@/integrations/supabase/client';
-import { Card } from '../ui/card';
-import { Loader2 } from 'lucide-react';
 
 interface MapContextType {
   isLoaded: boolean;
@@ -20,72 +17,24 @@ const MapContext = createContext<MapContextType>({
 export const useMap = () => useContext(MapContext);
 
 export const MapProvider = ({ children }: { children: React.ReactNode }) => {
-  const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mapboxToken, setMapboxToken] = useState<string | null>(null);
+  const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
-  useEffect(() => {
-    const initializeMapbox = async () => {
-      try {
-        // Direct query to secrets table instead of RPC
-        const { data, error } = await supabase
-          .from('secrets')
-          .select('value')
-          .eq('name', 'MAPBOX_ACCESS_TOKEN')
-          .single();
-
-        if (error) {
-          console.error('Error fetching Mapbox token:', error);
-          setError('Failed to load map configuration');
-          return;
-        }
-
-        if (!data?.value) {
-          console.error('No Mapbox token found');
-          setError('Invalid map configuration - token not found');
-          return;
-        }
-
-        const token = data.value;
-        console.log('Successfully fetched Mapbox token'); // Debug log
-
-        // Set the token globally for mapbox-gl
-        mapboxgl.accessToken = token;
-        setMapboxToken(token);
-        setIsLoaded(true);
-      } catch (err) {
-        console.error('Failed to initialize Mapbox:', err);
-        setError('Failed to initialize map');
-      }
-    };
-
-    initializeMapbox();
-  }, []);
-
-  if (error) {
-    return (
-      <Card className="p-4 text-center text-red-500">
-        <p>{error}</p>
-        <p className="text-sm mt-2 text-muted-foreground">
-          Please contact support if this issue persists.
-        </p>
-      </Card>
-    );
-  }
-
-  if (!isLoaded) {
-    return (
-      <Card className="p-4">
-        <div className="flex items-center justify-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <p>Loading map configuration...</p>
-        </div>
-      </Card>
-    );
+  // Validate token and set up Mapbox
+  if (!mapboxToken) {
+    console.error('Missing Mapbox access token');
+    setError('Failed to load map configuration - missing access token');
+  } else {
+    // Set the token globally for mapbox-gl
+    mapboxgl.accessToken = mapboxToken;
   }
 
   return (
-    <MapContext.Provider value={{ isLoaded, error, mapboxToken }}>
+    <MapContext.Provider value={{ 
+      isLoaded: !error && !!mapboxToken, 
+      error, 
+      mapboxToken 
+    }}>
       {children}
     </MapContext.Provider>
   );

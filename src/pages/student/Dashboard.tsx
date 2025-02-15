@@ -57,6 +57,7 @@ const StudentDashboard = () => {
   } | null>(null);
   const { toast } = useToast();
   const dispatch = useAppDispatch();
+  const { mapboxToken } = useMap();
   const [rideRequest, setRideRequest] = useState({
     pickup: "",
     dropoff: "",
@@ -65,6 +66,34 @@ const StudentDashboard = () => {
     pickupLocation: null as RideLocation | null,
     dropoffLocation: null as RideLocation | null,
   });
+
+  const handleLocationSelect = (lat: number, lng: number, isPickup = true) => {
+    if (!mapboxToken) {
+      console.error('Mapbox token not found');
+      return;
+    }
+
+    fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${mapboxToken}`)
+      .then(response => response.json())
+      .then(data => {
+        const address = data.features[0]?.place_name || 'Unknown location';
+        const location: RideLocation = { lat, lng, address };
+        
+        setRideRequest(prev => ({
+          ...prev,
+          [isPickup ? 'pickupLocation' : 'dropoffLocation']: location,
+          [isPickup ? 'pickup' : 'dropoff']: address,
+        }));
+      })
+      .catch(error => {
+        console.error('Error getting address:', error);
+        toast({
+          title: "Error",
+          description: "Failed to get location address",
+          variant: "destructive"
+        });
+      });
+  };
 
   const handleRideRequest = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,35 +194,6 @@ const StudentDashboard = () => {
         variant: "destructive"
       });
     }
-  };
-
-  const handleLocationSelect = (lat: number, lng: number, isPickup = true) => {
-    const { mapboxToken } = useMap();
-    if (!mapboxToken) {
-      console.error('Mapbox token not found');
-      return;
-    }
-
-    fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${mapboxToken}`)
-      .then(response => response.json())
-      .then(data => {
-        const address = data.features[0]?.place_name || 'Unknown location';
-        const location: RideLocation = { lat, lng, address };
-        
-        setRideRequest(prev => ({
-          ...prev,
-          [isPickup ? 'pickupLocation' : 'dropoffLocation']: location,
-          [isPickup ? 'pickup' : 'dropoff']: address,
-        }));
-      })
-      .catch(error => {
-        console.error('Error getting address:', error);
-        toast({
-          title: "Error",
-          description: "Failed to get location address",
-          variant: "destructive"
-        });
-      });
   };
 
   return (
