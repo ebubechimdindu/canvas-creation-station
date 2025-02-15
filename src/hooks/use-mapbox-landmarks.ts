@@ -41,7 +41,7 @@ export const useMapboxLandmarks = () => {
 
         // Query Mapbox Geocoding API with a bbox filter for Babcock University area
         const response = await fetch(
-          `https://api.mapbox.com/geocoding/v5/mapbox.places/landmark.json?proximity=3.7242,6.8923&bbox=${CAMPUS_BOUNDS[0].join(',')},${CAMPUS_BOUNDS[1].join(',')}&types=poi&limit=50&access_token=${mapboxToken}`
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/babcock%20university.json?proximity=3.7242,6.8923&bbox=${CAMPUS_BOUNDS[0].join(',')},${CAMPUS_BOUNDS[1].join(',')}&types=poi&limit=50&access_token=${mapboxToken}`
         );
 
         if (!response.ok) {
