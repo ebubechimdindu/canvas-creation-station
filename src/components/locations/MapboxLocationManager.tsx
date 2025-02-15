@@ -124,6 +124,68 @@ const MapboxLocationManager = ({
     });
   }, [landmarks, isLoadingLandmarks]);
 
+  const geocode = async (location: string): Promise<[number, number] | null> => {
+    if (!mapboxToken) return null;
+
+    // Check if the location matches any campus landmarks
+    const landmarkMatch = landmarks.find(landmark => 
+      landmark.name.toLowerCase().includes(location.toLowerCase())
+    );
+    
+    if (landmarkMatch) {
+      // Convert landmark coordinates to the expected [number, number] format
+      return [landmarkMatch.coordinates[0], landmarkMatch.coordinates[1]];
+    }
+
+    try {
+      // Make sure we have a valid query string
+      if (!location.trim()) {
+        toast({
+          title: 'Invalid Location',
+          description: 'Please enter a valid location to search',
+          variant: 'destructive'
+        });
+        return null;
+      }
+
+      // Query Mapbox with location name
+      const query = encodeURIComponent(location);
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${query}.json?proximity=${CAMPUS_CENTER.join(',')}&types=poi,address,place&language=en&access_token=${mapboxToken}`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to geocode location');
+      }
+
+      const data = await response.json();
+      
+      if (data.features?.[0]?.center) {
+        const [lng, lat] = data.features[0].center;
+        // Verify the result is within campus bounds
+        if (lng >= CAMPUS_BOUNDS[0][0] && lng <= CAMPUS_BOUNDS[1][0] &&
+            lat >= CAMPUS_BOUNDS[0][1] && lat <= CAMPUS_BOUNDS[1][1]) {
+          return [lng, lat];
+        }
+      }
+      
+      toast({
+        title: 'Location Outside Campus',
+        description: 'Please select a location within Babcock University campus',
+        variant: 'destructive'
+      });
+      return null;
+    } catch (error) {
+      console.error('Error geocoding:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to find location',
+        variant: 'destructive'
+      });
+      return null;
+    }
+  };
+
   const drawRoute = async (pickup: string, dropoff: string) => {
     if (!map.current || !mapboxToken) return;
 
@@ -201,46 +263,6 @@ const MapboxLocationManager = ({
         description: 'Could not draw route',
         variant: 'destructive'
       });
-    }
-  };
-
-  const geocode = async (location: string): Promise<[number, number] | null> => {
-    if (!mapboxToken) return null;
-
-    // Check if the location matches any campus landmarks
-    const landmarkEntry = Object.entries(landmarks).find(([name]) => 
-      name.toLowerCase().includes(location.toLowerCase())
-    );
-    if (landmarkEntry) {
-      return landmarkEntry[1] as [number, number];
-    }
-
-    try {
-      // Simplified query without full address
-      const query = location;
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=${CAMPUS_CENTER.join(',')}&types=poi,address,place&language=en&access_token=${mapboxToken}`
-      );
-      const data = await response.json();
-      
-      if (data.features?.[0]?.center) {
-        const [lng, lat] = data.features[0].center;
-        // Verify the result is within campus bounds
-        if (lng >= CAMPUS_BOUNDS[0][0] && lng <= CAMPUS_BOUNDS[1][0] &&
-            lat >= CAMPUS_BOUNDS[0][1] && lat <= CAMPUS_BOUNDS[1][1]) {
-          return [lng, lat];
-        }
-      }
-      
-      toast({
-        title: 'Location Outside Campus',
-        description: 'Please select a location within Babcock University campus',
-        variant: 'destructive'
-      });
-      return null;
-    } catch (error) {
-      console.error('Error geocoding:', error);
-      return null;
     }
   };
 
