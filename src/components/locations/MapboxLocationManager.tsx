@@ -1,4 +1,3 @@
-
 import { useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -36,7 +35,7 @@ const CAMPUS_LANDMARKS: GeoJSON.FeatureCollection = {
       },
       geometry: {
         type: "Point",
-        coordinates: [3.7183, 6.8935]
+        coordinates: [3.7185, 6.8942]
       }
     },
     {
@@ -48,7 +47,7 @@ const CAMPUS_LANDMARKS: GeoJSON.FeatureCollection = {
       },
       geometry: {
         type: "Point",
-        coordinates: [3.7175, 6.8945]
+        coordinates: [3.7183, 6.8938]
       }
     },
     {
@@ -60,7 +59,7 @@ const CAMPUS_LANDMARKS: GeoJSON.FeatureCollection = {
       },
       geometry: {
         type: "Point",
-        coordinates: [3.7195, 6.8925]
+        coordinates: [3.7190, 6.8935]
       }
     },
     {
@@ -72,7 +71,7 @@ const CAMPUS_LANDMARKS: GeoJSON.FeatureCollection = {
       },
       geometry: {
         type: "Point",
-        coordinates: [3.7165, 6.8925]
+        coordinates: [3.7182, 6.8937]
       }
     }
   ]
@@ -118,13 +117,13 @@ const MapboxLocationManager = ({
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: `mapbox://styles/mapbox/${mapStyle}-v12`,
-      center: [3.7187, 6.894],
+      center: [3.7187, 6.894], // Babcock University center coordinates
       zoom: 16,
       minZoom: 15,
       maxZoom: 19,
       maxBounds: [
-        [3.7137, 6.8880],
-        [3.7237, 6.8980]
+        [3.7177, 6.893], // Southwest bound
+        [3.7197, 6.895]  // Northeast bound
       ],
       pitchWithRotate: true,
       pitch: 45,
@@ -147,11 +146,11 @@ const MapboxLocationManager = ({
             geometry: {
               type: "Polygon",
               coordinates: [[
-                [3.7137, 6.8880],
-                [3.7237, 6.8880],
-                [3.7237, 6.8980],
-                [3.7137, 6.8980],
-                [3.7137, 6.8880]
+                [3.7177, 6.893],  // SW
+                [3.7197, 6.893],  // SE
+                [3.7197, 6.895],  // NE
+                [3.7177, 6.895],  // NW
+                [3.7177, 6.893]   // Back to SW to close polygon
               ]]
             }
           }]
@@ -348,7 +347,7 @@ const MapboxLocationManager = ({
     try {
       const query = `${location} Babcock University, Ilishan-Remo, Ogun State, Nigeria`;
       const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=3.7187,6.894&bbox=3.7137,6.8880,3.7237,6.8980&access_token=${mapboxToken}`
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=3.7187,6.894&bbox=3.7177,6.893,3.7197,6.895&access_token=${mapboxToken}`
       );
       const data = await response.json();
       
@@ -373,7 +372,7 @@ const MapboxLocationManager = ({
     try {
       const query = `${searchQuery} Babcock University, Ilishan-Remo, Ogun State, Nigeria`;
       const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=3.7187,6.894&bbox=3.7137,6.8880,3.7237,6.8980&access_token=${mapboxToken}`
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=3.7187,6.894&bbox=3.7177,6.893,3.7197,6.895&access_token=${mapboxToken}`
       );
 
       const data = await response.json();
