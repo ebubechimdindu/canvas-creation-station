@@ -46,12 +46,22 @@ const MapboxLocationManager = ({
   const routeSource = useRef<mapboxgl.GeoJSONSource | null>(null);
   const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
-  // Campus boundaries
+  // Campus boundaries and landmarks
   const CAMPUS_CENTER = [3.7242, 6.8923] as [number, number];
   const CAMPUS_BOUNDS = [
     [3.7192, 6.8873], // Southwest coordinates
     [3.7292, 6.8973]  // Northeast coordinates
   ] as [[number, number], [number, number]];
+
+  // Common campus landmarks
+  const CAMPUS_LANDMARKS = {
+    "Student Center": [3.7242, 6.8923],
+    "Main Gate": [3.7240, 6.8920],
+    "Library": [3.7245, 6.8925],
+    "Science Complex": [3.7244, 6.8924],
+    "Sports Complex": [3.7243, 6.8922],
+    "Cafeteria": [3.7241, 6.8921]
+  };
 
   // Initialize map only once
   useEffect(() => {
@@ -89,6 +99,14 @@ const MapboxLocationManager = ({
         title: 'Location Selected',
         description: `Latitude: ${lat.toFixed(6)}, Longitude: ${lng.toFixed(6)}`,
       });
+    });
+
+    // Add landmarks to the map
+    Object.entries(CAMPUS_LANDMARKS).forEach(([name, [lng, lat]]) => {
+      new mapboxgl.Marker({ color: '#4B5563', scale: 0.8 })
+        .setLngLat([lng, lat])
+        .setPopup(new mapboxgl.Popup().setHTML(`<div class="text-sm font-medium">${name}</div>`))
+        .addTo(map.current!);
     });
 
     return () => {
@@ -214,17 +232,36 @@ const MapboxLocationManager = ({
   const geocode = async (location: string): Promise<[number, number] | null> => {
     if (!mapboxToken) return null;
 
+    // Check if the location matches any campus landmarks
+    const landmarkEntry = Object.entries(CAMPUS_LANDMARKS).find(([name]) => 
+      name.toLowerCase().includes(location.toLowerCase())
+    );
+    if (landmarkEntry) {
+      return landmarkEntry[1] as [number, number];
+    }
+
     try {
-      const query = `${location} Babcock University, Ilishan-Remo, Ogun State, Nigeria`;
-      const bbox = CAMPUS_BOUNDS.flat().join(','); // Convert bounds to bbox string
+      // Simplified query without full address
+      const query = location;
       const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=${CAMPUS_CENTER.join(',')}&bbox=${bbox}&types=poi,address&access_token=${mapboxToken}`
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=${CAMPUS_CENTER.join(',')}&types=poi,address,place&language=en&access_token=${mapboxToken}`
       );
       const data = await response.json();
       
       if (data.features?.[0]?.center) {
-        return data.features[0].center;
+        const [lng, lat] = data.features[0].center;
+        // Verify the result is within campus bounds
+        if (lng >= CAMPUS_BOUNDS[0][0] && lng <= CAMPUS_BOUNDS[1][0] &&
+            lat >= CAMPUS_BOUNDS[0][1] && lat <= CAMPUS_BOUNDS[1][1]) {
+          return [lng, lat];
+        }
       }
+      
+      toast({
+        title: 'Location Outside Campus',
+        description: 'Please select a location within Babcock University campus',
+        variant: 'destructive'
+      });
       return null;
     } catch (error) {
       console.error('Error geocoding:', error);
@@ -236,16 +273,10 @@ const MapboxLocationManager = ({
     if (!searchQuery.trim() || !mapboxToken) return;
 
     try {
-      const query = `${searchQuery} Babcock University, Ilishan-Remo, Ogun State, Nigeria`;
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=3.7163,6.8906&access_token=${mapboxToken}`
-      );
-
-      const data = await response.json();
+      const coordinates = await geocode(searchQuery);
       
-      if (data.features && data.features.length > 0) {
-        const location = data.features[0];
-        const [lng, lat] = location.center;
+      if (coordinates) {
+        const [lng, lat] = coordinates;
 
         if (selectedMarker.current) {
           selectedMarker.current.remove();
@@ -266,13 +297,7 @@ const MapboxLocationManager = ({
 
         toast({
           title: 'Location Found',
-          description: location.place_name,
-        });
-      } else {
-        toast({
-          title: 'No Results',
-          description: 'No locations found matching your search',
-          variant: 'destructive'
+          description: `Selected: ${searchQuery}`,
         });
       }
     } catch (error) {
