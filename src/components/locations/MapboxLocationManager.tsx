@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -9,72 +10,6 @@ import { useToast } from '@/hooks/use-toast';
 import { type CampusLocation } from '@/types/locations';
 import { MapPin, Search, Layers } from 'lucide-react';
 import { useState } from 'react';
-
-const CAMPUS_LANDMARKS: GeoJSON.FeatureCollection = {
-  type: "FeatureCollection",
-  features: [
-    {
-      type: "Feature",
-      properties: {
-        title: 'Main Gate',
-        description: 'University Main Entrance',
-        category: 'entry_point'
-      },
-      geometry: {
-        type: "Point",
-        coordinates: [3.7187, 6.894]
-      }
-    },
-    {
-      type: "Feature",
-      properties: {
-        title: 'Student Center',
-        description: 'Main student gathering area',
-        category: 'common_area'
-      },
-      geometry: {
-        type: "Point",
-        coordinates: [3.7185, 6.8942]
-      }
-    },
-    {
-      type: "Feature",
-      properties: {
-        title: 'Academic Building',
-        description: 'Main lecture halls',
-        category: 'academic'
-      },
-      geometry: {
-        type: "Point",
-        coordinates: [3.7183, 6.8938]
-      }
-    },
-    {
-      type: "Feature",
-      properties: {
-        title: 'Male Hostel',
-        description: 'Male student residence',
-        category: 'residence'
-      },
-      geometry: {
-        type: "Point",
-        coordinates: [3.7190, 6.8935]
-      }
-    },
-    {
-      type: "Feature",
-      properties: {
-        title: 'Female Hostel',
-        description: 'Female student residence',
-        category: 'residence'
-      },
-      geometry: {
-        type: "Point",
-        coordinates: [3.7182, 6.8937]
-      }
-    }
-  ]
-};
 
 interface MapboxLocationManagerProps {
   onLocationSelect?: (location: CampusLocation) => void;
@@ -90,12 +25,6 @@ interface MapboxLocationManagerProps {
   nearbyDrivers?: Array<{ lat: number; lng: number }>;
   showNearbyRequests?: boolean;
 }
-
-const DEFAULT_CENTER: [number, number] = [3.7187, 6.894];
-const DEFAULT_BOUNDS: [[number, number], [number, number]] = [
-  [3.7167, 6.892], // SW - slightly wider
-  [3.7207, 6.896]  // NE - slightly wider
-];
 
 const MapboxLocationManager = ({
   onLocationSelect,
@@ -115,216 +44,57 @@ const MapboxLocationManager = ({
   const { toast } = useToast();
   const selectedMarker = useRef<mapboxgl.Marker | null>(null);
   const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
-  const [mapError, setMapError] = useState<string | null>(null);
-
-  const getMapStyle = (style: 'streets' | 'satellite') => {
-    return style === 'streets' 
-      ? 'mapbox://styles/mapbox/streets-v11'
-      : 'mapbox://styles/mapbox/satellite-v9';
-  };
 
   useEffect(() => {
-    if (!mapContainer.current || map.current || !mapboxToken) {
-      if (!mapboxToken) {
-        setMapError('Missing Mapbox access token');
-        toast({
-          title: 'Error',
-          description: 'Missing Mapbox access token',
-          variant: 'destructive'
-        });
-      }
-      return;
-    }
+    if (!mapContainer.current || map.current || !mapboxToken) return;
 
-    try {
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: getMapStyle(mapStyle),
-        center: DEFAULT_CENTER,
-        zoom: 16,
-        minZoom: 15,
-        maxZoom: 19,
-        maxBounds: DEFAULT_BOUNDS,
-        pitchWithRotate: true,
-        pitch: 45,
-        bearing: -15, // Slight rotation for better campus orientation
-        attributionControl: false,
-        failIfMajorPerformanceCaveat: true,
-        preserveDrawingBuffer: true,
-        transformRequest: (url, resourceType) => {
-          if (resourceType === 'Source' || resourceType === 'Tile') {
-            return {
-              url: url,
-              headers: {
-                'Cache-Control': 'max-age=600' // 10 minutes cache
-              }
-            };
-          }
-        }
-      });
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: `mapbox://styles/mapbox/${mapStyle}-v12`,
+      center: [3.7163, 6.8906], // Updated Babcock University coordinates
+      zoom: 16,
+      pitchWithRotate: true,
+      pitch: 45,
+    });
 
-      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-      map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-right');
-      map.current.addControl(new mapboxgl.AttributionControl({
-        compact: true
-      }), 'bottom-left');
-
-      map.current.on('style.load', () => {
-        if (!map.current) return;
-
-        try {
-          // Add campus boundary
-          map.current.addSource('campus-boundary', {
-            type: 'geojson',
-            data: {
-              type: "FeatureCollection",
-              features: [{
-                type: "Feature",
-                properties: {},
-                geometry: {
-                  type: "Polygon",
-                  coordinates: [[
-                    DEFAULT_BOUNDS[0], // SW
-                    [DEFAULT_BOUNDS[1][0], DEFAULT_BOUNDS[0][1]], // SE
-                    DEFAULT_BOUNDS[1], // NE
-                    [DEFAULT_BOUNDS[0][0], DEFAULT_BOUNDS[1][1]], // NW
-                    DEFAULT_BOUNDS[0]  // Back to SW to close polygon
-                  ]]
-                }
-              }]
-            } as GeoJSON.FeatureCollection
-          });
-
-          map.current.addLayer({
-            id: 'campus-outline',
-            type: 'line',
-            source: 'campus-boundary',
-            paint: {
-              'line-color': '#FF0000',
-              'line-width': 2,
-              'line-opacity': 0.8
-            }
-          });
-
-          map.current.addSource('landmarks', {
-            type: 'geojson',
-            data: CAMPUS_LANDMARKS
-          });
-
-          map.current.addLayer({
-            id: 'landmarks',
-            type: 'symbol',
-            source: 'landmarks',
-            layout: {
-              'icon-image': 'marker-15',
-              'icon-size': 1.5,
-              'text-field': ['get', 'title'],
-              'text-offset': [0, 1.5],
-              'text-anchor': 'top',
-              'text-size': 12
-            },
-            paint: {
-              'text-color': '#000000',
-              'text-halo-color': '#ffffff',
-              'text-halo-width': 1
-            }
-          });
-
-          // Add event listeners for landmarks
-          map.current.on('click', 'landmarks', (e) => {
-            if (!e.features?.[0]) return;
-            
-            const feature = e.features[0];
-            const geometry = feature.geometry as GeoJSON.Point;
-            const coordinates: [number, number] = [
-              geometry.coordinates[0],
-              geometry.coordinates[1]
-            ];
-            
-            new mapboxgl.Popup()
-              .setLngLat(coordinates)
-              .setHTML(`<h3>${feature.properties?.title}</h3><p>${feature.properties?.description}</p>`)
-              .addTo(map.current!);
-          });
-
-          map.current.on('mouseenter', 'landmarks', () => {
-            if (map.current) map.current.getCanvas().style.cursor = 'pointer';
-          });
-          
-          map.current.on('mouseleave', 'landmarks', () => {
-            if (map.current) map.current.getCanvas().style.cursor = '';
-          });
-
-          setMapError(null);
-        } catch (error) {
-          console.error('Error loading map layers:', error);
-          setMapError('Error loading map layers');
-          toast({
-            title: 'Error',
-            description: 'Failed to load map layers',
-            variant: 'destructive'
-          });
-        }
-      });
-
-      map.current.on('error', (e) => {
-        console.error('Map error:', e);
-        setMapError('Map loading error');
-        toast({
-          title: 'Map Error',
-          description: 'An error occurred while loading the map',
-          variant: 'destructive'
-        });
-      });
-
-    } catch (error) {
-      console.error('Error initializing map:', error);
-      setMapError('Map initialization error');
-      toast({
-        title: 'Error',
-        description: 'Failed to initialize map',
-        variant: 'destructive'
-      });
-    }
+    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-right');
 
     if (initialView && showRoutePath) {
       drawRoute(initialView.pickup, initialView.dropoff);
     }
 
+    if (mode === 'driver' && nearbyDrivers) {
+      nearbyDrivers.forEach(driver => {
+        new mapboxgl.Marker({ color: '#00FF00' })
+          .setLngLat([driver.lng, driver.lat])
+          .addTo(map.current!);
+      });
+    }
+
+    map.current.on('click', (e) => {
+      const { lng, lat } = e.lngLat;
+      
+      if (selectedMarker.current) {
+        selectedMarker.current.remove();
+      }
+
+      selectedMarker.current = new mapboxgl.Marker({ color: '#FF0000' })
+        .setLngLat([lng, lat])
+        .addTo(map.current!);
+
+      onCoordinatesSelect?.(lat, lng);
+
+      toast({
+        title: 'Location Selected',
+        description: `Latitude: ${lat.toFixed(6)}, Longitude: ${lng.toFixed(6)}`,
+      });
+    });
+
     return () => {
       map.current?.remove();
     };
   }, [mapStyle, mapboxToken, initialView, showRoutePath, mode, nearbyDrivers]);
-
-  const geocode = async (location: string): Promise<[number, number] | null> => {
-    if (!mapboxToken) return null;
-
-    try {
-      const query = `${location} Babcock University, Ilishan-Remo, Ogun State, Nigeria`;
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=${DEFAULT_CENTER.join(',')}&bbox=${DEFAULT_BOUNDS[0].join(',')},${DEFAULT_BOUNDS[1].join(',')}&access_token=${mapboxToken}&limit=1&types=poi,place,address&language=en`
-      );
-      
-      if (!response.ok) {
-        throw new Error('Geocoding request failed');
-      }
-      
-      const data = await response.json();
-      
-      if (data.features?.[0]?.center) {
-        return data.features[0].center;
-      }
-      return null;
-    } catch (error) {
-      console.error('Error geocoding:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to find location',
-        variant: 'destructive'
-      });
-      return null;
-    }
-  };
 
   const drawRoute = async (pickup: string, dropoff: string) => {
     if (!map.current || !mapboxToken) return;
@@ -385,6 +155,7 @@ const MapboxLocationManager = ({
           });
         }
 
+        // Fit map to route bounds
         const coordinates = route.geometry.coordinates;
         const bounds = coordinates.reduce((bounds, coord) => {
           return bounds.extend(coord as [number, number]);
@@ -404,13 +175,38 @@ const MapboxLocationManager = ({
     }
   };
 
+  const geocode = async (location: string): Promise<[number, number] | null> => {
+    if (!mapboxToken) return null;
+
+    try {
+      const query = `${location} Babcock University, Ilishan-Remo, Ogun State, Nigeria`;
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=3.7163,6.8906&access_token=${mapboxToken}`
+      );
+      const data = await response.json();
+      
+      if (data.features?.[0]?.center) {
+        return data.features[0].center;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error geocoding:', error);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    if (!map.current) return;
+    map.current.setStyle(`mapbox://styles/mapbox/${mapStyle}-v12`);
+  }, [mapStyle]);
+
   const handleSearch = async () => {
     if (!searchQuery.trim() || !mapboxToken) return;
 
     try {
       const query = `${searchQuery} Babcock University, Ilishan-Remo, Ogun State, Nigeria`;
       const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=${DEFAULT_CENTER.join(',')}&bbox=${DEFAULT_BOUNDS[0].join(',')},${DEFAULT_BOUNDS[1].join(',')}&access_token=${mapboxToken}&limit=1&types=poi,place,address&language=en`
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=3.7163,6.8906&access_token=${mapboxToken}`
       );
 
       const data = await response.json();
@@ -492,13 +288,7 @@ const MapboxLocationManager = ({
         </div>
 
         <div className="relative w-full h-[400px] rounded-lg overflow-hidden">
-          {mapError ? (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-              <p className="text-destructive">{mapError}</p>
-            </div>
-          ) : (
-            <div ref={mapContainer} className="w-full h-full" />
-          )}
+          <div ref={mapContainer} className="w-full h-full" />
         </div>
 
         <p className="text-sm text-muted-foreground">
