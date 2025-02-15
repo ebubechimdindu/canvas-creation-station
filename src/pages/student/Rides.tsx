@@ -57,7 +57,6 @@ import {
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import RideMap from "@/components/map/RideMap";
-import { Autocomplete } from "@/components/ui/autocomplete";
 
 const rides = [
   {
@@ -199,57 +198,27 @@ export default function StudentRides() {
                       <div className="space-y-4">
                         <div className="space-y-2">
                           <Label htmlFor="pickup">Pickup Location</Label>
-                          <Autocomplete
-                            onLoad={autocomplete => {
-                              console.log('Pickup autocomplete loaded');
-                              // Additional initialization if needed
-                            }}
-                            onPlaceChanged={() => {
-                              const place = autocomplete?.getPlace();
-                              if (place?.geometry?.location && place.formatted_address) {
-                                setRideRequest(prev => ({
-                                  ...prev,
-                                  pickup: place.formatted_address
-                                }));
-                                // Additional handling if needed
-                              }
-                            }}
-                          >
-                            <Input
-                              id="pickup"
-                              placeholder="Enter pickup location"
-                              value={rideRequest.pickup}
-                              onChange={(e) => setRideRequest({ ...rideRequest, pickup: e.target.value })}
-                              required
-                            />
-                          </Autocomplete>
+                          <Input
+                            id="pickup"
+                            placeholder="Enter pickup location"
+                            value={rideRequest.pickup}
+                            onChange={(e) =>
+                              setRideRequest({ ...rideRequest, pickup: e.target.value })
+                            }
+                            required
+                          />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="dropoff">Dropoff Location</Label>
-                          <Autocomplete
-                            onLoad={autocomplete => {
-                              console.log('Dropoff autocomplete loaded');
-                              // Additional initialization if needed
-                            }}
-                            onPlaceChanged={() => {
-                              const place = autocomplete?.getPlace();
-                              if (place?.geometry?.location && place.formatted_address) {
-                                setRideRequest(prev => ({
-                                  ...prev,
-                                  dropoff: place.formatted_address
-                                }));
-                                // Additional handling if needed
-                              }
-                            }}
-                          >
-                            <Input
-                              id="dropoff"
-                              placeholder="Enter dropoff location"
-                              value={rideRequest.dropoff}
-                              onChange={(e) => setRideRequest({ ...rideRequest, dropoff: e.target.value })}
-                              required
-                            />
-                          </Autocomplete>
+                          <Input
+                            id="dropoff"
+                            placeholder="Enter dropoff location"
+                            value={rideRequest.dropoff}
+                            onChange={(e) =>
+                              setRideRequest({ ...rideRequest, dropoff: e.target.value })
+                            }
+                            required
+                          />
                         </div>
                       </div>
                       <div className="space-y-4">

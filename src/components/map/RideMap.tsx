@@ -1,10 +1,12 @@
 
-import React, { useCallback, useEffect, useState } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer } from '@react-google-maps/api';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
+import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer, Autocomplete } from '@react-google-maps/api';
+import { Input } from '../ui/input';
+import { Button } from '../ui/button';
 import { Driver } from '@/types';
 import { Card } from '../ui/card';
-import { Loader2, Sun, Moon } from 'lucide-react';
-import { Button } from '../ui/button';
+import { Loader2, Sun, Moon, MapPin } from 'lucide-react';
+import { Label } from '../ui/label';
 import { toast } from 'sonner';
 
 const containerStyle = {
@@ -55,9 +57,20 @@ const RideMap = ({
     pickup?: google.maps.LatLng;
     dropoff?: google.maps.LatLng;
   }>({});
+  
+  const pickupAutocomplete = useRef<google.maps.places.Autocomplete | null>(null);
+  const dropoffAutocomplete = useRef<google.maps.places.Autocomplete | null>(null);
 
-  // Get API key from env
+  // Get API key from Supabase secrets
   const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
+  // Debug log for API key
+  useEffect(() => {
+    console.log('Google Maps API Key Status:', {
+      exists: !!googleMapsApiKey,
+      length: googleMapsApiKey?.length || 0
+    });
+  }, [googleMapsApiKey]);
 
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: googleMapsApiKey || '',
@@ -74,6 +87,7 @@ const RideMap = ({
       mapInstance: !!map
     });
 
+    // Update loading state based on isLoaded
     if (isLoaded && isLoading) {
       setIsLoading(false);
     }
@@ -87,6 +101,11 @@ const RideMap = ({
 
     const directionsService = new google.maps.DirectionsService();
     
+    console.log('Calculating route between:', {
+      origin: markers.pickup.toJSON(),
+      destination: markers.dropoff.toJSON()
+    });
+
     directionsService.route(
       {
         origin: markers.pickup.toJSON(),
@@ -94,6 +113,8 @@ const RideMap = ({
         travelMode: google.maps.TravelMode.DRIVING,
       },
       (result, status) => {
+        console.log('Route calculation result:', { status, hasResult: !!result });
+        
         if (status === google.maps.DirectionsStatus.OK && result) {
           setDirections(result);
           
@@ -129,19 +150,63 @@ const RideMap = ({
     setMap(null);
   }, []);
 
+  const handlePlaceSelect = useCallback((type: 'pickup' | 'dropoff') => {
+    const autocomplete = type === 'pickup' ? pickupAutocomplete.current : dropoffAutocomplete.current;
+    const place = autocomplete?.getPlace();
+    
+    console.log(`Place selected for ${type}:`, {
+      hasPlace: !!place,
+      hasGeometry: !!place?.geometry,
+      address: place?.formatted_address
+    });
+
+    if (place?.geometry?.location) {
+      const location = new google.maps.LatLng(
+        place.geometry.location.lat(),
+        place.geometry.location.lng()
+      );
+      
+      setMarkers(prev => ({
+        ...prev,
+        [type]: location
+      }));
+
+      if (onLocationSelect) {
+        onLocationSelect(type, {
+          address: place.formatted_address || '',
+          lat: location.lat(),
+          lng: location.lng()
+        });
+      }
+
+      if (map) {
+        map.panTo(location);
+        map.setZoom(15);
+      }
+    } else {
+      console.error('Selected place has no geometry');
+      toast.error('Invalid location selected. Please try again.');
+    }
+  }, [map, onLocationSelect]);
+
   const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
     if (!e.latLng) {
       console.error('Map click event has no coordinates');
       return;
     }
 
+    console.log('Map clicked:', e.latLng.toJSON());
+
     if (mode === 'driver' && onDriverLocationUpdate) {
       onDriverLocationUpdate(e.latLng.lat(), e.latLng.lng());
       return;
     }
 
+    // For student mode, allow clicking to set locations
     const geocoder = new google.maps.Geocoder();
     geocoder.geocode({ location: e.latLng }, (results, status) => {
+      console.log('Geocoding result:', { status, hasResults: !!results?.length });
+
       if (status === 'OK' && results?.[0]) {
         const address = results[0].formatted_address;
         const locationType = !markers.pickup ? 'pickup' : !markers.dropoff ? 'dropoff' : null;
@@ -166,15 +231,12 @@ const RideMap = ({
   }, [mode, onDriverLocationUpdate, markers, onLocationSelect]);
 
   if (loadError) {
+    console.error('Map loading error:', loadError);
     return (
       <Card className={`${className} min-h-[300px] flex items-center justify-center`}>
         <div className="text-center space-y-2">
           <p className="text-red-500">Error loading map</p>
-          <p className="text-sm text-muted-foreground">
-            {loadError.message.includes('API key') 
-              ? 'Invalid API key. Please check your configuration.' 
-              : loadError.message}
-          </p>
+          <p className="text-sm text-muted-foreground">{loadError.message}</p>
         </div>
       </Card>
     );
@@ -193,6 +255,39 @@ const RideMap = ({
 
   return (
     <div className={`relative ${className}`}>
+      {mode === 'student' && (
+        <div className="absolute top-4 left-4 right-4 z-10 space-y-2">
+          <div className="bg-white/95 backdrop-blur-sm p-4 rounded-lg shadow-lg space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="pickup-location">Pickup Location</Label>
+              <Autocomplete
+                onLoad={auto => pickupAutocomplete.current = auto}
+                onPlaceChanged={() => handlePlaceSelect('pickup')}
+              >
+                <Input
+                  id="pickup-location"
+                  placeholder="Enter pickup location"
+                  className="w-full"
+                />
+              </Autocomplete>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dropoff-location">Dropoff Location</Label>
+              <Autocomplete
+                onLoad={auto => dropoffAutocomplete.current = auto}
+                onPlaceChanged={() => handlePlaceSelect('dropoff')}
+              >
+                <Input
+                  id="dropoff-location"
+                  placeholder="Enter dropoff location"
+                  className="w-full"
+                />
+              </Autocomplete>
+            </div>
+          </div>
+        </div>
+      )}
+
       <GoogleMap
         mapContainerStyle={containerStyle}
         center={driverLocation || markers.pickup || defaultCenter}
@@ -294,3 +389,4 @@ const RideMap = ({
 };
 
 export default RideMap;
+
