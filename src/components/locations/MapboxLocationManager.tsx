@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -7,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { useMapboxLandmarks } from '@/hooks/use-mapbox-landmarks';
 import { type CampusLocation } from '@/types/locations';
 import { MapPin, Search, Layers } from 'lucide-react';
 
@@ -44,24 +44,16 @@ const MapboxLocationManager = ({
   const selectedMarker = useRef<mapboxgl.Marker | null>(null);
   const driversMarkers = useRef<mapboxgl.Marker[]>([]);
   const routeSource = useRef<mapboxgl.GeoJSONSource | null>(null);
+  const { landmarks, isLoading: isLoadingLandmarks } = useMapboxLandmarks();
+  const landmarkMarkers = useRef<mapboxgl.Marker[]>([]);
   const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
-  // Campus boundaries and landmarks
+  // Campus boundaries
   const CAMPUS_CENTER = [3.7242, 6.8923] as [number, number];
   const CAMPUS_BOUNDS = [
     [3.7192, 6.8873], // Southwest coordinates
     [3.7292, 6.8973]  // Northeast coordinates
   ] as [[number, number], [number, number]];
-
-  // Common campus landmarks
-  const CAMPUS_LANDMARKS = {
-    "Student Center": [3.7242, 6.8923],
-    "Main Gate": [3.7240, 6.8920],
-    "Library": [3.7245, 6.8925],
-    "Science Complex": [3.7244, 6.8924],
-    "Sports Complex": [3.7243, 6.8922],
-    "Cafeteria": [3.7241, 6.8921]
-  };
 
   // Initialize map only once
   useEffect(() => {
@@ -101,53 +93,36 @@ const MapboxLocationManager = ({
       });
     });
 
-    // Add landmarks to the map
-    Object.entries(CAMPUS_LANDMARKS).forEach(([name, [lng, lat]]) => {
-      new mapboxgl.Marker({ color: '#4B5563', scale: 0.8 })
-        .setLngLat([lng, lat])
-        .setPopup(new mapboxgl.Popup().setHTML(`<div class="text-sm font-medium">${name}</div>`))
-        .addTo(map.current!);
-    });
-
     return () => {
       map.current?.remove();
       map.current = null;
     };
   }, [mapboxToken]);
 
-  // Handle map style changes
+  // Update landmarks on map
   useEffect(() => {
-    if (!map.current) return;
-    map.current.setStyle(`mapbox://styles/mapbox/${mapStyle}-v12`);
-  }, [mapStyle]);
+    if (!map.current || isLoadingLandmarks) return;
 
-  // Handle route drawing
-  useEffect(() => {
-    if (!map.current || !initialView || !showRoutePath) return;
-    drawRoute(initialView.pickup, initialView.dropoff);
-  }, [initialView, showRoutePath, mapboxToken]);
+    // Clear existing landmark markers
+    landmarkMarkers.current.forEach(marker => marker.remove());
+    landmarkMarkers.current = [];
 
-  // Handle nearby drivers updates
-  useEffect(() => {
-    if (!map.current || !nearbyDrivers) return;
-
-    // Clear existing driver markers
-    driversMarkers.current.forEach(marker => marker.remove());
-    driversMarkers.current = [];
-
-    // Add new driver markers
-    nearbyDrivers.forEach(driver => {
-      const marker = new mapboxgl.Marker({ color: '#00FF00' })
-        .setLngLat([driver.lng, driver.lat])
+    // Add new landmark markers
+    landmarks.forEach(landmark => {
+      const marker = new mapboxgl.Marker({ color: '#4B5563', scale: 0.8 })
+        .setLngLat(landmark.coordinates)
+        .setPopup(
+          new mapboxgl.Popup().setHTML(
+            `<div class="p-2">
+              <div class="font-medium">${landmark.name}</div>
+              ${landmark.category ? `<div class="text-sm text-gray-500">${landmark.category}</div>` : ''}
+            </div>`
+          )
+        )
         .addTo(map.current!);
-      driversMarkers.current.push(marker);
+      landmarkMarkers.current.push(marker);
     });
-
-    return () => {
-      driversMarkers.current.forEach(marker => marker.remove());
-      driversMarkers.current = [];
-    };
-  }, [nearbyDrivers]);
+  }, [landmarks, isLoadingLandmarks]);
 
   const drawRoute = async (pickup: string, dropoff: string) => {
     if (!map.current || !mapboxToken) return;
@@ -233,7 +208,7 @@ const MapboxLocationManager = ({
     if (!mapboxToken) return null;
 
     // Check if the location matches any campus landmarks
-    const landmarkEntry = Object.entries(CAMPUS_LANDMARKS).find(([name]) => 
+    const landmarkEntry = Object.entries(landmarks).find(([name]) => 
       name.toLowerCase().includes(location.toLowerCase())
     );
     if (landmarkEntry) {
@@ -308,6 +283,40 @@ const MapboxLocationManager = ({
       });
     }
   };
+
+  // Handle map style changes
+  useEffect(() => {
+    if (!map.current) return;
+    map.current.setStyle(`mapbox://styles/mapbox/${mapStyle}-v12`);
+  }, [mapStyle]);
+
+  // Handle route drawing
+  useEffect(() => {
+    if (!map.current || !initialView || !showRoutePath) return;
+    drawRoute(initialView.pickup, initialView.dropoff);
+  }, [initialView, showRoutePath, mapboxToken]);
+
+  // Handle nearby drivers updates
+  useEffect(() => {
+    if (!map.current || !nearbyDrivers) return;
+
+    // Clear existing driver markers
+    driversMarkers.current.forEach(marker => marker.remove());
+    driversMarkers.current = [];
+
+    // Add new driver markers
+    nearbyDrivers.forEach(driver => {
+      const marker = new mapboxgl.Marker({ color: '#00FF00' })
+        .setLngLat([driver.lng, driver.lat])
+        .addTo(map.current!);
+      driversMarkers.current.push(marker);
+    });
+
+    return () => {
+      driversMarkers.current.forEach(marker => marker.remove());
+      driversMarkers.current = [];
+    };
+  }, [nearbyDrivers]);
 
   return (
     <Card className={className}>
