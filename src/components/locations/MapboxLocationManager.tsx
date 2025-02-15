@@ -1,4 +1,3 @@
-
 import { useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -10,6 +9,73 @@ import { useToast } from '@/hooks/use-toast';
 import { type CampusLocation } from '@/types/locations';
 import { MapPin, Search, Layers } from 'lucide-react';
 import { useState } from 'react';
+
+// Define campus landmarks
+const CAMPUS_LANDMARKS = {
+  type: 'FeatureCollection',
+  features: [
+    {
+      type: 'Feature',
+      properties: {
+        title: 'Main Gate',
+        description: 'University Main Entrance',
+        category: 'entry_point'
+      },
+      geometry: {
+        type: 'Point',
+        coordinates: [3.7187, 6.894]
+      }
+    },
+    {
+      type: 'Feature',
+      properties: {
+        title: 'Student Center',
+        description: 'Main student gathering area',
+        category: 'common_area'
+      },
+      geometry: {
+        type: 'Point',
+        coordinates: [3.7183, 6.8935]
+      }
+    },
+    {
+      type: 'Feature',
+      properties: {
+        title: 'Academic Building',
+        description: 'Main lecture halls',
+        category: 'academic'
+      },
+      geometry: {
+        type: 'Point',
+        coordinates: [3.7175, 6.8945]
+      }
+    },
+    {
+      type: 'Feature',
+      properties: {
+        title: 'Male Hostel',
+        description: 'Male student residence',
+        category: 'residence'
+      },
+      geometry: {
+        type: 'Point',
+        coordinates: [3.7195, 6.8925]
+      }
+    },
+    {
+      type: 'Feature',
+      properties: {
+        title: 'Female Hostel',
+        description: 'Female student residence',
+        category: 'residence'
+      },
+      geometry: {
+        type: 'Point',
+        coordinates: [3.7165, 6.8925]
+      }
+    }
+  ]
+};
 
 interface MapboxLocationManagerProps {
   onLocationSelect?: (location: CampusLocation) => void;
@@ -48,17 +114,107 @@ const MapboxLocationManager = ({
   useEffect(() => {
     if (!mapContainer.current || map.current || !mapboxToken) return;
 
+    // Initialize map with campus boundaries
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: `mapbox://styles/mapbox/${mapStyle}-v12`,
-      center: [3.7163, 6.8906], // Updated Babcock University coordinates
+      center: [3.7187, 6.894], // Babcock University center
       zoom: 16,
+      minZoom: 15, // Prevent zooming out too far
+      maxZoom: 19, // Allow detailed zoom
+      maxBounds: [ // Restrict map panning
+        [3.7137, 6.8880], // Southwest coordinates
+        [3.7237, 6.8980]  // Northeast coordinates
+      ],
       pitchWithRotate: true,
       pitch: 45,
     });
 
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
     map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-right');
+
+    // Add campus boundary and landmarks after map loads
+    map.current.on('load', () => {
+      if (!map.current) return;
+
+      // Add campus boundary polygon
+      map.current.addSource('campus-boundary', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'Polygon',
+            coordinates: [[
+              [3.7137, 6.8880],
+              [3.7237, 6.8880],
+              [3.7237, 6.8980],
+              [3.7137, 6.8980],
+              [3.7137, 6.8880]
+            ]]
+          }
+        }
+      });
+
+      // Add boundary line
+      map.current.addLayer({
+        id: 'campus-outline',
+        type: 'line',
+        source: 'campus-boundary',
+        paint: {
+          'line-color': '#FF0000',
+          'line-width': 2
+        }
+      });
+
+      // Add landmarks
+      map.current.addSource('landmarks', {
+        type: 'geojson',
+        data: CAMPUS_LANDMARKS
+      });
+
+      // Add landmark markers
+      map.current.addLayer({
+        id: 'landmarks',
+        type: 'symbol',
+        source: 'landmarks',
+        layout: {
+          'icon-image': 'marker-15',
+          'icon-size': 1.5,
+          'text-field': ['get', 'title'],
+          'text-offset': [0, 1.5],
+          'text-anchor': 'top',
+          'text-size': 12
+        },
+        paint: {
+          'text-color': '#000000',
+          'text-halo-color': '#ffffff',
+          'text-halo-width': 1
+        }
+      });
+
+      // Add popup for landmarks
+      map.current.on('click', 'landmarks', (e) => {
+        if (!e.features?.[0]) return;
+        
+        const coordinates = e.features[0].geometry.coordinates.slice();
+        const { title, description } = e.features[0].properties;
+        
+        new mapboxgl.Popup()
+          .setLngLat(coordinates)
+          .setHTML(`<h3>${title}</h3><p>${description}</p>`)
+          .addTo(map.current!);
+      });
+
+      // Change cursor on landmark hover
+      map.current.on('mouseenter', 'landmarks', () => {
+        if (map.current) map.current.getCanvas().style.cursor = 'pointer';
+      });
+      
+      map.current.on('mouseleave', 'landmarks', () => {
+        if (map.current) map.current.getCanvas().style.cursor = '';
+      });
+    });
 
     if (initialView && showRoutePath) {
       drawRoute(initialView.pickup, initialView.dropoff);
@@ -73,7 +229,19 @@ const MapboxLocationManager = ({
     }
 
     map.current.on('click', (e) => {
+      // Only allow clicks within campus bounds
       const { lng, lat } = e.lngLat;
+      if (
+        lng < 3.7137 || lng > 3.7237 ||
+        lat < 6.8880 || lat > 6.8980
+      ) {
+        toast({
+          title: 'Outside Campus',
+          description: 'Please select a location within campus boundaries',
+          variant: 'destructive'
+        });
+        return;
+      }
       
       if (selectedMarker.current) {
         selectedMarker.current.remove();
@@ -181,7 +349,7 @@ const MapboxLocationManager = ({
     try {
       const query = `${location} Babcock University, Ilishan-Remo, Ogun State, Nigeria`;
       const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=3.7163,6.8906&access_token=${mapboxToken}`
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=3.7187,6.894&bbox=3.7137,6.8880,3.7237,6.8980&access_token=${mapboxToken}`
       );
       const data = await response.json();
       
@@ -206,7 +374,7 @@ const MapboxLocationManager = ({
     try {
       const query = `${searchQuery} Babcock University, Ilishan-Remo, Ogun State, Nigeria`;
       const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=3.7163,6.8906&access_token=${mapboxToken}`
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=3.7187,6.894&bbox=3.7137,6.8880,3.7237,6.8980&access_token=${mapboxToken}`
       );
 
       const data = await response.json();
