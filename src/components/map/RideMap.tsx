@@ -69,7 +69,7 @@ const RideMap = ({
         const { data, error } = await supabase
           .from('secrets')
           .select('value')
-          .eq('key', 'GOOGLE_MAPS_API_KEY')
+          .eq('name', 'GOOGLE_MAPS_API_KEY')
           .single();
 
         if (error) {
