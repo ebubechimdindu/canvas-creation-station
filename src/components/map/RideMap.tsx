@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer, Autocomplete } from '@react-google-maps/api';
 import { Input } from '../ui/input';
@@ -8,6 +7,7 @@ import { Card } from '../ui/card';
 import { Loader2, Sun, Moon, MapPin } from 'lucide-react';
 import { Label } from '../ui/label';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const containerStyle = {
   width: '100%',
@@ -61,16 +61,39 @@ const RideMap = ({
   const pickupAutocomplete = useRef<google.maps.places.Autocomplete | null>(null);
   const dropoffAutocomplete = useRef<google.maps.places.Autocomplete | null>(null);
 
-  // Get API key from Supabase secrets
-  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const [googleMapsApiKey, setGoogleMapsApiKey] = useState<string | null>(null);
 
-  // Debug log for API key
   useEffect(() => {
-    console.log('Google Maps API Key Status:', {
-      exists: !!googleMapsApiKey,
-      length: googleMapsApiKey?.length || 0
-    });
-  }, [googleMapsApiKey]);
+    const loadApiKey = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('secrets')
+          .select('value')
+          .eq('key', 'GOOGLE_MAPS_API_KEY')
+          .single();
+
+        if (error) {
+          console.error('Error loading API key:', error);
+          toast.error('Failed to load map configuration.');
+          return;
+        }
+
+        if (!data?.value) {
+          console.error('No API key found in Supabase');
+          toast.error('API key not found. Please configure it in Supabase.');
+          return;
+        }
+
+        setGoogleMapsApiKey(data.value);
+        console.log('Successfully loaded Google Maps API key');
+      } catch (error) {
+        console.error('Failed to load API key:', error);
+        toast.error('Failed to load map configuration');
+      }
+    };
+
+    loadApiKey();
+  }, []);
 
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: googleMapsApiKey || '',
@@ -87,7 +110,6 @@ const RideMap = ({
       mapInstance: !!map
     });
 
-    // Update loading state based on isLoaded
     if (isLoaded && isLoading) {
       setIsLoading(false);
     }
@@ -237,6 +259,13 @@ const RideMap = ({
         <div className="text-center space-y-2">
           <p className="text-red-500">Error loading map</p>
           <p className="text-sm text-muted-foreground">{loadError.message}</p>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </Button>
         </div>
       </Card>
     );
@@ -389,4 +418,3 @@ const RideMap = ({
 };
 
 export default RideMap;
-
