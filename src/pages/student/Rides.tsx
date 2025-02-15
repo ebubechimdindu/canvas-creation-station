@@ -220,44 +220,25 @@ export default function StudentRides() {
                             required
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="date">Date</Label>
-                            <Input
-                              id="date"
-                              type="date"
-                              value={rideRequest.date}
-                              onChange={(e) =>
-                                setRideRequest({ ...rideRequest, date: e.target.value })
-                              }
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="time">Time</Label>
-                            <Input
-                              id="time"
-                              type="time"
-                              value={rideRequest.time}
-                              onChange={(e) =>
-                                setRideRequest({ ...rideRequest, time: e.target.value })
-                              }
-                              required
-                            />
-                          </div>
-                        </div>
                       </div>
                       <div className="space-y-4">
                         <Label>Location Preview</Label>
-                        <div className="relative aspect-square rounded-lg overflow-hidden bg-[#F1F0FB] border">
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="text-center space-y-2">
-                              <MapPin className="h-8 w-8 text-[#8E9196] mx-auto" />
-                              <p className="text-sm text-[#8E9196]">Select a location to preview</p>
-                            </div>
-                          </div>
-                          <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent to-background/10" />
-                        </div>
+                        <RideMap
+                          pickup={rideRequest.pickup}
+                          dropoff={rideRequest.dropoff}
+                          className="aspect-square rounded-lg overflow-hidden"
+                          showRoutePath={true}
+                          onRouteCalculated={(distance, duration) => {
+                            console.log(`Distance: ${distance}km, Duration: ${duration}min`);
+                          }}
+                          onLocationSelect={(type, location) => {
+                            setRideRequest(prev => ({
+                              ...prev,
+                              [type]: location.address
+                            }));
+                          }}
+                          mode="student"
+                        />
                       </div>
                     </div>
                     <div className="space-y-2">
@@ -307,7 +288,7 @@ export default function StudentRides() {
             </div>
 
             <div className="grid gap-6">
-              {activeRequest.status !== "Cancelled" && (
+              {activeRequest && (
                 <Card className="border-l-4 border-l-blue-500">
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between">
@@ -355,15 +336,14 @@ export default function StudentRides() {
                           <span className="font-medium">{activeRequest.nearbyDrivers}</span>
                         </div>
                       </div>
-                      <div className="relative aspect-video md:aspect-square rounded-lg overflow-hidden bg-[#F1F0FB] border">
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="text-center space-y-2">
-                            <Car className="h-8 w-8 text-[#8E9196] mx-auto animate-pulse" />
-                            <p className="text-sm text-[#8E9196]">Searching for nearby drivers...</p>
-                          </div>
-                        </div>
-                        <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent to-background/10" />
-                      </div>
+                      <RideMap
+                        pickup={rideRequest.pickup}
+                        dropoff={rideRequest.dropoff}
+                        className="aspect-video md:aspect-square rounded-lg overflow-hidden"
+                        showRoutePath={true}
+                        showNearbyRequests={true}
+                        mode="student"
+                      />
                     </div>
                   </CardContent>
                 </Card>
