@@ -1,11 +1,11 @@
 
-export type LocationCategory = 'academic' | 'residence' | 'common_area' | 'administrative' | 'pickup_point';
+export type LocationCategory = 'academic' | 'residence' | 'common_area' | 'administrative' | 'pickup_point' | 'dropoff_point' | 'campus_boundary';
 
 export interface CampusLocation {
   id: string;
   name: string;
   description?: string;
-  locationType: LocationCategory;  // Changed from 'category' to 'locationType'
+  locationType: LocationCategory;
   coordinates: {
     lat: number;
     lng: number;

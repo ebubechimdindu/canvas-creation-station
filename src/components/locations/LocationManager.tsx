@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { type CampusLocation } from '@/types/locations';
+import { type CampusLocation, type LocationCategory } from '@/types/locations';
 import { Loader2, MapPin, Plus } from 'lucide-react';
 import MapboxLocationManager from './MapboxLocationManager';
 
@@ -25,7 +25,7 @@ interface LocationManagerProps {
 const LocationManager = ({ onLocationSelect, mode = 'view' }: LocationManagerProps) => {
   const [locations, setLocations] = useState<CampusLocation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedLocationType, setSelectedLocationType] = useState<string>('all');
+  const [selectedLocationType, setSelectedLocationType] = useState<LocationCategory | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
@@ -46,7 +46,7 @@ const LocationManager = ({ onLocationSelect, mode = 'view' }: LocationManagerPro
         id: location.id,
         name: location.name,
         description: location.description,
-        locationType: location.location_type,
+        locationType: location.location_type as LocationCategory,
         coordinates: {
           lat: location.coordinates[1],
           lng: location.coordinates[0]
@@ -133,7 +133,7 @@ const LocationManager = ({ onLocationSelect, mode = 'view' }: LocationManagerPro
                 <Label htmlFor="locationType">Type</Label>
                 <Select
                   value={selectedLocationType}
-                  onValueChange={(value) => setSelectedLocationType(value)}
+                  onValueChange={(value: LocationCategory | 'all') => setSelectedLocationType(value)}
                 >
                   <SelectTrigger id="locationType">
                     <SelectValue placeholder="Select type" />

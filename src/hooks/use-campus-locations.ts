@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { CampusLocation } from '@/types/locations';
+import type { CampusLocation, LocationCategory } from '@/types/locations';
 
 export const useCampusLocations = () => {
   const [locations, setLocations] = useState<CampusLocation[]>([]);
@@ -23,7 +23,7 @@ export const useCampusLocations = () => {
             id: location.id,
             name: location.name,
             description: location.description,
-            locationType: location.location_type,
+            locationType: location.location_type as LocationCategory,
             coordinates: {
               lat: location.coordinates[1],
               lng: location.coordinates[0]
