@@ -1,7 +1,7 @@
 
 import React from 'react';
 import MapboxLocationManager from '@/components/locations/MapboxLocationManager';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import { TooltipProvider } from '@radix-ui/react-tooltip';
 
 interface RideMapProps {
   pickup: string;
@@ -25,20 +25,18 @@ const RideMap: React.FC<RideMapProps> = ({
   showNearbyRequests
 }) => {
   return (
-    <TooltipProvider>
-      <MapboxLocationManager
-        className={className}
-        initialView={{
-          pickup,
-          dropoff
-        }}
-        showRoutePath={showRoutePath}
-        mode={mode}
-        nearbyDrivers={nearbyDrivers}
-        onRouteCalculated={onRouteCalculated}
-        showNearbyRequests={showNearbyRequests}
-      />
-    </TooltipProvider>
+    <MapboxLocationManager
+      className={className}
+      initialView={{
+        pickup,
+        dropoff
+      }}
+      showRoutePath={showRoutePath}
+      mode={mode}
+      nearbyDrivers={nearbyDrivers}
+      onRouteCalculated={onRouteCalculated}
+      showNearbyRequests={showNearbyRequests}
+    />
   );
 };
 

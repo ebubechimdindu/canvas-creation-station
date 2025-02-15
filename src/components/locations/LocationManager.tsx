@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { type CampusLocation, type LocationCategory } from '@/types/locations';
+import { type CampusLocation } from '@/types/locations';
 import { Loader2, MapPin, Plus } from 'lucide-react';
 import MapboxLocationManager from './MapboxLocationManager';
 
@@ -24,7 +25,7 @@ interface LocationManagerProps {
 const LocationManager = ({ onLocationSelect, mode = 'view' }: LocationManagerProps) => {
   const [locations, setLocations] = useState<CampusLocation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState<LocationCategory | 'all'>('all');
+  const [selectedLocationType, setSelectedLocationType] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
@@ -45,7 +46,7 @@ const LocationManager = ({ onLocationSelect, mode = 'view' }: LocationManagerPro
         id: location.id,
         name: location.name,
         description: location.description,
-        category: location.category,
+        locationType: location.location_type,
         coordinates: {
           lat: location.coordinates[1],
           lng: location.coordinates[0]
@@ -77,17 +78,16 @@ const LocationManager = ({ onLocationSelect, mode = 'view' }: LocationManagerPro
   };
 
   const filteredLocations = locations.filter(location => {
-    const matchesCategory = selectedCategory === 'all' || location.category === selectedCategory;
+    const matchesLocationType = selectedLocationType === 'all' || location.locationType === selectedLocationType;
     const matchesSearch = location.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       location.buildingCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       location.commonNames?.some(name => name.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    return matchesCategory && matchesSearch;
+    return matchesLocationType && matchesSearch;
   });
 
   const handleCoordinatesSelect = (lat: number, lng: number) => {
     console.log('Selected coordinates:', { lat, lng });
-    // Here you can implement logic to update or create a location with these coordinates
   };
 
   if (isLoading) {
@@ -130,21 +130,19 @@ const LocationManager = ({ onLocationSelect, mode = 'view' }: LocationManagerPro
                 />
               </div>
               <div className="w-[200px]">
-                <Label htmlFor="category">Category</Label>
+                <Label htmlFor="locationType">Type</Label>
                 <Select
-                  value={selectedCategory}
-                  onValueChange={(value) => setSelectedCategory(value as LocationCategory | 'all')}
+                  value={selectedLocationType}
+                  onValueChange={(value) => setSelectedLocationType(value)}
                 >
-                  <SelectTrigger id="category">
-                    <SelectValue placeholder="Select category" />
+                  <SelectTrigger id="locationType">
+                    <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
-                    <SelectItem value="academic">Academic</SelectItem>
-                    <SelectItem value="residence">Residence</SelectItem>
-                    <SelectItem value="common_area">Common Area</SelectItem>
-                    <SelectItem value="administrative">Administrative</SelectItem>
+                    <SelectItem value="all">All Types</SelectItem>
                     <SelectItem value="pickup_point">Pickup Point</SelectItem>
+                    <SelectItem value="dropoff_point">Dropoff Point</SelectItem>
+                    <SelectItem value="campus_boundary">Campus Boundary</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -168,7 +166,7 @@ const LocationManager = ({ onLocationSelect, mode = 'view' }: LocationManagerPro
                         <h3 className="font-medium">{location.name}</h3>
                         <p className="text-sm text-muted-foreground">
                           {location.buildingCode && `${location.buildingCode} • `}
-                          {location.category.replace('_', ' ')}
+                          {location.locationType.replace('_', ' ')}
                         </p>
                       </div>
                       {location.isVerified && (
