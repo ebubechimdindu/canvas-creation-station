@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,6 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { type CampusLocation } from '@/types/locations';
 import { MapPin, Search, Layers } from 'lucide-react';
-import { useState } from 'react';
 
 interface MapboxLocationManagerProps {
   onLocationSelect?: (location: CampusLocation) => void;
@@ -43,15 +42,18 @@ const MapboxLocationManager = ({
   const [mapStyle, setMapStyle] = useState<'streets' | 'satellite'>('streets');
   const { toast } = useToast();
   const selectedMarker = useRef<mapboxgl.Marker | null>(null);
+  const driversMarkers = useRef<mapboxgl.Marker[]>([]);
+  const routeSource = useRef<mapboxgl.GeoJSONSource | null>(null);
   const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
+  // Initialize map only once
   useEffect(() => {
     if (!mapContainer.current || map.current || !mapboxToken) return;
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: `mapbox://styles/mapbox/${mapStyle}-v12`,
-      center: [3.7163, 6.8906], // Updated Babcock University coordinates
+      center: [3.7163, 6.8906], // Babcock University coordinates
       zoom: 16,
       pitchWithRotate: true,
       pitch: 45,
@@ -59,18 +61,6 @@ const MapboxLocationManager = ({
 
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
     map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-right');
-
-    if (initialView && showRoutePath) {
-      drawRoute(initialView.pickup, initialView.dropoff);
-    }
-
-    if (mode === 'driver' && nearbyDrivers) {
-      nearbyDrivers.forEach(driver => {
-        new mapboxgl.Marker({ color: '#00FF00' })
-          .setLngLat([driver.lng, driver.lat])
-          .addTo(map.current!);
-      });
-    }
 
     map.current.on('click', (e) => {
       const { lng, lat } = e.lngLat;
@@ -93,8 +83,43 @@ const MapboxLocationManager = ({
 
     return () => {
       map.current?.remove();
+      map.current = null;
     };
-  }, [mapStyle, mapboxToken, initialView, showRoutePath, mode, nearbyDrivers]);
+  }, [mapboxToken]);
+
+  // Handle map style changes
+  useEffect(() => {
+    if (!map.current) return;
+    map.current.setStyle(`mapbox://styles/mapbox/${mapStyle}-v12`);
+  }, [mapStyle]);
+
+  // Handle route drawing
+  useEffect(() => {
+    if (!map.current || !initialView || !showRoutePath) return;
+    drawRoute(initialView.pickup, initialView.dropoff);
+  }, [initialView, showRoutePath, mapboxToken]);
+
+  // Handle nearby drivers updates
+  useEffect(() => {
+    if (!map.current || !nearbyDrivers) return;
+
+    // Clear existing driver markers
+    driversMarkers.current.forEach(marker => marker.remove());
+    driversMarkers.current = [];
+
+    // Add new driver markers
+    nearbyDrivers.forEach(driver => {
+      const marker = new mapboxgl.Marker({ color: '#00FF00' })
+        .setLngLat([driver.lng, driver.lat])
+        .addTo(map.current!);
+      driversMarkers.current.push(marker);
+    });
+
+    return () => {
+      driversMarkers.current.forEach(marker => marker.remove());
+      driversMarkers.current = [];
+    };
+  }, [nearbyDrivers]);
 
   const drawRoute = async (pickup: string, dropoff: string) => {
     if (!map.current || !mapboxToken) return;
@@ -194,11 +219,6 @@ const MapboxLocationManager = ({
       return null;
     }
   };
-
-  useEffect(() => {
-    if (!map.current) return;
-    map.current.setStyle(`mapbox://styles/mapbox/${mapStyle}-v12`);
-  }, [mapStyle]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim() || !mapboxToken) return;
