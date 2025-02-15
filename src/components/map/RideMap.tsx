@@ -1,6 +1,7 @@
 
 import React from 'react';
 import MapboxLocationManager from '@/components/locations/MapboxLocationManager';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 interface RideMapProps {
   pickup: string;
@@ -10,7 +11,7 @@ interface RideMapProps {
   mode?: 'student' | 'driver';
   nearbyDrivers?: Array<{ lat: number; lng: number }>;
   onRouteCalculated?: (distance: number, duration: number) => void;
-  showNearbyRequests?: boolean; // Added this prop
+  showNearbyRequests?: boolean;
 }
 
 const RideMap: React.FC<RideMapProps> = ({
@@ -24,18 +25,20 @@ const RideMap: React.FC<RideMapProps> = ({
   showNearbyRequests
 }) => {
   return (
-    <MapboxLocationManager
-      className={className}
-      initialView={{
-        pickup,
-        dropoff
-      }}
-      showRoutePath={showRoutePath}
-      mode={mode}
-      nearbyDrivers={nearbyDrivers}
-      onRouteCalculated={onRouteCalculated}
-      showNearbyRequests={showNearbyRequests}
-    />
+    <TooltipProvider>
+      <MapboxLocationManager
+        className={className}
+        initialView={{
+          pickup,
+          dropoff
+        }}
+        showRoutePath={showRoutePath}
+        mode={mode}
+        nearbyDrivers={nearbyDrivers}
+        onRouteCalculated={onRouteCalculated}
+        showNearbyRequests={showNearbyRequests}
+      />
+    </TooltipProvider>
   );
 };
 

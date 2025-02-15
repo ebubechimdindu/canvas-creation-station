@@ -12,7 +12,6 @@ export type Database = {
       campus_locations: {
         Row: {
           building_code: string | null
-          category: Database["public"]["Enums"]["location_category"]
           common_names: string[] | null
           coordinates: unknown
           created_at: string
@@ -21,12 +20,12 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_verified: boolean | null
+          location_type: string
           name: string
           updated_at: string
         }
         Insert: {
           building_code?: string | null
-          category: Database["public"]["Enums"]["location_category"]
           common_names?: string[] | null
           coordinates: unknown
           created_at?: string
@@ -35,12 +34,12 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_verified?: boolean | null
+          location_type: string
           name: string
           updated_at?: string
         }
         Update: {
           building_code?: string | null
-          category?: Database["public"]["Enums"]["location_category"]
           common_names?: string[] | null
           coordinates?: unknown
           created_at?: string
@@ -49,6 +48,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_verified?: boolean | null
+          location_type?: string
           name?: string
           updated_at?: string
         }
@@ -3458,6 +3458,7 @@ export type Database = {
         | "common_area"
         | "administrative"
         | "pickup_point"
+      location_type: "pickup_point" | "dropoff_point" | "campus_boundary"
       ride_status:
         | "pending"
         | "accepted"
