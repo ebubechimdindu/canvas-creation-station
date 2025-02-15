@@ -46,6 +46,13 @@ const MapboxLocationManager = ({
   const routeSource = useRef<mapboxgl.GeoJSONSource | null>(null);
   const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
+  // Campus boundaries
+  const CAMPUS_CENTER = [3.7242, 6.8923] as [number, number];
+  const CAMPUS_BOUNDS = [
+    [3.7192, 6.8873], // Southwest coordinates
+    [3.7292, 6.8973]  // Northeast coordinates
+  ] as [[number, number], [number, number]];
+
   // Initialize map only once
   useEffect(() => {
     if (!mapContainer.current || map.current || !mapboxToken) return;
@@ -53,10 +60,13 @@ const MapboxLocationManager = ({
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: `mapbox://styles/mapbox/${mapStyle}-v12`,
-      center: [3.7163, 6.8906], // Babcock University coordinates
+      center: CAMPUS_CENTER,
       zoom: 16,
+      minZoom: 15,
+      maxZoom: 19,
       pitchWithRotate: true,
       pitch: 45,
+      maxBounds: CAMPUS_BOUNDS
     });
 
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
@@ -180,14 +190,15 @@ const MapboxLocationManager = ({
           });
         }
 
-        // Fit map to route bounds
+        // Fit map to route bounds within campus bounds
         const coordinates = route.geometry.coordinates;
         const bounds = coordinates.reduce((bounds, coord) => {
           return bounds.extend(coord as [number, number]);
         }, new mapboxgl.LngLatBounds(coordinates[0], coordinates[0]));
 
         map.current.fitBounds(bounds, {
-          padding: 50
+          padding: 50,
+          maxZoom: 19
         });
       }
     } catch (error) {
@@ -205,8 +216,9 @@ const MapboxLocationManager = ({
 
     try {
       const query = `${location} Babcock University, Ilishan-Remo, Ogun State, Nigeria`;
+      const bbox = CAMPUS_BOUNDS.flat().join(','); // Convert bounds to bbox string
       const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=3.7163,6.8906&access_token=${mapboxToken}`
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=${CAMPUS_CENTER.join(',')}&bbox=${bbox}&types=poi,address&access_token=${mapboxToken}`
       );
       const data = await response.json();
       
