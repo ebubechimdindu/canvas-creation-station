@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useAppSelector } from "@/hooks/redux";
 import { useToast } from "@/hooks/use-toast";
@@ -23,7 +24,9 @@ import { SearchFilters } from "@/components/rides/SearchFilters";
 import RideDetailsModal from "@/components/rides/RideDetailsModal";
 import { useAppDispatch } from "@/hooks/redux";
 import { markPaymentReceived } from "@/features/rides/ridesSlice";
-import type { Ride } from "@/types";
+import type { Ride, Driver } from "@/types";
+import { useLocationUpdates } from "@/hooks/use-location-updates";
+import RideMap from "@/components/map/RideMap";
 
 const DriverRides = () => {
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
@@ -39,6 +42,9 @@ const DriverRides = () => {
   const rides = useAppSelector((state) => state.rides.history);
   const dispatch = useAppDispatch();
 
+  // Get real-time driver locations
+  const { nearbyDrivers, error: locationError } = useLocationUpdates('all-drivers');
+
   const filteredRides = rides.filter(ride => {
     const matchesStatus = searchFilters.status === 'all' || ride.status === searchFilters.status;
     const matchesSearch = searchFilters.searchTerm
@@ -53,7 +59,6 @@ const DriverRides = () => {
   });
 
   const updateRideStatus = (rideId: number, newStatus: Ride['status']) => {
-    // In a real app, this would dispatch an action to update the ride status
     toast({
       title: "Status Updated",
       description: `Ride #${rideId} status has been updated to ${newStatus}`,
@@ -93,6 +98,14 @@ const DriverRides = () => {
     });
   };
 
+  if (locationError) {
+    toast({
+      title: "Location Error",
+      description: "Failed to load driver locations. Please try again.",
+      variant: "destructive",
+    });
+  }
+
   return (
     <div className="flex h-screen bg-gray-50">
       <DriverSidebar />
@@ -105,6 +118,25 @@ const DriverRides = () => {
               <p className="text-gray-600">View and manage your rides</p>
             </div>
           </div>
+
+          {/* Map View */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Live Map View</CardTitle>
+            </CardHeader>
+            <CardContent className="h-[400px]">
+              <RideMap
+                pickup=""
+                dropoff=""
+                className="w-full h-full rounded-lg"
+                nearbyDrivers={nearbyDrivers?.map(driver => ({
+                  lat: driver.currentLocation?.lat || 0,
+                  lng: driver.currentLocation?.lng || 0
+                })).filter(loc => loc.lat !== 0 && loc.lng !== 0)}
+                showNearbyRequests={true}
+              />
+            </CardContent>
+          </Card>
 
           {/* Search Filters */}
           <Card>

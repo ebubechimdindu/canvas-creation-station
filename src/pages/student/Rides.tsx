@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useAppSelector, useAppDispatch } from "@/hooks/redux";
 import { setActiveRide, addToHistory, updateDrivers } from "@/features/rides/ridesSlice";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
@@ -22,7 +22,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, Star, MessageSquare, Clock, Car, Search, Filter, Download, X } from 'lucide-react';
+import { Calendar, MapPin, Star, MessageSquare, Clock, Car, Search, Filter, Download, X } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import {
   Dialog,
@@ -57,7 +57,7 @@ import {
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import RideMap from "@/components/map/RideMap";
-import { Autocomplete } from "@react-google-maps/api";
+import { MapProvider } from "@/components/map/MapProvider";
 
 const rides = [
   {
@@ -123,9 +123,6 @@ export default function StudentRides() {
   const [selectedRideDetails, setSelectedRideDetails] = useState<typeof rides[0] | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
-  const pickupAutocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
-  const dropoffAutocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
-
   const handleRideRequest = (e: React.FormEvent) => {
     e.preventDefault();
     const newRide = {
@@ -180,97 +177,95 @@ export default function StudentRides() {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-background">
-        <StudentSidebar />
-        <main className="flex-1 p-8">
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h1 className="text-3xl font-bold">Your Rides</h1>
-              <Dialog open={isRequestOpen} onOpenChange={setIsRequestOpen}>
-                <DialogTrigger asChild>
-                  <Button size="lg" className="gap-2">
-                    <Car className="h-5 w-5" />
-                    Request a Ride
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[625px]">
-                  <DialogHeader>
-                    <DialogTitle>Request a Ride</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleRideRequest} className="space-y-4">
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="pickup">Pickup Location</Label>
-                          <Autocomplete
-                            onLoad={(autoComplete) => {
-                              pickupAutocompleteRef.current = autoComplete;
-                            }}
-                            onPlaceChanged={() => {
-                              const place = pickupAutocompleteRef.current?.getPlace();
-                              if (place?.geometry?.location && place.formatted_address) {
-                                setRideRequest(prev => ({
-                                  ...prev,
-                                  pickup: place.formatted_address
-                                }));
-                              }
-                            }}
-                          >
+      <MapProvider>
+        <div className="flex min-h-screen w-full bg-background">
+          <StudentSidebar />
+          <main className="flex-1 p-8">
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h1 className="text-3xl font-bold">Your Rides</h1>
+                <Dialog open={isRequestOpen} onOpenChange={setIsRequestOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="lg" className="gap-2">
+                      <Car className="h-5 w-5" />
+                      Request a Ride
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[625px]">
+                    <DialogHeader>
+                      <DialogTitle>Request a Ride</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleRideRequest} className="space-y-4">
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="pickup">Pickup Location</Label>
                             <Input
                               id="pickup"
                               placeholder="Enter pickup location"
                               value={rideRequest.pickup}
-                              onChange={(e) => setRideRequest({ ...rideRequest, pickup: e.target.value })}
+                              onChange={(e) =>
+                                setRideRequest({ ...rideRequest, pickup: e.target.value })
+                              }
                               required
                             />
-                          </Autocomplete>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="dropoff">Dropoff Location</Label>
-                          <Autocomplete
-                            onLoad={(autoComplete) => {
-                              dropoffAutocompleteRef.current = autoComplete;
-                            }}
-                            onPlaceChanged={() => {
-                              const place = dropoffAutocompleteRef.current?.getPlace();
-                              if (place?.geometry?.location && place.formatted_address) {
-                                setRideRequest(prev => ({
-                                  ...prev,
-                                  dropoff: place.formatted_address
-                                }));
-                              }
-                            }}
-                          >
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="dropoff">Dropoff Location</Label>
                             <Input
                               id="dropoff"
                               placeholder="Enter dropoff location"
                               value={rideRequest.dropoff}
-                              onChange={(e) => setRideRequest({ ...rideRequest, dropoff: e.target.value })}
+                              onChange={(e) =>
+                                setRideRequest({ ...rideRequest, dropoff: e.target.value })
+                              }
                               required
                             />
-                          </Autocomplete>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="date">Date</Label>
+                              <Input
+                                id="date"
+                                type="date"
+                                value={rideRequest.date}
+                                onChange={(e) =>
+                                  setRideRequest({ ...rideRequest, date: e.target.value })
+                                }
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="time">Time</Label>
+                              <Input
+                                id="time"
+                                type="time"
+                                value={rideRequest.time}
+                                onChange={(e) =>
+                                  setRideRequest({ ...rideRequest, time: e.target.value })
+                                }
+                                required
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-4">
+                          <Label>Location Preview</Label>
+                          <div className="relative aspect-square rounded-lg overflow-hidden">
+                            <RideMap
+                              pickup={rideRequest.pickup}
+                              dropoff={rideRequest.dropoff}
+                              className="w-full h-full"
+                              showRoutePath={true}
+                              mode="student"
+                              nearbyDrivers={availableDrivers?.map(driver => ({
+                                lat: driver.currentLocation?.lat || 0,
+                                lng: driver.currentLocation?.lng || 0
+                              })).filter(loc => loc.lat !== 0 && loc.lng !== 0)}
+                            />
+                          </div>
                         </div>
                       </div>
-                      <div className="space-y-4">
-                        <Label>Location Preview</Label>
-                        <RideMap
-                          pickup={rideRequest.pickup}
-                          dropoff={rideRequest.dropoff}
-                          className="aspect-square rounded-lg overflow-hidden"
-                          showRoutePath={true}
-                          onRouteCalculated={(distance, duration) => {
-                            console.log(`Distance: ${distance}km, Duration: ${duration}min`);
-                          }}
-                          onLocationSelect={(type, location) => {
-                            setRideRequest(prev => ({
-                              ...prev,
-                              [type]: location.address
-                            }));
-                          }}
-                          mode="student"
-                        />
-                      </div>
-                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="specialRequirements">Special Requirements</Label>
                       <Select
@@ -318,7 +313,7 @@ export default function StudentRides() {
             </div>
 
             <div className="grid gap-6">
-              {activeRequest && (
+              {activeRequest.status !== "Cancelled" && (
                 <Card className="border-l-4 border-l-blue-500">
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between">
@@ -366,14 +361,19 @@ export default function StudentRides() {
                           <span className="font-medium">{activeRequest.nearbyDrivers}</span>
                         </div>
                       </div>
-                      <RideMap
-                        pickup={rideRequest.pickup}
-                        dropoff={rideRequest.dropoff}
-                        className="aspect-video md:aspect-square rounded-lg overflow-hidden"
-                        showRoutePath={true}
-                        showNearbyRequests={true}
-                        mode="student"
-                      />
+                      <div className="relative aspect-video md:aspect-square rounded-lg overflow-hidden">
+                        <RideMap
+                          pickup={rideRequest.pickup}
+                          dropoff={rideRequest.dropoff}
+                          className="w-full h-full"
+                          showRoutePath={true}
+                          mode="student"
+                          nearbyDrivers={availableDrivers?.map(driver => ({
+                            lat: driver.currentLocation?.lat || 0,
+                            lng: driver.currentLocation?.lng || 0
+                          })).filter(loc => loc.lat !== 0 && loc.lng !== 0)}
+                        />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -647,13 +647,14 @@ export default function StudentRides() {
             </div>
           </div>
         </main>
-      </div>
+        </div>
 
-      <RideDetailsModal
-        ride={selectedRideDetails}
-        open={isDetailsModalOpen}
-        onOpenChange={setIsDetailsModalOpen}
-      />
+        <RideDetailsModal
+          ride={selectedRideDetails}
+          open={isDetailsModalOpen}
+          onOpenChange={setIsDetailsModalOpen}
+        />
+      </MapProvider>
     </SidebarProvider>
   );
 }

@@ -1,16 +1,14 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { type CampusLocation, type LocationType } from '@/types/locations';
+import { type CampusLocation } from '@/types/locations';
 import { useToast } from './use-toast';
-import { useAuth } from './useAuth';
 
 export function useCampusLocations() {
   const [locations, setLocations] = useState<CampusLocation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const { user } = useAuth();
 
   useEffect(() => {
     fetchLocations();
@@ -32,20 +30,20 @@ export function useCampusLocations() {
         id: location.id,
         name: location.name,
         description: location.description,
-        locationType: location.location_type as LocationType,
+        category: location.category,
         coordinates: {
-          lat: Number(location.coordinates[1]),
-          lng: Number(location.coordinates[0])
+          lat: location.coordinates[1],
+          lng: location.coordinates[0]
         },
         isActive: location.is_active,
         isVerified: location.is_verified,
         buildingCode: location.building_code,
         commonNames: location.common_names,
         entrancePoints: location.entrance_points?.map((point: any) => ({
-          lat: Number(point.lat),
-          lng: Number(point.lng),
+          lat: point.lat,
+          lng: point.lng,
           description: point.description
-        })),
+        })) || [],
         createdAt: location.created_at,
         updatedAt: location.updated_at
       }));
@@ -73,8 +71,9 @@ export function useCampusLocations() {
     }
   ) => {
     try {
-      if (!user) {
-        throw new Error('You must be logged in to submit feedback');
+      const user = await supabase.auth.getUser();
+      if (!user.data.user) {
+        throw new Error('User must be authenticated to submit feedback');
       }
 
       const { error: feedbackError } = await supabase
@@ -86,7 +85,7 @@ export function useCampusLocations() {
           suggested_coordinates: feedback.suggestedCoordinates 
             ? `(${feedback.suggestedCoordinates.lng},${feedback.suggestedCoordinates.lat})`
             : null,
-          submitted_by: user.id
+          submitted_by: user.data.user.id
         });
 
       if (feedbackError) throw feedbackError;
