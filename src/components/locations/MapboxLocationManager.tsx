@@ -10,67 +10,67 @@ import { type CampusLocation } from '@/types/locations';
 import { MapPin, Search, Layers } from 'lucide-react';
 import { useState } from 'react';
 
-// Define campus landmarks
-const CAMPUS_LANDMARKS = {
-  type: 'FeatureCollection',
+// Define campus landmarks with proper GeoJSON typing
+const CAMPUS_LANDMARKS: GeoJSON.FeatureCollection = {
+  type: "FeatureCollection",
   features: [
     {
-      type: 'Feature',
+      type: "Feature",
       properties: {
         title: 'Main Gate',
         description: 'University Main Entrance',
         category: 'entry_point'
       },
       geometry: {
-        type: 'Point',
+        type: "Point",
         coordinates: [3.7187, 6.894]
       }
     },
     {
-      type: 'Feature',
+      type: "Feature",
       properties: {
         title: 'Student Center',
         description: 'Main student gathering area',
         category: 'common_area'
       },
       geometry: {
-        type: 'Point',
+        type: "Point",
         coordinates: [3.7183, 6.8935]
       }
     },
     {
-      type: 'Feature',
+      type: "Feature",
       properties: {
         title: 'Academic Building',
         description: 'Main lecture halls',
         category: 'academic'
       },
       geometry: {
-        type: 'Point',
+        type: "Point",
         coordinates: [3.7175, 6.8945]
       }
     },
     {
-      type: 'Feature',
+      type: "Feature",
       properties: {
         title: 'Male Hostel',
         description: 'Male student residence',
         category: 'residence'
       },
       geometry: {
-        type: 'Point',
+        type: "Point",
         coordinates: [3.7195, 6.8925]
       }
     },
     {
-      type: 'Feature',
+      type: "Feature",
       properties: {
         title: 'Female Hostel',
         description: 'Female student residence',
         category: 'residence'
       },
       geometry: {
-        type: 'Point',
+        type: "Point",
         coordinates: [3.7165, 6.8925]
       }
     }
@@ -114,17 +114,16 @@ const MapboxLocationManager = ({
   useEffect(() => {
     if (!mapContainer.current || map.current || !mapboxToken) return;
 
-    // Initialize map with campus boundaries
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: `mapbox://styles/mapbox/${mapStyle}-v12`,
-      center: [3.7187, 6.894], // Babcock University center
+      center: [3.7187, 6.894],
       zoom: 16,
-      minZoom: 15, // Prevent zooming out too far
-      maxZoom: 19, // Allow detailed zoom
-      maxBounds: [ // Restrict map panning
-        [3.7137, 6.8880], // Southwest coordinates
-        [3.7237, 6.8980]  // Northeast coordinates
+      minZoom: 15,
+      maxZoom: 19,
+      maxBounds: [
+        [3.7137, 6.8880],
+        [3.7237, 6.8980]
       ],
       pitchWithRotate: true,
       pitch: 45,
@@ -133,18 +132,16 @@ const MapboxLocationManager = ({
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
     map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-right');
 
-    // Add campus boundary and landmarks after map loads
     map.current.on('load', () => {
       if (!map.current) return;
 
-      // Add campus boundary polygon
       map.current.addSource('campus-boundary', {
         type: 'geojson',
         data: {
-          type: 'Feature',
+          type: "Feature",
           properties: {},
           geometry: {
-            type: 'Polygon',
+            type: "Polygon",
             coordinates: [[
               [3.7137, 6.8880],
               [3.7237, 6.8880],
@@ -152,11 +149,10 @@ const MapboxLocationManager = ({
               [3.7137, 6.8980],
               [3.7137, 6.8880]
             ]]
-          }
+          } as GeoJSON.Feature<GeoJSON.Polygon>
         }
       });
 
-      // Add boundary line
       map.current.addLayer({
         id: 'campus-outline',
         type: 'line',
@@ -167,13 +163,11 @@ const MapboxLocationManager = ({
         }
       });
 
-      // Add landmarks
       map.current.addSource('landmarks', {
         type: 'geojson',
         data: CAMPUS_LANDMARKS
       });
 
-      // Add landmark markers
       map.current.addLayer({
         id: 'landmarks',
         type: 'symbol',
@@ -193,20 +187,18 @@ const MapboxLocationManager = ({
         }
       });
 
-      // Add popup for landmarks
       map.current.on('click', 'landmarks', (e) => {
         if (!e.features?.[0]) return;
         
-        const coordinates = e.features[0].geometry.coordinates.slice();
-        const { title, description } = e.features[0].properties;
+        const feature = e.features[0];
+        const geometry = feature.geometry as GeoJSON.Point;
         
         new mapboxgl.Popup()
-          .setLngLat(coordinates)
-          .setHTML(`<h3>${title}</h3><p>${description}</p>`)
+          .setLngLat(geometry.coordinates)
+          .setHTML(`<h3>${feature.properties?.title}</h3><p>${feature.properties?.description}</p>`)
           .addTo(map.current!);
       });
 
-      // Change cursor on landmark hover
       map.current.on('mouseenter', 'landmarks', () => {
         if (map.current) map.current.getCanvas().style.cursor = 'pointer';
       });
@@ -229,7 +221,6 @@ const MapboxLocationManager = ({
     }
 
     map.current.on('click', (e) => {
-      // Only allow clicks within campus bounds
       const { lng, lat } = e.lngLat;
       if (
         lng < 3.7137 || lng > 3.7237 ||
@@ -255,7 +246,7 @@ const MapboxLocationManager = ({
 
       toast({
         title: 'Location Selected',
-        description: `Latitude: ${lat.toFixed(6)}, Longitude: ${lng.toFixed(6)}`,
+        description: `Location selected within campus`,
       });
     });
 
@@ -323,7 +314,6 @@ const MapboxLocationManager = ({
           });
         }
 
-        // Fit map to route bounds
         const coordinates = route.geometry.coordinates;
         const bounds = coordinates.reduce((bounds, coord) => {
           return bounds.extend(coord as [number, number]);
