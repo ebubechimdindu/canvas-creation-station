@@ -7,6 +7,7 @@ import { Driver } from '@/types';
 import { Card } from '../ui/card';
 import { Loader2, Sun, Moon, MapPin } from 'lucide-react';
 import { Label } from '../ui/label';
+import { toast } from 'sonner';
 
 const containerStyle = {
   width: '100%',
@@ -14,7 +15,6 @@ const containerStyle = {
   borderRadius: '0.5rem'
 };
 
-// UI Lagos center coordinates
 const defaultCenter = {
   lat: 6.4552,
   lng: 3.4470
@@ -61,15 +61,51 @@ const RideMap = ({
   const pickupAutocomplete = useRef<google.maps.places.Autocomplete | null>(null);
   const dropoffAutocomplete = useRef<google.maps.places.Autocomplete | null>(null);
 
+  // Get API key from Supabase secrets
+  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
+  // Debug log for API key
+  useEffect(() => {
+    console.log('Google Maps API Key Status:', {
+      exists: !!googleMapsApiKey,
+      length: googleMapsApiKey?.length || 0
+    });
+  }, [googleMapsApiKey]);
+
   const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
-    libraries
+    googleMapsApiKey: googleMapsApiKey || '',
+    libraries,
   });
 
+  // Debug log for loading states
+  useEffect(() => {
+    console.log('Map Loading Status:', {
+      jsApiLoaded: isLoaded,
+      internalLoading: isLoading,
+      hasError: !!loadError,
+      errorDetails: loadError?.message,
+      mapInstance: !!map
+    });
+
+    // Update loading state based on isLoaded
+    if (isLoaded && isLoading) {
+      setIsLoading(false);
+    }
+  }, [isLoaded, isLoading, loadError, map]);
+
   const calculateRoute = useCallback(() => {
-    if (!markers.pickup || !markers.dropoff) return;
+    if (!markers.pickup || !markers.dropoff) {
+      console.log('Route calculation skipped: Missing markers', { pickup: !!markers.pickup, dropoff: !!markers.dropoff });
+      return;
+    }
 
     const directionsService = new google.maps.DirectionsService();
+    
+    console.log('Calculating route between:', {
+      origin: markers.pickup.toJSON(),
+      destination: markers.dropoff.toJSON()
+    });
+
     directionsService.route(
       {
         origin: markers.pickup.toJSON(),
@@ -77,6 +113,8 @@ const RideMap = ({
         travelMode: google.maps.TravelMode.DRIVING,
       },
       (result, status) => {
+        console.log('Route calculation result:', { status, hasResult: !!result });
+        
         if (status === google.maps.DirectionsStatus.OK && result) {
           setDirections(result);
           
@@ -87,6 +125,9 @@ const RideMap = ({
               duration?.value ? duration.value / 60 : 0
             );
           }
+        } else {
+          console.error('Route calculation failed:', status);
+          toast.error('Failed to calculate route. Please try again.');
         }
       }
     );
@@ -99,11 +140,13 @@ const RideMap = ({
   }, [markers, calculateRoute]);
 
   const onLoad = useCallback((map: google.maps.Map) => {
+    console.log('Map loaded successfully');
     setMap(map);
     setIsLoading(false);
   }, []);
 
   const onUnmount = useCallback(() => {
+    console.log('Map unmounted');
     setMap(null);
   }, []);
 
@@ -111,6 +154,12 @@ const RideMap = ({
     const autocomplete = type === 'pickup' ? pickupAutocomplete.current : dropoffAutocomplete.current;
     const place = autocomplete?.getPlace();
     
+    console.log(`Place selected for ${type}:`, {
+      hasPlace: !!place,
+      hasGeometry: !!place?.geometry,
+      address: place?.formatted_address
+    });
+
     if (place?.geometry?.location) {
       const location = new google.maps.LatLng(
         place.geometry.location.lat(),
@@ -134,11 +183,19 @@ const RideMap = ({
         map.panTo(location);
         map.setZoom(15);
       }
+    } else {
+      console.error('Selected place has no geometry');
+      toast.error('Invalid location selected. Please try again.');
     }
   }, [map, onLocationSelect]);
 
   const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
-    if (!e.latLng) return;
+    if (!e.latLng) {
+      console.error('Map click event has no coordinates');
+      return;
+    }
+
+    console.log('Map clicked:', e.latLng.toJSON());
 
     if (mode === 'driver' && onDriverLocationUpdate) {
       onDriverLocationUpdate(e.latLng.lat(), e.latLng.lng());
@@ -148,6 +205,8 @@ const RideMap = ({
     // For student mode, allow clicking to set locations
     const geocoder = new google.maps.Geocoder();
     geocoder.geocode({ location: e.latLng }, (results, status) => {
+      console.log('Geocoding result:', { status, hasResults: !!results?.length });
+
       if (status === 'OK' && results?.[0]) {
         const address = results[0].formatted_address;
         const locationType = !markers.pickup ? 'pickup' : !markers.dropoff ? 'dropoff' : null;
@@ -164,11 +223,15 @@ const RideMap = ({
             [locationType]: e.latLng!
           }));
         }
+      } else {
+        console.error('Geocoding failed:', status);
+        toast.error('Failed to get address for selected location. Please try again.');
       }
     });
   }, [mode, onDriverLocationUpdate, markers, onLocationSelect]);
 
   if (loadError) {
+    console.error('Map loading error:', loadError);
     return (
       <Card className={`${className} min-h-[300px] flex items-center justify-center`}>
         <div className="text-center space-y-2">
