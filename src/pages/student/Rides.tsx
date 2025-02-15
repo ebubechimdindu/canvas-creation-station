@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAppSelector, useAppDispatch } from "@/hooks/redux";
 import { setActiveRide, addToHistory, updateDrivers } from "@/features/rides/ridesSlice";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
@@ -22,7 +22,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, Star, MessageSquare, Clock, Car, Search, Filter, Download, X } from "lucide-react";
+import { Calendar, MapPin, Star, MessageSquare, Clock, Car, Search, Filter, Download, X } from 'lucide-react';
 import { SidebarProvider } from "@/components/ui/sidebar";
 import {
   Dialog,
@@ -57,6 +57,7 @@ import {
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import RideMap from "@/components/map/RideMap";
+import { Autocomplete } from "@react-google-maps/api";
 
 const rides = [
   {
@@ -121,6 +122,9 @@ export default function StudentRides() {
   });
   const [selectedRideDetails, setSelectedRideDetails] = useState<typeof rides[0] | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
+  const pickupAutocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const dropoffAutocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
   const handleRideRequest = (e: React.FormEvent) => {
     e.preventDefault();
@@ -198,27 +202,53 @@ export default function StudentRides() {
                       <div className="space-y-4">
                         <div className="space-y-2">
                           <Label htmlFor="pickup">Pickup Location</Label>
-                          <Input
-                            id="pickup"
-                            placeholder="Enter pickup location"
-                            value={rideRequest.pickup}
-                            onChange={(e) =>
-                              setRideRequest({ ...rideRequest, pickup: e.target.value })
-                            }
-                            required
-                          />
+                          <Autocomplete
+                            onLoad={(autoComplete) => {
+                              pickupAutocompleteRef.current = autoComplete;
+                            }}
+                            onPlaceChanged={() => {
+                              const place = pickupAutocompleteRef.current?.getPlace();
+                              if (place?.geometry?.location && place.formatted_address) {
+                                setRideRequest(prev => ({
+                                  ...prev,
+                                  pickup: place.formatted_address
+                                }));
+                              }
+                            }}
+                          >
+                            <Input
+                              id="pickup"
+                              placeholder="Enter pickup location"
+                              value={rideRequest.pickup}
+                              onChange={(e) => setRideRequest({ ...rideRequest, pickup: e.target.value })}
+                              required
+                            />
+                          </Autocomplete>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="dropoff">Dropoff Location</Label>
-                          <Input
-                            id="dropoff"
-                            placeholder="Enter dropoff location"
-                            value={rideRequest.dropoff}
-                            onChange={(e) =>
-                              setRideRequest({ ...rideRequest, dropoff: e.target.value })
-                            }
-                            required
-                          />
+                          <Autocomplete
+                            onLoad={(autoComplete) => {
+                              dropoffAutocompleteRef.current = autoComplete;
+                            }}
+                            onPlaceChanged={() => {
+                              const place = dropoffAutocompleteRef.current?.getPlace();
+                              if (place?.geometry?.location && place.formatted_address) {
+                                setRideRequest(prev => ({
+                                  ...prev,
+                                  dropoff: place.formatted_address
+                                }));
+                              }
+                            }}
+                          >
+                            <Input
+                              id="dropoff"
+                              placeholder="Enter dropoff location"
+                              value={rideRequest.dropoff}
+                              onChange={(e) => setRideRequest({ ...rideRequest, dropoff: e.target.value })}
+                              required
+                            />
+                          </Autocomplete>
                         </div>
                       </div>
                       <div className="space-y-4">
