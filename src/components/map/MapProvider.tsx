@@ -1,44 +1,30 @@
 
-import React, { createContext, useContext, useEffect } from 'react';
+import React, { createContext, useContext } from 'react';
 import mapboxgl from 'mapbox-gl';
-import { useToast } from '@/hooks/use-toast';
 
 interface MapContextType {
   mapboxToken: string;
-  isLoaded: boolean;
 }
 
 const MapContext = createContext<MapContextType>({
-  mapboxToken: '',
-  isLoaded: false
+  mapboxToken: import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || '',
 });
 
 export const useMap = () => useContext(MapContext);
 
 export const MapProvider = ({ children }: { children: React.ReactNode }) => {
   const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
-  const { toast } = useToast();
-
-  useEffect(() => {
-    if (!mapboxToken) {
-      toast({
-        title: 'Map Error',
-        description: 'Missing Mapbox access token. Please check your configuration.',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    // Set the token globally for mapbox-gl
-    mapboxgl.accessToken = mapboxToken;
-  }, [mapboxToken]);
 
   if (!mapboxToken) {
+    console.error('Missing Mapbox access token');
     return null;
   }
 
+  // Set the token globally for mapbox-gl
+  mapboxgl.accessToken = mapboxToken;
+
   return (
-    <MapContext.Provider value={{ mapboxToken, isLoaded: true }}>
+    <MapContext.Provider value={{ mapboxToken }}>
       {children}
     </MapContext.Provider>
   );

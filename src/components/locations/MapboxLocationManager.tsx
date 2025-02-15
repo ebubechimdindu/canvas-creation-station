@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -8,7 +9,6 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { type CampusLocation } from '@/types/locations';
 import { MapPin, Search, Layers } from 'lucide-react';
-import { useMap } from '@/components/map/MapProvider';
 
 interface MapboxLocationManagerProps {
   onLocationSelect?: (location: CampusLocation) => void;
@@ -44,57 +44,48 @@ const MapboxLocationManager = ({
   const selectedMarker = useRef<mapboxgl.Marker | null>(null);
   const driversMarkers = useRef<mapboxgl.Marker[]>([]);
   const routeSource = useRef<mapboxgl.GeoJSONSource | null>(null);
-  const { mapboxToken, isLoaded } = useMap();
+  const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
   // Initialize map only once
   useEffect(() => {
-    if (!mapContainer.current || map.current || !isLoaded) return;
+    if (!mapContainer.current || map.current || !mapboxToken) return;
 
-    try {
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: `mapbox://styles/mapbox/${mapStyle}-v12`,
-        center: [3.7163, 6.8906], // Babcock University coordinates
-        zoom: 16,
-        pitchWithRotate: true,
-        pitch: 45,
-      });
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: `mapbox://styles/mapbox/${mapStyle}-v12`,
+      center: [3.7163, 6.8906], // Babcock University coordinates
+      zoom: 16,
+      pitchWithRotate: true,
+      pitch: 45,
+    });
 
-      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-      map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-right');
+    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-right');
 
-      map.current.on('click', (e) => {
-        const { lng, lat } = e.lngLat;
-        
-        if (selectedMarker.current) {
-          selectedMarker.current.remove();
-        }
+    map.current.on('click', (e) => {
+      const { lng, lat } = e.lngLat;
+      
+      if (selectedMarker.current) {
+        selectedMarker.current.remove();
+      }
 
-        selectedMarker.current = new mapboxgl.Marker({ color: '#FF0000' })
-          .setLngLat([lng, lat])
-          .addTo(map.current!);
+      selectedMarker.current = new mapboxgl.Marker({ color: '#FF0000' })
+        .setLngLat([lng, lat])
+        .addTo(map.current!);
 
-        onCoordinatesSelect?.(lat, lng);
+      onCoordinatesSelect?.(lat, lng);
 
-        toast({
-          title: 'Location Selected',
-          description: `Latitude: ${lat.toFixed(6)}, Longitude: ${lng.toFixed(6)}`,
-        });
-      });
-    } catch (error) {
-      console.error('Error initializing map:', error);
       toast({
-        title: 'Map Error',
-        description: 'Failed to initialize map. Please try again.',
-        variant: 'destructive'
+        title: 'Location Selected',
+        description: `Latitude: ${lat.toFixed(6)}, Longitude: ${lng.toFixed(6)}`,
       });
-    }
+    });
 
     return () => {
       map.current?.remove();
       map.current = null;
     };
-  }, [isLoaded]);
+  }, [mapboxToken]);
 
   // Handle map style changes
   useEffect(() => {
