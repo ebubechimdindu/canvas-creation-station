@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -135,22 +136,26 @@ const MapboxLocationManager = ({
     map.current.on('load', () => {
       if (!map.current) return;
 
+      // Add campus boundary
       map.current.addSource('campus-boundary', {
         type: 'geojson',
         data: {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            type: "Polygon",
-            coordinates: [[
-              [3.7137, 6.8880],
-              [3.7237, 6.8880],
-              [3.7237, 6.8980],
-              [3.7137, 6.8980],
-              [3.7137, 6.8880]
-            ]]
-          } as GeoJSON.Feature<GeoJSON.Polygon>
-        }
+          type: "FeatureCollection",
+          features: [{
+            type: "Feature",
+            properties: {},
+            geometry: {
+              type: "Polygon",
+              coordinates: [[
+                [3.7137, 6.8880],
+                [3.7237, 6.8880],
+                [3.7237, 6.8980],
+                [3.7137, 6.8980],
+                [3.7137, 6.8880]
+              ]]
+            }
+          }]
+        } as GeoJSON.FeatureCollection
       });
 
       map.current.addLayer({
@@ -192,9 +197,13 @@ const MapboxLocationManager = ({
         
         const feature = e.features[0];
         const geometry = feature.geometry as GeoJSON.Point;
+        const coordinates: [number, number] = [
+          geometry.coordinates[0],
+          geometry.coordinates[1]
+        ];
         
         new mapboxgl.Popup()
-          .setLngLat(geometry.coordinates)
+          .setLngLat(coordinates)
           .setHTML(`<h3>${feature.properties?.title}</h3><p>${feature.properties?.description}</p>`)
           .addTo(map.current!);
       });
