@@ -77,15 +77,6 @@ const LocationManager = ({ onLocationSelect, mode = 'view' }: LocationManagerPro
     }
   };
 
-  const filteredLocations = locations.filter(location => {
-    const matchesLocationType = selectedLocationType === 'all' || location.locationType === selectedLocationType;
-    const matchesSearch = location.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      location.buildingCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      location.commonNames?.some(name => name.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    return matchesLocationType && matchesSearch;
-  });
-
   const handleCoordinatesSelect = (lat: number, lng: number) => {
     console.log('Selected coordinates:', { lat, lng });
   };
@@ -149,13 +140,13 @@ const LocationManager = ({ onLocationSelect, mode = 'view' }: LocationManagerPro
             </div>
 
             <div className="space-y-2">
-              {filteredLocations.length === 0 ? (
+              {locations.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <MapPin className="h-8 w-8 mx-auto mb-2" />
                   <p>No locations found</p>
                 </div>
               ) : (
-                filteredLocations.map((location) => (
+                locations.map((location) => (
                   <div
                     key={location.id}
                     className="p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
