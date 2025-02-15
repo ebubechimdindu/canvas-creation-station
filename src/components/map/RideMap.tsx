@@ -1,7 +1,6 @@
 
 import React from 'react';
 import MapboxLocationManager from '@/components/locations/MapboxLocationManager';
-import { TooltipProvider } from '@radix-ui/react-tooltip';
 
 interface RideMapProps {
   pickup: string;

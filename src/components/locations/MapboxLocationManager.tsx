@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Button } from '@/components/ui/button';
@@ -8,8 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { type CampusLocation } from '@/types/locations';
-import { Loader2, MapPin, Search, Layers } from 'lucide-react';
-import { useMap } from '../map/MapProvider';
+import { MapPin, Search, Layers } from 'lucide-react';
+import { useState } from 'react';
 
 interface MapboxLocationManagerProps {
   onLocationSelect?: (location: CampusLocation) => void;
@@ -26,8 +26,8 @@ interface MapboxLocationManagerProps {
   showNearbyRequests?: boolean;
 }
 
-const MapboxLocationManager = ({ 
-  onLocationSelect, 
+const MapboxLocationManager = ({
+  onLocationSelect,
   onCoordinatesSelect,
   onRouteCalculated,
   className = "",
@@ -39,15 +39,14 @@ const MapboxLocationManager = ({
 }: MapboxLocationManagerProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [mapStyle, setMapStyle] = useState<'streets' | 'satellite'>('streets');
   const { toast } = useToast();
   const selectedMarker = useRef<mapboxgl.Marker | null>(null);
-  const { isLoaded, error, mapboxToken } = useMap();
+  const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
   useEffect(() => {
-    if (!mapContainer.current || map.current || !isLoaded || !mapboxToken) return;
+    if (!mapContainer.current || map.current || !mapboxToken) return;
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
@@ -61,12 +60,9 @@ const MapboxLocationManager = ({
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
     map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-right');
 
-    map.current.on('load', () => {
-      setIsLoading(false);
-      if (initialView && showRoutePath) {
-        drawRoute(initialView.pickup, initialView.dropoff);
-      }
-    });
+    if (initialView && showRoutePath) {
+      drawRoute(initialView.pickup, initialView.dropoff);
+    }
 
     if (mode === 'driver' && nearbyDrivers) {
       nearbyDrivers.forEach(driver => {
@@ -98,7 +94,7 @@ const MapboxLocationManager = ({
     return () => {
       map.current?.remove();
     };
-  }, [isLoaded, mapStyle, mapboxToken, initialView, showRoutePath, mode, nearbyDrivers]);
+  }, [mapStyle, mapboxToken, initialView, showRoutePath, mode, nearbyDrivers]);
 
   const drawRoute = async (pickup: string, dropoff: string) => {
     if (!map.current || !mapboxToken) return;
@@ -256,29 +252,6 @@ const MapboxLocationManager = ({
     }
   };
 
-  if (error) {
-    return (
-      <Card className={className}>
-        <CardContent className="p-4 text-center text-red-500">
-          <p>{error}</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (isLoading || !isLoaded) {
-    return (
-      <Card className={className}>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <p>Loading map...</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card className={className}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
@@ -327,4 +300,3 @@ const MapboxLocationManager = ({
 };
 
 export default MapboxLocationManager;
-
