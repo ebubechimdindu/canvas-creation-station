@@ -50,14 +50,14 @@ export function LocationCombobox({
   const [open, setOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
 
+  // Ensure locations is always an array
+  const safeLocations = React.useMemo(() => {
+    return Array.isArray(locations) ? locations : [];
+  }, [locations]);
+
   // Group locations by type with additional safety checks
   const groupedLocations = React.useMemo(() => {
-    if (!Array.isArray(locations)) {
-      console.warn('Locations prop is not an array');
-      return {};
-    }
-
-    const validLocations = locations.filter((loc): loc is CampusLocation => 
+    const validLocations = safeLocations.filter((loc): loc is CampusLocation => 
       Boolean(loc) && 
       typeof loc === 'object' && 
       'name' in loc && 
@@ -72,13 +72,12 @@ export function LocationCombobox({
       groups[type].push(location);
       return groups;
     }, {} as Record<string, CampusLocation[]>);
-  }, [locations]);
+  }, [safeLocations]);
 
   // Find selected location with strict type checking
   const selectedLocation = React.useMemo(() => {
-    if (!Array.isArray(locations)) return null;
-    return locations.find(loc => loc && loc.name === value) || null;
-  }, [locations, value]);
+    return safeLocations.find(loc => loc && loc.name === value) || null;
+  }, [safeLocations, value]);
 
   // Ensure we have valid data for the Command component
   const commandGroups = React.useMemo(() => {
@@ -149,7 +148,7 @@ export function LocationCombobox({
                     {filteredLocations.map((location) => (
                       <CommandItem
                         key={location.id}
-                        value={location.name || ""}
+                        value={location.name}
                         onSelect={() => {
                           onSelect(location);
                           setOpen(false);
