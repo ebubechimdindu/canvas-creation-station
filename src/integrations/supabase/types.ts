@@ -13,42 +13,39 @@ export type Database = {
         Row: {
           building_code: string | null
           common_names: string[] | null
-          coordinates: unknown
+          coordinates: unknown | null
           created_at: string
           description: string | null
-          entrance_points: Json[] | null
           id: string
           is_active: boolean | null
           is_verified: boolean | null
-          location_type: string
+          location_type: string | null
           name: string
           updated_at: string
         }
         Insert: {
           building_code?: string | null
           common_names?: string[] | null
-          coordinates: unknown
+          coordinates?: unknown | null
           created_at?: string
           description?: string | null
-          entrance_points?: Json[] | null
           id?: string
           is_active?: boolean | null
           is_verified?: boolean | null
-          location_type: string
+          location_type?: string | null
           name: string
           updated_at?: string
         }
         Update: {
           building_code?: string | null
           common_names?: string[] | null
-          coordinates?: unknown
+          coordinates?: unknown | null
           created_at?: string
           description?: string | null
-          entrance_points?: Json[] | null
           id?: string
           is_active?: boolean | null
           is_verified?: boolean | null
-          location_type?: string
+          location_type?: string | null
           name?: string
           updated_at?: string
         }
@@ -138,6 +135,7 @@ export type Database = {
           status: string | null
           submitted_by: string
           suggested_coordinates: unknown | null
+          updated_at: string
         }
         Insert: {
           created_at?: string
@@ -148,6 +146,7 @@ export type Database = {
           status?: string | null
           submitted_by: string
           suggested_coordinates?: unknown | null
+          updated_at?: string
         }
         Update: {
           created_at?: string
@@ -158,6 +157,7 @@ export type Database = {
           status?: string | null
           submitted_by?: string
           suggested_coordinates?: unknown | null
+          updated_at?: string
         }
         Relationships: [
           {
