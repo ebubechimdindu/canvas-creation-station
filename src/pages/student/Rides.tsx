@@ -1,5 +1,4 @@
-import React from 'react';
-import { useState } from "react";
+import React, { useState } from "react";
 import { useAppSelector, useAppDispatch } from "@/hooks/redux";
 import { setActiveRide, addToHistory, updateDrivers } from "@/features/rides/ridesSlice";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
@@ -60,6 +59,8 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import RideMap from "@/components/map/RideMap";
 import { useCampusLocations } from "@/hooks/use-campus-locations";
+import type { CampusLocation } from "@/types/locations";
+import { LocationCombobox } from "@/components/locations/LocationCombobox";
 
 const rides = [
   {
