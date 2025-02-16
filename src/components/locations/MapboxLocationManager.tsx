@@ -160,6 +160,11 @@ const MapboxLocationManager = ({
     locationMarkers.current = [];
 
     locations.forEach(location => {
+      if (!isValidCoordinate(location.coordinates.lng, location.coordinates.lat)) {
+        console.warn(`Invalid coordinates for location ${location.name}`);
+        return;
+      }
+
       const marker = new mapboxgl.Marker({ 
         color: getMarkerColor(location.locationType),
         scale: 0.8
@@ -177,15 +182,21 @@ const MapboxLocationManager = ({
       locationMarkers.current.push(marker);
     });
 
-    const bounds = new mapboxgl.LngLatBounds();
-    locations.forEach(location => {
-      bounds.extend([location.coordinates.lng, location.coordinates.lat]);
-    });
+    const validLocations = locations.filter(loc => 
+      isValidCoordinate(loc.coordinates.lng, loc.coordinates.lat)
+    );
 
-    map.current.fitBounds(bounds, {
-      padding: 50,
-      maxZoom: 19
-    });
+    if (validLocations.length > 0) {
+      const bounds = new mapboxgl.LngLatBounds();
+      validLocations.forEach(location => {
+        bounds.extend([location.coordinates.lng, location.coordinates.lat]);
+      });
+
+      map.current.fitBounds(bounds, {
+        padding: 50,
+        maxZoom: 19
+      });
+    }
 
     return () => {
       locationMarkers.current.forEach(marker => marker.remove());
@@ -366,6 +377,15 @@ const MapboxLocationManager = ({
         variant: 'destructive'
       });
     }
+  };
+
+  const isValidCoordinate = (lng: number, lat: number) => {
+    return !isNaN(lng) && 
+           !isNaN(lat) && 
+           lng >= -180 && 
+           lng <= 180 && 
+           lat >= -90 && 
+           lat <= 90;
   };
 
   return (
