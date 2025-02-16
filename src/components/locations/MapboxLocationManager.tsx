@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { type CampusLocation } from '@/types/locations';
 import { MapPin, Search, Layers } from 'lucide-react';
+import { useMap } from '@/components/map/MapProvider';
 
 interface MapboxLocationManagerProps {
   onLocationSelect?: (location: CampusLocation) => void;
@@ -43,7 +44,7 @@ const MapboxLocationManager = ({
   const selectedMarker = useRef<mapboxgl.Marker | null>(null);
   const driversMarkers = useRef<mapboxgl.Marker[]>([]);
   const routeSource = useRef<mapboxgl.GeoJSONSource | null>(null);
-  const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+  const { mapboxToken } = useMap();
 
   const CAMPUS_CENTER = [3.7242, 6.8923] as [number, number];
   const CAMPUS_BOUNDS = [
