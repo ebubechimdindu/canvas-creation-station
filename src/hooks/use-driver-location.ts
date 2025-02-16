@@ -11,11 +11,46 @@ export const useDriverLocation = () => {
   useEffect(() => {
     let watchId: number;
 
-    const updateLocation = async (position: GeolocationPosition) => {
-      const { latitude, longitude } = position.coords;
-      const { heading, speed } = position.coords;
+    const ensureDriverProfile = async (userId: string) => {
+      const { data: profile } = await supabase
+        .from('driver_profiles')
+        .select('id')
+        .eq('id', userId)
+        .single();
 
+      if (!profile) {
+        // Profile doesn't exist, create a temporary one
+        const { error: createError } = await supabase
+          .from('driver_profiles')
+          .insert({
+            id: userId,
+            full_name: 'Temporary Driver', // Temporary name
+            driver_license_number: 'PENDING', // Temporary license
+            phone_number: 'PENDING', // Temporary phone
+            status: 'pending_verification'
+          });
+
+        if (createError) {
+          console.error('Error creating driver profile:', createError);
+          throw new Error('Failed to create driver profile');
+        }
+      }
+    };
+
+    const updateLocation = async (position: GeolocationPosition) => {
       try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError || !user) {
+          throw new Error('Failed to get user');
+        }
+
+        // Ensure driver profile exists before updating location
+        await ensureDriverProfile(user.id);
+
+        const { latitude, longitude } = position.coords;
+        const { heading, speed } = position.coords;
+
         const { error: upsertError } = await supabase
           .from('driver_locations')
           .upsert({
@@ -23,8 +58,8 @@ export const useDriverLocation = () => {
             heading,
             speed,
             is_online: driverStatus !== 'offline',
-            driver_id: (await supabase.auth.getUser()).data.user?.id,
-            updated_at: new Date().toISOString() // Using the new updated_at field
+            driver_id: user.id,
+            updated_at: new Date().toISOString()
           }, {
             onConflict: 'driver_id'
           });
@@ -41,6 +76,11 @@ export const useDriverLocation = () => {
       } catch (err) {
         console.error('Error in location update:', err);
         setError('Failed to update location');
+        toast({
+          title: 'Error',
+          description: 'Failed to update location. Please try again.',
+          variant: 'destructive',
+        });
       }
     };
 
