@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import { Calendar, MapPin, Star, MessageSquare, Clock, Car, Search, Filter, Download, X } from "lucide-react";
-import { SidebarProvider, Sidebar } from "@/components/ui/sidebar";
 import {
   Dialog,
   DialogContent,
@@ -57,7 +56,6 @@ import {
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import RideMap from "@/components/map/RideMap";
-import { MapProvider } from "@/components/map/MapProvider";
 
 const rides = [
   {
