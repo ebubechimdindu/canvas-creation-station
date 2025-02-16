@@ -323,32 +323,8 @@ const MapboxLocationManager = ({
         </Button>
       </CardHeader>
       <CardContent className="space-y-4 p-0">
-        <div className="flex gap-2 p-4">
-          <div className="flex-1">
-            <Label htmlFor="search">Search Location</Label>
-            <div className="flex gap-2">
-              <Input
-                id="search"
-                placeholder="Search for a campus location..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              />
-              <Button onClick={handleSearch}>
-                <Search className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <div className="relative w-full h-[400px] md:h-[500px]">
+        <div className="relative w-full h-[600px]">
           <div ref={mapContainer} className="absolute inset-0" />
-        </div>
-
-        <div className="p-4">
-          <p className="text-sm text-muted-foreground">
-            Click on the map to select a location or use the search bar to find specific campus buildings.
-          </p>
         </div>
       </CardContent>
     </Card>

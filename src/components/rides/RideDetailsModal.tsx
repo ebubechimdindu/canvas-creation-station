@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,12 +10,22 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import RideMap from "../map/RideMap";
 import { RideTimeline } from "./RideTimeline";
 import { RideStatusBadge } from "./RideStatusBadge";
 import { MapPin, Calendar, Clock, User, MessageSquare, Upload } from "lucide-react";
 import { Ride } from "@/types";
 import { format } from "date-fns";
+import { useCampusLocations } from "@/hooks/use-campus-locations";
 
 interface RideDetailsModalProps {
   ride: Ride | null;
@@ -28,6 +38,17 @@ const RideDetailsModal = ({ ride, open, onOpenChange }: RideDetailsModalProps) =
   const [distance, setDistance] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
   const [note, setNote] = useState("");
+  const { locations, isLoading: isLoadingLocations } = useCampusLocations();
+
+  // Group locations by type
+  const groupedLocations = locations.reduce((acc, location) => {
+    const type = location.locationType;
+    if (!acc[type]) {
+      acc[type] = [];
+    }
+    acc[type].push(location);
+    return acc;
+  }, {} as Record<string, typeof locations>);
 
   if (!ride) return null;
 
@@ -43,9 +64,16 @@ const RideDetailsModal = ({ ride, open, onOpenChange }: RideDetailsModalProps) =
     }
   };
 
+  const formatLocationType = (type: string) => {
+    return type
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Ride Details #{ride.id}</span>
@@ -53,119 +81,172 @@ const RideDetailsModal = ({ ride, open, onOpenChange }: RideDetailsModalProps) =
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
-          <TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden">
+          <TabsList className="mb-4">
             <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="map">Map</TabsTrigger>
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
           </TabsList>
 
-          <ScrollArea className="h-[500px] mt-4">
-            <TabsContent value="details" className="space-y-6">
-              <div className="grid gap-4">
-                <div className="space-y-2">
-                  <h3 className="font-semibold">Route Information</h3>
-                  <div className="grid gap-2">
-                    <div className="flex items-start gap-2">
-                      <MapPin className="h-4 w-4 mt-1 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">Pickup Location</p>
-                        <p className="text-muted-foreground">{ride.pickup}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <MapPin className="h-4 w-4 mt-1 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">Dropoff Location</p>
-                        <p className="text-muted-foreground">{ride.dropoff}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <h3 className="font-semibold">Time Information</h3>
-                  <div className="grid gap-2">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span>{format(new Date(ride.date), "PP")}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span>{format(new Date(ride.date), "p")}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {(distance > 0 && duration > 0) && (
+          <div className="flex-1 overflow-hidden">
+            <ScrollArea className="h-[500px]">
+              <TabsContent value="details" className="space-y-6">
+                <div className="grid gap-4">
                   <div className="space-y-2">
-                    <h3 className="font-semibold">Route Details</h3>
+                    <h3 className="font-semibold">Route Information</h3>
+                    <div className="grid gap-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">Pickup Location</span>
+                        </div>
+                        <Select defaultValue={ride.pickup}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select pickup location" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(groupedLocations).map(([type, locs]) => (
+                              <SelectGroup key={type}>
+                                <SelectLabel>{formatLocationType(type)}</SelectLabel>
+                                {locs.map((loc) => (
+                                  <SelectItem 
+                                    key={loc.id} 
+                                    value={loc.name}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <span>{loc.name}</span>
+                                    {loc.buildingCode && (
+                                      <span className="text-xs text-muted-foreground">
+                                        ({loc.buildingCode})
+                                      </span>
+                                    )}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">Dropoff Location</span>
+                        </div>
+                        <Select defaultValue={ride.dropoff}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select dropoff location" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(groupedLocations).map(([type, locs]) => (
+                              <SelectGroup key={type}>
+                                <SelectLabel>{formatLocationType(type)}</SelectLabel>
+                                {locs.map((loc) => (
+                                  <SelectItem 
+                                    key={loc.id} 
+                                    value={loc.name}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <span>{loc.name}</span>
+                                    {loc.buildingCode && (
+                                      <span className="text-xs text-muted-foreground">
+                                        ({loc.buildingCode})
+                                      </span>
+                                    )}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="font-semibold">Time Information</h3>
                     <div className="grid gap-2">
-                      <p>Estimated Distance: {distance.toFixed(1)} km</p>
-                      <p>Estimated Duration: {Math.round(duration)} minutes</p>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span>{format(new Date(ride.date), "PP")}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span>{format(new Date(ride.date), "p")}</span>
+                      </div>
                     </div>
                   </div>
-                )}
 
-                <div className="space-y-2">
-                  <h3 className="font-semibold">Student Information</h3>
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span>Student Name (ID: {ride.id})</span>
-                  </div>
-                </div>
-              </div>
-            </TabsContent>
+                  {(distance > 0 && duration > 0) && (
+                    <div className="space-y-2">
+                      <h3 className="font-semibold">Route Details</h3>
+                      <div className="grid gap-2">
+                        <p>Estimated Distance: {distance.toFixed(1)} km</p>
+                        <p>Estimated Duration: {Math.round(duration)} minutes</p>
+                      </div>
+                    </div>
+                  )}
 
-            <TabsContent value="map">
-              <RideMap
-                pickup={ride.pickup}
-                dropoff={ride.dropoff}
-                className="h-[400px]"
-                onRouteCalculated={handleRouteCalculated}
-              />
-            </TabsContent>
-
-            <TabsContent value="timeline">
-              <RideTimeline ride={ride} />
-            </TabsContent>
-
-            <TabsContent value="notes" className="space-y-4">
-              <div className="space-y-4">
-                <div className="flex items-start gap-4">
-                  <Textarea
-                    placeholder="Add a note about this ride..."
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                  />
-                  <Button onClick={handleAddNote}>
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Add Note
-                  </Button>
-                </div>
-
-                {ride.notes && (
                   <div className="space-y-2">
-                    <h3 className="font-semibold">Notes</h3>
-                    <p className="text-muted-foreground">{ride.notes}</p>
-                  </div>
-                )}
-
-                <div className="border-t pt-4">
-                  <h3 className="font-semibold mb-2">Upload Evidence</h3>
-                  <div className="flex items-center justify-center border-2 border-dashed rounded-lg p-6">
-                    <div className="text-center">
-                      <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                      <p className="text-sm text-muted-foreground">
-                        Drag and drop files here, or click to select files
-                      </p>
+                    <h3 className="font-semibold">Student Information</h3>
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span>Student Name (ID: {ride.id})</span>
                     </div>
                   </div>
                 </div>
-              </div>
-            </TabsContent>
-          </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="map" className="h-[500px]">
+                <RideMap
+                  pickup={ride.pickup}
+                  dropoff={ride.dropoff}
+                  className="w-full h-full"
+                  onRouteCalculated={handleRouteCalculated}
+                />
+              </TabsContent>
+
+              <TabsContent value="timeline">
+                <RideTimeline ride={ride} />
+              </TabsContent>
+
+              <TabsContent value="notes" className="space-y-4">
+                <div className="space-y-4">
+                  <div className="flex items-start gap-4">
+                    <Textarea
+                      placeholder="Add a note about this ride..."
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                    />
+                    <Button onClick={handleAddNote}>
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      Add Note
+                    </Button>
+                  </div>
+
+                  {ride.notes && (
+                    <div className="space-y-2">
+                      <h3 className="font-semibold">Notes</h3>
+                      <p className="text-muted-foreground">{ride.notes}</p>
+                    </div>
+                  )}
+
+                  <div className="border-t pt-4">
+                    <h3 className="font-semibold mb-2">Upload Evidence</h3>
+                    <div className="flex items-center justify-center border-2 border-dashed rounded-lg p-6">
+                      <div className="text-center">
+                        <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                        <p className="text-sm text-muted-foreground">
+                          Drag and drop files here, or click to select files
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+            </ScrollArea>
+          </div>
         </Tabs>
       </DialogContent>
     </Dialog>
