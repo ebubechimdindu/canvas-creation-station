@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAppSelector, useAppDispatch } from "@/hooks/redux";
 import { setActiveRide, addToHistory, updateDrivers } from "@/features/rides/ridesSlice";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import RideDetailsModal from "@/components/rides/RideDetailsModal";
+import { useCampusLocations } from "@/hooks/use-campus-locations";
 import {
   Table,
   TableBody,
@@ -58,8 +59,7 @@ import {
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import RideMap from "@/components/map/RideMap";
-import { useCampusLocations } from "@/hooks/use-campus-locations";
-import type { CampusLocation } from "@/types/locations";
+import { type CampusLocation } from "@/types/locations";
 import { LocationCombobox } from "@/components/locations/LocationCombobox";
 
 const rides = [
@@ -99,7 +99,7 @@ export default function StudentRides() {
   );
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
 
-  const { locations, isLoading: locationsLoading } = useCampusLocations();
+  const { locations = [], isLoading: locationsLoading } = useCampusLocations();
   const [selectedRide, setSelectedRide] = useState<number | null>(null);
   const [isRequestOpen, setIsRequestOpen] = useState(false);
   const [isRatingOpen, setIsRatingOpen] = useState(false);
@@ -243,7 +243,7 @@ export default function StudentRides() {
                                 setSelectedPickupLocation(location);
                                 setRideRequest(prev => ({ ...prev, pickup: location.name }));
                               }}
-                              locations={locations}
+                              locations={locations || []}
                               placeholder="Select pickup location"
                             />
                           </div>
@@ -255,7 +255,7 @@ export default function StudentRides() {
                                 setSelectedDropoffLocation(location);
                                 setRideRequest(prev => ({ ...prev, dropoff: location.name }));
                               }}
-                              locations={locations}
+                              locations={locations || []}
                               placeholder="Select dropoff location"
                             />
                           </div>
