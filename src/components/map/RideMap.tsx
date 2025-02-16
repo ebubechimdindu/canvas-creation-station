@@ -29,7 +29,7 @@ const RideMap: React.FC<RideMapProps> = ({
     <div className="w-full h-full min-h-[300px] md:min-h-[400px]">
       <MapboxLocationManager
         className={`w-full h-full ${className}`}
-        initialView={{
+        initialView={mode === 'driver' ? undefined : {
           pickup,
           dropoff
         }}
@@ -38,13 +38,7 @@ const RideMap: React.FC<RideMapProps> = ({
         nearbyDrivers={nearbyDrivers}
         onRouteCalculated={onRouteCalculated}
         showNearbyRequests={showNearbyRequests}
-        onLocationSelect={(location) => {
-          if (!pickup) {
-            onLocationSelect?.('pickup', location.name);
-          } else if (!dropoff) {
-            onLocationSelect?.('dropoff', location.name);
-          }
-        }}
+        onLocationSelect={onLocationSelect}
       />
     </div>
   );

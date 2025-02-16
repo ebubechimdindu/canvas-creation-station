@@ -82,31 +82,27 @@ const MapboxLocationManager = ({
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
     map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-right');
 
-    map.current.on('click', (e) => {
-      const { lng, lat } = e.lngLat;
-      
-      if (selectedMarker.current) {
-        selectedMarker.current.remove();
-      }
+    // Only add click handler if we're in student mode
+    if (mode === 'student') {
+      map.current.on('click', (e) => {
+        const { lng, lat } = e.lngLat;
+        
+        if (selectedMarker.current) {
+          selectedMarker.current.remove();
+        }
 
-      selectedMarker.current = new mapboxgl.Marker({ color: '#FF0000' })
-        .setLngLat([lng, lat])
-        .addTo(map.current!);
+        selectedMarker.current = new mapboxgl.Marker({ color: '#FF0000' })
+          .setLngLat([lng, lat])
+          .addTo(map.current!);
 
-      onCoordinatesSelect?.(lat, lng);
+        onCoordinatesSelect?.(lat, lng);
 
-      toast({
-        title: 'Location Selected',
-        description: `Latitude: ${lat.toFixed(6)}, Longitude: ${lng.toFixed(6)}`,
+        toast({
+          title: 'Location Selected',
+          description: `Latitude: ${lat.toFixed(6)}, Longitude: ${lng.toFixed(6)}`,
+        });
       });
-    });
-
-    Object.entries(CAMPUS_LANDMARKS).forEach(([name, [lng, lat]]) => {
-      new mapboxgl.Marker({ color: '#4B5563', scale: 0.8 })
-        .setLngLat([lng, lat])
-        .setPopup(new mapboxgl.Popup().setHTML(`<div class="text-sm font-medium">${name}</div>`))
-        .addTo(map.current!);
-    });
+    }
 
     const resizeMap = () => {
       if (map.current) {
@@ -122,7 +118,7 @@ const MapboxLocationManager = ({
       map.current?.remove();
       map.current = null;
     };
-  }, [mapboxToken]);
+  }, [mapboxToken, mode]);
 
   useEffect(() => {
     if (!map.current) return;
@@ -147,11 +143,20 @@ const MapboxLocationManager = ({
       driversMarkers.current.push(marker);
     });
 
+    // If we're in driver mode, center on the driver's location
+    if (mode === 'driver' && nearbyDrivers.length > 0) {
+      map.current.flyTo({
+        center: [nearbyDrivers[0].lng, nearbyDrivers[0].lat],
+        zoom: 17,
+        essential: true
+      });
+    }
+
     return () => {
       driversMarkers.current.forEach(marker => marker.remove());
       driversMarkers.current = [];
     };
-  }, [nearbyDrivers]);
+  }, [nearbyDrivers, mode]);
 
   useEffect(() => {
     if (!map.current || !locations.length) return;
