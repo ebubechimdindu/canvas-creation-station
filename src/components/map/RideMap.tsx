@@ -11,6 +11,7 @@ interface RideMapProps {
   nearbyDrivers?: Array<{ lat: number; lng: number }>;
   onRouteCalculated?: (distance: number, duration: number) => void;
   showNearbyRequests?: boolean;
+  onLocationSelect?: (type: 'pickup' | 'dropoff', location: string) => void;
 }
 
 const RideMap: React.FC<RideMapProps> = ({
@@ -21,21 +22,31 @@ const RideMap: React.FC<RideMapProps> = ({
   mode,
   nearbyDrivers,
   onRouteCalculated,
-  showNearbyRequests
+  showNearbyRequests,
+  onLocationSelect
 }) => {
   return (
-    <MapboxLocationManager
-      className={className}
-      initialView={{
-        pickup,
-        dropoff
-      }}
-      showRoutePath={showRoutePath}
-      mode={mode}
-      nearbyDrivers={nearbyDrivers}
-      onRouteCalculated={onRouteCalculated}
-      showNearbyRequests={showNearbyRequests}
-    />
+    <div className="w-full h-full min-h-[300px] md:min-h-[400px]">
+      <MapboxLocationManager
+        className={`w-full h-full ${className}`}
+        initialView={{
+          pickup,
+          dropoff
+        }}
+        showRoutePath={showRoutePath}
+        mode={mode}
+        nearbyDrivers={nearbyDrivers}
+        onRouteCalculated={onRouteCalculated}
+        showNearbyRequests={showNearbyRequests}
+        onLocationSelect={(location) => {
+          if (!pickup) {
+            onLocationSelect?.('pickup', location.name);
+          } else if (!dropoff) {
+            onLocationSelect?.('dropoff', location.name);
+          }
+        }}
+      />
+    </div>
   );
 };
 

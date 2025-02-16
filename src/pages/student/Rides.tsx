@@ -109,8 +109,8 @@ export default function StudentRides() {
   const [rideRequest, setRideRequest] = useState({
     pickup: "",
     dropoff: "",
-    date: "",
-    time: "",
+    date: format(new Date(), "yyyy-MM-dd"),
+    time: format(new Date(), "HH:mm"),
     notes: "",
     recurring: false,
     specialRequirements: "",
@@ -123,22 +123,52 @@ export default function StudentRides() {
   const [selectedRideDetails, setSelectedRideDetails] = useState<typeof rides[0] | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
-  const handleRideRequest = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newRide = {
-      id: Date.now(),
-      date: new Date().toISOString(),
-      pickup: rideRequest.pickup,
-      dropoff: rideRequest.dropoff,
-      driver: "Pending",
-      status: "Upcoming" as const,
-    };
-    dispatch(setActiveRide(newRide));
+  const handleLocationSelect = (type: 'pickup' | 'dropoff', location: string) => {
+    setRideRequest(prev => ({
+      ...prev,
+      [type]: location
+    }));
     toast({
-      title: "Ride Requested",
-      description: "Looking for available drivers...",
+      title: `${type.charAt(0).toUpperCase() + type.slice(1)} Location Selected`,
+      description: location,
     });
-    setIsRequestOpen(false);
+  };
+
+  const handleRideRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!rideRequest.pickup || !rideRequest.dropoff) {
+      toast({
+        title: "Missing Locations",
+        description: "Please select both pickup and dropoff locations.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const newRide = {
+        id: Date.now(),
+        date: new Date().toISOString(),
+        pickup: rideRequest.pickup,
+        dropoff: rideRequest.dropoff,
+        driver: "Pending",
+        status: "Upcoming" as const,
+      };
+      
+      dispatch(setActiveRide(newRide));
+      toast({
+        title: "Ride Requested",
+        description: "Looking for available drivers...",
+      });
+      setIsRequestOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to submit ride request. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleRating = (rideId: number) => {
@@ -180,8 +210,8 @@ export default function StudentRides() {
       <MapProvider>
         <div className="flex min-h-screen w-full bg-background">
           <StudentSidebar />
-          <main className="flex-1 p-8">
-            <div className="space-y-6">
+          <main className="flex-1 p-4 md:p-8 overflow-y-auto">
+            <div className="space-y-6 max-w-7xl mx-auto">
               <div className="flex justify-between items-center">
                 <h1 className="text-3xl font-bold">Your Rides</h1>
                 <Dialog open={isRequestOpen} onOpenChange={setIsRequestOpen}>
@@ -191,7 +221,7 @@ export default function StudentRides() {
                       Request a Ride
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[625px]">
+                  <DialogContent className="sm:max-w-[90vw] md:max-w-[800px] h-[90vh] md:h-auto">
                     <DialogHeader>
                       <DialogTitle>Request a Ride</DialogTitle>
                     </DialogHeader>
@@ -202,7 +232,7 @@ export default function StudentRides() {
                             <Label htmlFor="pickup">Pickup Location</Label>
                             <Input
                               id="pickup"
-                              placeholder="Enter pickup location"
+                              placeholder="Select on map or enter location"
                               value={rideRequest.pickup}
                               onChange={(e) =>
                                 setRideRequest({ ...rideRequest, pickup: e.target.value })
@@ -214,7 +244,7 @@ export default function StudentRides() {
                             <Label htmlFor="dropoff">Dropoff Location</Label>
                             <Input
                               id="dropoff"
-                              placeholder="Enter dropoff location"
+                              placeholder="Select on map or enter location"
                               value={rideRequest.dropoff}
                               onChange={(e) =>
                                 setRideRequest({ ...rideRequest, dropoff: e.target.value })
@@ -251,13 +281,13 @@ export default function StudentRides() {
                         </div>
                         <div className="space-y-4">
                           <Label>Location Preview</Label>
-                          <div className="relative aspect-square rounded-lg overflow-hidden">
+                          <div className="h-[300px] md:h-[400px] rounded-lg overflow-hidden">
                             <RideMap
                               pickup={rideRequest.pickup}
                               dropoff={rideRequest.dropoff}
-                              className="w-full h-full"
                               showRoutePath={true}
                               mode="student"
+                              onLocationSelect={handleLocationSelect}
                               nearbyDrivers={availableDrivers?.map(driver => ({
                                 lat: driver.currentLocation?.lat || 0,
                                 lng: driver.currentLocation?.lng || 0
@@ -266,6 +296,7 @@ export default function StudentRides() {
                           </div>
                         </div>
                       </div>
+
                     <div className="space-y-2">
                       <Label htmlFor="specialRequirements">Special Requirements</Label>
                       <Select
@@ -645,8 +676,7 @@ export default function StudentRides() {
                 </CardContent>
               </Card>
             </div>
-          </div>
-        </main>
+          </main>
         </div>
 
         <RideDetailsModal

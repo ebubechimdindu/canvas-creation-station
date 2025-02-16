@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -46,14 +45,12 @@ const MapboxLocationManager = ({
   const routeSource = useRef<mapboxgl.GeoJSONSource | null>(null);
   const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
-  // Campus boundaries and landmarks
   const CAMPUS_CENTER = [3.7242, 6.8923] as [number, number];
   const CAMPUS_BOUNDS = [
     [3.7192, 6.8873], // Southwest coordinates
     [3.7292, 6.8973]  // Northeast coordinates
   ] as [[number, number], [number, number]];
 
-  // Common campus landmarks
   const CAMPUS_LANDMARKS = {
     "Student Center": [3.7242, 6.8923],
     "Main Gate": [3.7240, 6.8920],
@@ -63,7 +60,6 @@ const MapboxLocationManager = ({
     "Cafeteria": [3.7241, 6.8921]
   };
 
-  // Initialize map only once
   useEffect(() => {
     if (!mapContainer.current || map.current || !mapboxToken) return;
 
@@ -101,7 +97,6 @@ const MapboxLocationManager = ({
       });
     });
 
-    // Add landmarks to the map
     Object.entries(CAMPUS_LANDMARKS).forEach(([name, [lng, lat]]) => {
       new mapboxgl.Marker({ color: '#4B5563', scale: 0.8 })
         .setLngLat([lng, lat])
@@ -109,33 +104,38 @@ const MapboxLocationManager = ({
         .addTo(map.current!);
     });
 
+    const resizeMap = () => {
+      if (map.current) {
+        map.current.resize();
+      }
+    };
+
+    window.addEventListener('resize', resizeMap);
+    resizeMap();
+
     return () => {
+      window.removeEventListener('resize', resizeMap);
       map.current?.remove();
       map.current = null;
     };
   }, [mapboxToken]);
 
-  // Handle map style changes
   useEffect(() => {
     if (!map.current) return;
     map.current.setStyle(`mapbox://styles/mapbox/${mapStyle}-v12`);
   }, [mapStyle]);
 
-  // Handle route drawing
   useEffect(() => {
     if (!map.current || !initialView || !showRoutePath) return;
     drawRoute(initialView.pickup, initialView.dropoff);
   }, [initialView, showRoutePath, mapboxToken]);
 
-  // Handle nearby drivers updates
   useEffect(() => {
     if (!map.current || !nearbyDrivers) return;
 
-    // Clear existing driver markers
     driversMarkers.current.forEach(marker => marker.remove());
     driversMarkers.current = [];
 
-    // Add new driver markers
     nearbyDrivers.forEach(driver => {
       const marker = new mapboxgl.Marker({ color: '#00FF00' })
         .setLngLat([driver.lng, driver.lat])
@@ -208,7 +208,6 @@ const MapboxLocationManager = ({
           });
         }
 
-        // Fit map to route bounds within campus bounds
         const coordinates = route.geometry.coordinates;
         const bounds = coordinates.reduce((bounds, coord) => {
           return bounds.extend(coord as [number, number]);
@@ -232,7 +231,6 @@ const MapboxLocationManager = ({
   const geocode = async (location: string): Promise<[number, number] | null> => {
     if (!mapboxToken) return null;
 
-    // Check if the location matches any campus landmarks
     const landmarkEntry = Object.entries(CAMPUS_LANDMARKS).find(([name]) => 
       name.toLowerCase().includes(location.toLowerCase())
     );
@@ -241,7 +239,6 @@ const MapboxLocationManager = ({
     }
 
     try {
-      // Simplified query without full address
       const query = location;
       const response = await fetch(
         `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=${CAMPUS_CENTER.join(',')}&types=poi,address,place&language=en&access_token=${mapboxToken}`
@@ -250,7 +247,6 @@ const MapboxLocationManager = ({
       
       if (data.features?.[0]?.center) {
         const [lng, lat] = data.features[0].center;
-        // Verify the result is within campus bounds
         if (lng >= CAMPUS_BOUNDS[0][0] && lng <= CAMPUS_BOUNDS[1][0] &&
             lat >= CAMPUS_BOUNDS[0][1] && lat <= CAMPUS_BOUNDS[1][1]) {
           return [lng, lat];
@@ -310,7 +306,7 @@ const MapboxLocationManager = ({
   };
 
   return (
-    <Card className={className}>
+    <Card className={`${className} overflow-hidden`}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="text-xl font-bold">Campus Location Manager</CardTitle>
         <Button
@@ -325,8 +321,8 @@ const MapboxLocationManager = ({
           <Layers className="h-4 w-4" />
         </Button>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex gap-2">
+      <CardContent className="space-y-4 p-0">
+        <div className="flex gap-2 p-4">
           <div className="flex-1">
             <Label htmlFor="search">Search Location</Label>
             <div className="flex gap-2">
@@ -344,13 +340,15 @@ const MapboxLocationManager = ({
           </div>
         </div>
 
-        <div className="relative w-full h-[400px] rounded-lg overflow-hidden">
-          <div ref={mapContainer} className="w-full h-full" />
+        <div className="relative w-full h-[400px] md:h-[500px]">
+          <div ref={mapContainer} className="absolute inset-0" />
         </div>
 
-        <p className="text-sm text-muted-foreground">
-          Click on the map to select a location or use the search bar to find specific campus buildings.
-        </p>
+        <div className="p-4">
+          <p className="text-sm text-muted-foreground">
+            Click on the map to select a location or use the search bar to find specific campus buildings.
+          </p>
+        </div>
       </CardContent>
     </Card>
   );
