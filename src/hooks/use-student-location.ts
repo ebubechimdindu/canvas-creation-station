@@ -90,7 +90,7 @@ export const useStudentLocation = (mapboxToken?: string): UseStudentLocationRetu
         toast({
           title: "Outside Campus",
           description: "Your current location is outside the campus boundaries.",
-          variant: "warning",
+          variant: "default", // Changed from "warning" to "default" since "warning" is not a valid variant
         });
       }
     } catch (err) {
