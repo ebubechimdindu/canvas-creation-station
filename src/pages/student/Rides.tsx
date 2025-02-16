@@ -59,6 +59,7 @@ import {
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import RideMap from "@/components/map/RideMap";
+import { useCampusLocations } from "@/hooks/use-campus-locations";
 
 const rides = [
   {
@@ -97,6 +98,7 @@ export default function StudentRides() {
   );
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
 
+  const { locations, isLoading: locationsLoading } = useCampusLocations();
   const [selectedRide, setSelectedRide] = useState<number | null>(null);
   const [isRequestOpen, setIsRequestOpen] = useState(false);
   const [isRatingOpen, setIsRatingOpen] = useState(false);
@@ -124,6 +126,9 @@ export default function StudentRides() {
   const [selectedRideDetails, setSelectedRideDetails] = useState<typeof rides[0] | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
+  const [selectedPickupLocation, setSelectedPickupLocation] = useState<CampusLocation | null>(null);
+  const [selectedDropoffLocation, setSelectedDropoffLocation] = useState<CampusLocation | null>(null);
+
   const handleLocationSelect = (type: 'pickup' | 'dropoff', location: string) => {
     setRideRequest(prev => ({
       ...prev,
@@ -138,7 +143,7 @@ export default function StudentRides() {
   const handleRideRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!rideRequest.pickup || !rideRequest.dropoff) {
+    if (!selectedPickupLocation || !selectedDropoffLocation) {
       toast({
         title: "Missing Locations",
         description: "Please select both pickup and dropoff locations.",
@@ -151,8 +156,8 @@ export default function StudentRides() {
       const newRide = {
         id: Date.now(),
         date: new Date().toISOString(),
-        pickup: rideRequest.pickup,
-        dropoff: rideRequest.dropoff,
+        pickup: selectedPickupLocation.name,
+        dropoff: selectedDropoffLocation.name,
         driver: "Pending",
         status: "Upcoming" as const,
       };
@@ -231,26 +236,26 @@ export default function StudentRides() {
                         <div className="space-y-4">
                           <div className="space-y-2">
                             <Label htmlFor="pickup">Pickup Location</Label>
-                            <Input
-                              id="pickup"
-                              placeholder="Select on map or enter location"
-                              value={rideRequest.pickup}
-                              onChange={(e) =>
-                                setRideRequest({ ...rideRequest, pickup: e.target.value })
-                              }
-                              required
+                            <LocationCombobox
+                              value={selectedPickupLocation?.name || ""}
+                              onSelect={(location) => {
+                                setSelectedPickupLocation(location);
+                                setRideRequest(prev => ({ ...prev, pickup: location.name }));
+                              }}
+                              locations={locations}
+                              placeholder="Select pickup location"
                             />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="dropoff">Dropoff Location</Label>
-                            <Input
-                              id="dropoff"
-                              placeholder="Select on map or enter location"
-                              value={rideRequest.dropoff}
-                              onChange={(e) =>
-                                setRideRequest({ ...rideRequest, dropoff: e.target.value })
-                              }
-                              required
+                            <LocationCombobox
+                              value={selectedDropoffLocation?.name || ""}
+                              onSelect={(location) => {
+                                setSelectedDropoffLocation(location);
+                                setRideRequest(prev => ({ ...prev, dropoff: location.name }));
+                              }}
+                              locations={locations}
+                              placeholder="Select dropoff location"
                             />
                           </div>
                           <div className="grid grid-cols-2 gap-4">
@@ -284,11 +289,10 @@ export default function StudentRides() {
                           <Label>Location Preview</Label>
                           <div className="h-[300px] md:h-[400px] rounded-lg overflow-hidden">
                             <RideMap
-                              pickup={rideRequest.pickup}
-                              dropoff={rideRequest.dropoff}
+                              pickup={selectedPickupLocation?.name || ""}
+                              dropoff={selectedDropoffLocation?.name || ""}
                               showRoutePath={true}
                               mode="student"
-                              onLocationSelect={handleLocationSelect}
                               nearbyDrivers={availableDrivers?.map(driver => ({
                                 lat: driver.currentLocation?.lat || 0,
                                 lng: driver.currentLocation?.lng || 0

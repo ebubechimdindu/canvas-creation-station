@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { type CampusLocation } from '@/types/locations';
 import { MapPin, Search, Layers } from 'lucide-react';
 import { useMap } from '@/components/map/MapProvider';
+import { useCampusLocations } from '@/hooks/use-campus-locations';
 
 interface MapboxLocationManagerProps {
   onLocationSelect?: (location: CampusLocation) => void;
@@ -45,6 +46,8 @@ const MapboxLocationManager = ({
   const driversMarkers = useRef<mapboxgl.Marker[]>([]);
   const routeSource = useRef<mapboxgl.GeoJSONSource | null>(null);
   const { mapboxToken } = useMap();
+  const { locations } = useCampusLocations();
+  const locationMarkers = useRef<mapboxgl.Marker[]>([]);
 
   const CAMPUS_CENTER = [3.7242, 6.8923] as [number, number];
   const CAMPUS_BOUNDS = [
@@ -149,6 +152,65 @@ const MapboxLocationManager = ({
       driversMarkers.current = [];
     };
   }, [nearbyDrivers]);
+
+  useEffect(() => {
+    if (!map.current || !locations.length) return;
+
+    locationMarkers.current.forEach(marker => marker.remove());
+    locationMarkers.current = [];
+
+    locations.forEach(location => {
+      const marker = new mapboxgl.Marker({ 
+        color: getMarkerColor(location.locationType),
+        scale: 0.8
+      })
+        .setLngLat([location.coordinates.lng, location.coordinates.lat])
+        .setPopup(new mapboxgl.Popup().setHTML(`
+          <div class="p-2">
+            <div class="font-medium">${location.name}</div>
+            ${location.buildingCode ? `<div class="text-sm text-gray-500">${location.buildingCode}</div>` : ''}
+            ${location.description ? `<div class="text-sm mt-1">${location.description}</div>` : ''}
+          </div>
+        `))
+        .addTo(map.current!);
+
+      locationMarkers.current.push(marker);
+    });
+
+    const bounds = new mapboxgl.LngLatBounds();
+    locations.forEach(location => {
+      bounds.extend([location.coordinates.lng, location.coordinates.lat]);
+    });
+
+    map.current.fitBounds(bounds, {
+      padding: 50,
+      maxZoom: 19
+    });
+
+    return () => {
+      locationMarkers.current.forEach(marker => marker.remove());
+      locationMarkers.current = [];
+    };
+  }, [locations, map.current]);
+
+  const getMarkerColor = (locationType: string) => {
+    switch (locationType) {
+      case 'academic':
+        return '#3B82F6'; // blue
+      case 'residence':
+        return '#10B981'; // green
+      case 'common_area':
+        return '#F59E0B'; // yellow
+      case 'administrative':
+        return '#6366F1'; // indigo
+      case 'pickup_point':
+        return '#EC4899'; // pink
+      case 'dropoff_point':
+        return '#8B5CF6'; // purple
+      default:
+        return '#6B7280'; // gray
+    }
+  };
 
   const drawRoute = async (pickup: string, dropoff: string) => {
     if (!map.current || !mapboxToken) return;
