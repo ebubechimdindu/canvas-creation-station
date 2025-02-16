@@ -1,3 +1,5 @@
+
+import React from 'react';
 import { useState } from "react";
 import { useAppSelector, useAppDispatch } from "@/hooks/redux";
 import { setActiveRide, addToHistory, updateDrivers } from "@/features/rides/ridesSlice";
@@ -672,13 +674,14 @@ export default function StudentRides() {
               </CardContent>
             </Card>
           </div>
-        </main>
+        </div>
 
         <RideDetailsModal
           ride={selectedRideDetails}
           open={isDetailsModalOpen}
           onOpenChange={setIsDetailsModalOpen}
         />
+      </main>
     </div>
   );
 }
