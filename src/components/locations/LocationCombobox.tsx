@@ -41,7 +41,7 @@ const typeLabels: Record<string, string> = {
 export function LocationCombobox({
   value,
   onSelect,
-  locations = [], // Default to empty array
+  locations = [],
   placeholder = "Select location...",
   onFocus,
   onBlur,
@@ -50,16 +50,20 @@ export function LocationCombobox({
   const [open, setOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
 
-  // Group locations by type with safety checks
+  // Group locations by type with additional safety checks
   const groupedLocations = React.useMemo(() => {
-    // Ensure locations is an array and not empty
-    if (!Array.isArray(locations) || locations.length === 0) {
+    if (!Array.isArray(locations)) {
+      console.warn('Locations prop is not an array');
       return {};
     }
 
-    // Filter out any null/undefined locations first
-    const validLocations = locations.filter(Boolean);
-    
+    const validLocations = locations.filter((loc): loc is CampusLocation => 
+      Boolean(loc) && 
+      typeof loc === 'object' && 
+      'name' in loc && 
+      'locationType' in loc
+    );
+
     return validLocations.reduce((groups, location) => {
       const type = location.locationType || "other";
       if (!groups[type]) {
@@ -70,13 +74,18 @@ export function LocationCombobox({
     }, {} as Record<string, CampusLocation[]>);
   }, [locations]);
 
-  // Find selected location with null safety
+  // Find selected location with strict type checking
   const selectedLocation = React.useMemo(() => {
     if (!Array.isArray(locations)) return null;
-    return locations.find(location => location?.name === value) || null;
+    return locations.find(loc => loc && loc.name === value) || null;
   }, [locations, value]);
 
-  const groups = Object.entries(groupedLocations);
+  // Ensure we have valid data for the Command component
+  const commandGroups = React.useMemo(() => {
+    return Object.entries(groupedLocations).filter(([_, locs]) => 
+      Array.isArray(locs) && locs.length > 0
+    );
+  }, [groupedLocations]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -116,18 +125,18 @@ export function LocationCombobox({
                 <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                 <p className="text-sm text-muted-foreground mt-2">Loading locations...</p>
               </div>
-            ) : groups.length === 0 ? (
+            ) : commandGroups.length === 0 ? (
               <div className="p-4 text-center text-sm text-muted-foreground">
                 No locations available
               </div>
             ) : (
-              groups.map(([type, locs]) => {
-                if (!Array.isArray(locs) || locs.length === 0) return null;
-                
-                const filteredLocations = locs.filter(loc => 
-                  loc && (
-                    loc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    loc.commonNames?.some(name => 
+              commandGroups.map(([type, locations]) => {
+                if (!Array.isArray(locations)) return null;
+
+                const filteredLocations = locations.filter(location => 
+                  location && typeof location.name === 'string' && (
+                    location.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    Array.isArray(location.commonNames) && location.commonNames.some(name => 
                       name.toLowerCase().includes(searchQuery.toLowerCase())
                     )
                   )
@@ -140,7 +149,7 @@ export function LocationCombobox({
                     {filteredLocations.map((location) => (
                       <CommandItem
                         key={location.id}
-                        value={location.name}
+                        value={location.name || ""}
                         onSelect={() => {
                           onSelect(location);
                           setOpen(false);
@@ -164,13 +173,15 @@ export function LocationCombobox({
                 );
               })
             )}
-            {!isLoading && searchQuery && groups.length > 0 && 
+            {!isLoading && searchQuery && commandGroups.length > 0 && 
               Object.values(groupedLocations)
                 .flat()
                 .filter(loc => 
-                  loc?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  loc?.commonNames?.some(name => 
-                    name.toLowerCase().includes(searchQuery.toLowerCase())
+                  loc && typeof loc.name === 'string' && (
+                    loc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    Array.isArray(loc.commonNames) && loc.commonNames.some(name => 
+                      name.toLowerCase().includes(searchQuery.toLowerCase())
+                    )
                   )
                 ).length === 0 && (
               <CommandEmpty>No locations found.</CommandEmpty>
