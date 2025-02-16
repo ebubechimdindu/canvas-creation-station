@@ -60,6 +60,7 @@ export type Database = {
           last_updated: string
           location: unknown
           speed: number | null
+          updated_at: string | null
         }
         Insert: {
           driver_id: string
@@ -69,6 +70,7 @@ export type Database = {
           last_updated?: string
           location: unknown
           speed?: number | null
+          updated_at?: string | null
         }
         Update: {
           driver_id?: string
@@ -78,6 +80,7 @@ export type Database = {
           last_updated?: string
           location?: unknown
           speed?: number | null
+          updated_at?: string | null
         }
         Relationships: [
           {

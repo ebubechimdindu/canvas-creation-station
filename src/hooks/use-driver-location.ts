@@ -24,6 +24,7 @@ export const useDriverLocation = () => {
             speed,
             is_online: driverStatus !== 'offline',
             driver_id: (await supabase.auth.getUser()).data.user?.id,
+            updated_at: new Date().toISOString() // Using the new updated_at field
           }, {
             onConflict: 'driver_id'
           });
