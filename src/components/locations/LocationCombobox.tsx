@@ -1,6 +1,6 @@
 
 import * as React from "react";
-import { Check, ChevronsUpDown, MapPin } from "lucide-react";
+import { Check, ChevronsUpDown, MapPin, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +26,7 @@ interface LocationComboboxProps {
   placeholder?: string;
   onFocus?: () => void;
   onBlur?: () => void;
+  isLoading?: boolean;
 }
 
 const typeLabels: Record<string, string> = {
@@ -40,17 +41,21 @@ const typeLabels: Record<string, string> = {
 export function LocationCombobox({
   value,
   onSelect,
-  locations,
+  locations = [], // Provide default empty array
   placeholder = "Select location...",
   onFocus,
   onBlur,
+  isLoading = false,
 }: LocationComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
 
-  // Group locations by type
+  // Group locations by type with safety checks
   const groupedLocations = React.useMemo(() => {
+    if (!Array.isArray(locations)) return {};
+    
     return locations.reduce((groups, location) => {
+      if (!location) return groups;
       const type = location.locationType || "other";
       if (!groups[type]) {
         groups[type] = [];
@@ -60,7 +65,7 @@ export function LocationCombobox({
     }, {} as Record<string, CampusLocation[]>);
   }, [locations]);
 
-  const selectedLocation = locations.find(location => location.name === value);
+  const selectedLocation = locations?.find(location => location?.name === value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -72,9 +77,14 @@ export function LocationCombobox({
           className="w-full justify-between"
           onFocus={onFocus}
           onBlur={onBlur}
+          disabled={isLoading}
         >
           <div className="flex items-center gap-2 truncate">
-            <MapPin className="h-4 w-4 shrink-0 opacity-50" />
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <MapPin className="h-4 w-4 shrink-0 opacity-50" />
+            )}
             <span className="truncate">
               {selectedLocation ? selectedLocation.name : placeholder}
             </span>
@@ -90,45 +100,68 @@ export function LocationCombobox({
             onValueChange={setSearchQuery}
           />
           <ScrollArea className="h-[300px]">
-            {Object.entries(groupedLocations).map(([type, locs]) => {
-              const filteredLocations = locs.filter(loc => 
-                loc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (loc.commonNames?.some(name => 
-                  name.toLowerCase().includes(searchQuery.toLowerCase())
-                ))
-              );
+            {isLoading ? (
+              <div className="p-4 text-center">
+                <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                <p className="text-sm text-muted-foreground mt-2">Loading locations...</p>
+              </div>
+            ) : Object.entries(groupedLocations).length === 0 ? (
+              <div className="p-4 text-center text-sm text-muted-foreground">
+                No locations available
+              </div>
+            ) : (
+              Object.entries(groupedLocations).map(([type, locs]) => {
+                if (!Array.isArray(locs)) return null;
+                
+                const filteredLocations = locs.filter(loc => 
+                  loc?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  (loc?.commonNames?.some(name => 
+                    name.toLowerCase().includes(searchQuery.toLowerCase())
+                  ))
+                );
 
-              if (filteredLocations.length === 0) return null;
+                if (filteredLocations.length === 0) return null;
 
-              return (
-                <CommandGroup key={type} heading={typeLabels[type] || type}>
-                  {filteredLocations.map((location) => (
-                    <CommandItem
-                      key={location.id}
-                      value={location.name}
-                      onSelect={() => {
-                        onSelect(location);
-                        setOpen(false);
-                      }}
-                      className="flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span>{location.name}</span>
-                        {location.buildingCode && (
-                          <Badge variant="secondary" className="text-xs">
-                            {location.buildingCode}
-                          </Badge>
+                return (
+                  <CommandGroup key={type} heading={typeLabels[type] || type}>
+                    {filteredLocations.map((location) => (
+                      <CommandItem
+                        key={location.id}
+                        value={location.name}
+                        onSelect={() => {
+                          onSelect(location);
+                          setOpen(false);
+                        }}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span>{location.name}</span>
+                          {location.buildingCode && (
+                            <Badge variant="secondary" className="text-xs">
+                              {location.buildingCode}
+                            </Badge>
+                          )}
+                        </div>
+                        {location.name === value && (
+                          <Check className="h-4 w-4" />
                         )}
-                      </div>
-                      {location.name === value && (
-                        <Check className="h-4 w-4" />
-                      )}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              );
-            })}
-            <CommandEmpty>No locations found.</CommandEmpty>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                );
+              })
+            )}
+            {!isLoading && searchQuery && Object.values(groupedLocations).flat().length > 0 && 
+              Object.values(groupedLocations)
+                .flat()
+                .filter(loc => 
+                  loc?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  loc?.commonNames?.some(name => 
+                    name.toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+                ).length === 0 && (
+              <CommandEmpty>No locations found.</CommandEmpty>
+            )}
           </ScrollArea>
         </Command>
       </PopoverContent>
