@@ -10,15 +10,6 @@ import { type CampusLocation } from '@/types/locations';
 import { MapPin, Search, Layers } from 'lucide-react';
 import { useMap } from '@/components/map/MapProvider';
 import { useCampusLocations } from '@/hooks/use-campus-locations';
-import { CAMPUS_BOUNDS, CAMPUS_CENTER } from '@/hooks/use-student-location';
-
-const CAMPUS_BOUNDARY = [
-  [CAMPUS_BOUNDS.west, CAMPUS_BOUNDS.north],
-  [CAMPUS_BOUNDS.east, CAMPUS_BOUNDS.north],
-  [CAMPUS_BOUNDS.east, CAMPUS_BOUNDS.south],
-  [CAMPUS_BOUNDS.west, CAMPUS_BOUNDS.south],
-  [CAMPUS_BOUNDS.west, CAMPUS_BOUNDS.north],
-];
 
 interface MapboxLocationManagerProps {
   onLocationSelect?: (location: CampusLocation) => void;
@@ -33,8 +24,6 @@ interface MapboxLocationManagerProps {
   mode?: 'student' | 'driver';
   nearbyDrivers?: Array<{ lat: number; lng: number }>;
   showNearbyRequests?: boolean;
-  showCampusBoundary?: boolean;
-  enforceRestrictions?: boolean;
 }
 
 const MapboxLocationManager = ({
@@ -46,9 +35,7 @@ const MapboxLocationManager = ({
   showRoutePath,
   mode,
   nearbyDrivers,
-  showNearbyRequests,
-  showCampusBoundary = true,
-  enforceRestrictions = true
+  showNearbyRequests
 }: MapboxLocationManagerProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -61,13 +48,20 @@ const MapboxLocationManager = ({
   const { mapboxToken } = useMap();
   const { locations } = useCampusLocations();
   const locationMarkers = useRef<mapboxgl.Marker[]>([]);
-  const boundaryLayer = useRef<string | null>(null);
 
-  const isWithinCampus = (lng: number, lat: number): boolean => {
-    return lat >= CAMPUS_BOUNDS.south && 
-           lat <= CAMPUS_BOUNDS.north && 
-           lng >= CAMPUS_BOUNDS.west && 
-           lng <= CAMPUS_BOUNDS.east;
+  const CAMPUS_CENTER = [3.7242, 6.8923] as [number, number];
+  const CAMPUS_BOUNDS = [
+    [3.7192, 6.8873], // Southwest coordinates
+    [3.7292, 6.8973]  // Northeast coordinates
+  ] as [[number, number], [number, number]];
+
+  const CAMPUS_LANDMARKS = {
+    "Student Center": [3.7242, 6.8923],
+    "Main Gate": [3.7240, 6.8920],
+    "Library": [3.7245, 6.8925],
+    "Science Complex": [3.7244, 6.8924],
+    "Sports Complex": [3.7243, 6.8922],
+    "Cafeteria": [3.7241, 6.8921]
   };
 
   useEffect(() => {
@@ -76,73 +70,23 @@ const MapboxLocationManager = ({
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: `mapbox://styles/mapbox/${mapStyle}-v12`,
-      center: [CAMPUS_CENTER.lng, CAMPUS_CENTER.lat],
+      center: CAMPUS_CENTER,
       zoom: 16,
       minZoom: 15,
       maxZoom: 19,
       pitchWithRotate: true,
       pitch: 45,
-      maxBounds: [
-        [CAMPUS_BOUNDS.west - 0.01, CAMPUS_BOUNDS.south - 0.01],
-        [CAMPUS_BOUNDS.east + 0.01, CAMPUS_BOUNDS.north + 0.01]
-      ]
+      maxBounds: CAMPUS_BOUNDS
     });
 
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
     map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-right');
 
-    map.current.on('load', () => {
-      if (!map.current) return;
-
-      map.current.addSource('campus-boundary', {
-        type: 'geojson',
-        data: {
-          type: 'Feature',
-          geometry: {
-            type: 'Polygon',
-            coordinates: [CAMPUS_BOUNDARY]
-          },
-          properties: {}
-        }
-      });
-
-      map.current.addLayer({
-        id: 'campus-boundary-line',
-        type: 'line',
-        source: 'campus-boundary',
-        paint: {
-          'line-color': '#FF0000',
-          'line-width': 2,
-          'line-dasharray': [2, 2]
-        }
-      });
-
-      map.current.addLayer({
-        id: 'campus-boundary-fill',
-        type: 'fill',
-        source: 'campus-boundary',
-        paint: {
-          'fill-color': '#FF0000',
-          'fill-opacity': 0.1
-        }
-      });
-
-      boundaryLayer.current = 'campus-boundary-fill';
-    });
-
-    if (onCoordinatesSelect) {
+    // Only add click handler if we're in student mode
+    if (mode === 'student') {
       map.current.on('click', (e) => {
         const { lng, lat } = e.lngLat;
         
-        if (enforceRestrictions && !isWithinCampus(lng, lat)) {
-          toast({
-            title: 'Invalid Location',
-            description: 'Please select a location within the campus boundaries.',
-            variant: 'destructive',
-          });
-          return;
-        }
-
         if (selectedMarker.current) {
           selectedMarker.current.remove();
         }
@@ -151,7 +95,12 @@ const MapboxLocationManager = ({
           .setLngLat([lng, lat])
           .addTo(map.current!);
 
-        onCoordinatesSelect(lat, lng);
+        onCoordinatesSelect?.(lat, lng);
+
+        toast({
+          title: 'Location Selected',
+          description: `Latitude: ${lat.toFixed(6)}, Longitude: ${lng.toFixed(6)}`,
+        });
       });
     }
 
@@ -169,7 +118,7 @@ const MapboxLocationManager = ({
       map.current?.remove();
       map.current = null;
     };
-  }, [mapboxToken, onCoordinatesSelect, enforceRestrictions]);
+  }, [mapboxToken, mode]);
 
   useEffect(() => {
     if (!map.current) return;
@@ -194,6 +143,7 @@ const MapboxLocationManager = ({
       driversMarkers.current.push(marker);
     });
 
+    // If we're in driver mode, center on the driver's location
     if (mode === 'driver' && nearbyDrivers.length > 0) {
       map.current.flyTo({
         center: [nearbyDrivers[0].lng, nearbyDrivers[0].lat],
@@ -262,19 +212,19 @@ const MapboxLocationManager = ({
   const getMarkerColor = (locationType: string) => {
     switch (locationType) {
       case 'academic':
-        return '#3B82F6';
+        return '#3B82F6'; // blue
       case 'residence':
-        return '#10B981';
+        return '#10B981'; // green
       case 'common_area':
-        return '#F59E0B';
+        return '#F59E0B'; // yellow
       case 'administrative':
-        return '#6366F1';
+        return '#6366F1'; // indigo
       case 'pickup_point':
-        return '#EC4899';
+        return '#EC4899'; // pink
       case 'dropoff_point':
-        return '#8B5CF6';
+        return '#8B5CF6'; // purple
       default:
-        return '#6B7280';
+        return '#6B7280'; // gray
     }
   };
 
@@ -302,8 +252,8 @@ const MapboxLocationManager = ({
 
       if (data.routes?.[0]) {
         const route = data.routes[0];
-        const distance = route.distance / 1000;
-        const duration = route.duration / 60;
+        const distance = route.distance / 1000; // Convert to kilometers
+        const duration = route.duration / 60; // Convert to minutes
 
         onRouteCalculated?.(distance, duration);
 
