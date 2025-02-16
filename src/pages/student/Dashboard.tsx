@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { navigationMenuTriggerStyle } from "@/components/ui/navigation-menu";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
 import { MapPin, Calendar, Clock, Activity, Car, X, Star } from "lucide-react";
-import mapboxgl from 'mapbox-gl';
 import {
   Dialog,
   DialogContent,
@@ -41,6 +40,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { MapProvider } from '@/components/map/MapProvider';
 import { useMap } from '@/components/map/MapProvider';
+import { useStudentLocation } from '@/hooks/use-student-location';
+import { Switch } from "@/components/ui/switch";
 
 interface RideLocation {
   lat: number;
@@ -58,6 +59,8 @@ const StudentDashboard = () => {
   const { toast } = useToast();
   const dispatch = useAppDispatch();
   const { mapboxToken } = useMap();
+  const { currentLocation, error: locationError } = useStudentLocation(mapboxToken);
+  const [useCurrentLocation, setUseCurrentLocation] = useState(true);
   const [rideRequest, setRideRequest] = useState({
     pickup: "",
     dropoff: "",
@@ -70,6 +73,10 @@ const StudentDashboard = () => {
   const handleLocationSelect = (lat: number, lng: number, isPickup = true) => {
     if (!mapboxToken) {
       console.error('Mapbox token not found');
+      return;
+    }
+
+    if (useCurrentLocation && isPickup) {
       return;
     }
 
@@ -94,6 +101,20 @@ const StudentDashboard = () => {
         });
       });
   };
+
+  useEffect(() => {
+    if (useCurrentLocation && currentLocation) {
+      setRideRequest(prev => ({
+        ...prev,
+        pickupLocation: {
+          lat: currentLocation.lat,
+          lng: currentLocation.lng,
+          address: currentLocation.address
+        },
+        pickup: currentLocation.address
+      }));
+    }
+  }, [currentLocation, useCurrentLocation]);
 
   const handleRideRequest = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,14 +149,12 @@ const StudentDashboard = () => {
 
       if (rideError) throw rideError;
 
-      // Update local state
       setActiveRequest({
         status: "Searching for driver",
         estimatedWait: "5-10 minutes",
         nearbyDrivers: 3,
       });
 
-      // Update Redux store
       dispatch(setActiveRide({
         id: rideData.id,
         date: new Date().toISOString(),
@@ -219,7 +238,19 @@ const StudentDashboard = () => {
                       <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-4">
                           <div className="space-y-2">
-                            <Label htmlFor="pickup">Pickup Location</Label>
+                            <div className="flex items-center justify-between">
+                              <Label htmlFor="pickup">Pickup Location</Label>
+                              <div className="flex items-center space-x-2">
+                                <Label htmlFor="use-current" className="text-sm text-muted-foreground">
+                                  Use Current Location
+                                </Label>
+                                <Switch
+                                  id="use-current"
+                                  checked={useCurrentLocation}
+                                  onCheckedChange={setUseCurrentLocation}
+                                />
+                              </div>
+                            </div>
                             <Input
                               id="pickup"
                               placeholder="Enter pickup location"
@@ -232,6 +263,7 @@ const StudentDashboard = () => {
                               }
                               className="transition-all duration-200 hover:border-primary focus:ring-2 focus:ring-primary/20"
                               required
+                              readOnly={useCurrentLocation}
                             />
                           </div>
                           <div className="space-y-2">

@@ -325,6 +325,30 @@ export type Database = {
         }
         Relationships: []
       }
+      student_locations: {
+        Row: {
+          id: number
+          is_current_location: boolean | null
+          location: unknown
+          student_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: number
+          is_current_location?: boolean | null
+          location: unknown
+          student_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: number
+          is_current_location?: boolean | null
+          location?: unknown
+          student_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       student_profiles: {
         Row: {
           created_at: string
