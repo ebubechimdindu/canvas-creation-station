@@ -41,7 +41,7 @@ const typeLabels: Record<string, string> = {
 export function LocationCombobox({
   value,
   onSelect,
-  locations = [], // Provide default empty array
+  locations = [], // Default to empty array
   placeholder = "Select location...",
   onFocus,
   onBlur,
@@ -52,10 +52,15 @@ export function LocationCombobox({
 
   // Group locations by type with safety checks
   const groupedLocations = React.useMemo(() => {
-    if (!Array.isArray(locations)) return {};
+    // Ensure locations is an array and not empty
+    if (!Array.isArray(locations) || locations.length === 0) {
+      return {};
+    }
+
+    // Filter out any null/undefined locations first
+    const validLocations = locations.filter(Boolean);
     
-    return locations.reduce((groups, location) => {
-      if (!location) return groups;
+    return validLocations.reduce((groups, location) => {
       const type = location.locationType || "other";
       if (!groups[type]) {
         groups[type] = [];
@@ -65,7 +70,13 @@ export function LocationCombobox({
     }, {} as Record<string, CampusLocation[]>);
   }, [locations]);
 
-  const selectedLocation = locations?.find(location => location?.name === value);
+  // Find selected location with null safety
+  const selectedLocation = React.useMemo(() => {
+    if (!Array.isArray(locations)) return null;
+    return locations.find(location => location?.name === value) || null;
+  }, [locations, value]);
+
+  const groups = Object.entries(groupedLocations);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -105,19 +116,21 @@ export function LocationCombobox({
                 <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                 <p className="text-sm text-muted-foreground mt-2">Loading locations...</p>
               </div>
-            ) : Object.entries(groupedLocations).length === 0 ? (
+            ) : groups.length === 0 ? (
               <div className="p-4 text-center text-sm text-muted-foreground">
                 No locations available
               </div>
             ) : (
-              Object.entries(groupedLocations).map(([type, locs]) => {
-                if (!Array.isArray(locs)) return null;
+              groups.map(([type, locs]) => {
+                if (!Array.isArray(locs) || locs.length === 0) return null;
                 
                 const filteredLocations = locs.filter(loc => 
-                  loc?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  (loc?.commonNames?.some(name => 
-                    name.toLowerCase().includes(searchQuery.toLowerCase())
-                  ))
+                  loc && (
+                    loc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    loc.commonNames?.some(name => 
+                      name.toLowerCase().includes(searchQuery.toLowerCase())
+                    )
+                  )
                 );
 
                 if (filteredLocations.length === 0) return null;
@@ -151,7 +164,7 @@ export function LocationCombobox({
                 );
               })
             )}
-            {!isLoading && searchQuery && Object.values(groupedLocations).flat().length > 0 && 
+            {!isLoading && searchQuery && groups.length > 0 && 
               Object.values(groupedLocations)
                 .flat()
                 .filter(loc => 
