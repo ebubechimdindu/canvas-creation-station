@@ -14,11 +14,6 @@ export interface CampusLocation {
   isVerified: boolean;
   buildingCode?: string;
   commonNames?: string[];
-  entrancePoints?: Array<{
-    lat: number;
-    lng: number;
-    description?: string;
-  }>;
   createdAt: string;
   updatedAt: string;
 }

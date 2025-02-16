@@ -55,11 +55,6 @@ const LocationManager = ({ onLocationSelect, mode = 'view' }: LocationManagerPro
         isVerified: location.is_verified,
         buildingCode: location.building_code,
         commonNames: location.common_names,
-        entrancePoints: location.entrance_points?.map((point: any) => ({
-          lat: point.lat,
-          lng: point.lng,
-          description: point.description
-        })) || [],
         createdAt: location.created_at,
         updatedAt: location.updated_at
       }));
