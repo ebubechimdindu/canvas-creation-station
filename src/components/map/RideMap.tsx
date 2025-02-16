@@ -1,6 +1,7 @@
 
 import React from 'react';
 import MapboxLocationManager from '@/components/locations/MapboxLocationManager';
+import { type CampusLocation } from '@/types/locations';
 
 interface RideMapProps {
   pickup: string;
@@ -11,7 +12,7 @@ interface RideMapProps {
   nearbyDrivers?: Array<{ lat: number; lng: number }>;
   onRouteCalculated?: (distance: number, duration: number) => void;
   showNearbyRequests?: boolean;
-  onLocationSelect?: (type: 'pickup' | 'dropoff', location: string) => void;
+  onLocationSelect?: (location: CampusLocation) => void;
 }
 
 const RideMap: React.FC<RideMapProps> = ({
