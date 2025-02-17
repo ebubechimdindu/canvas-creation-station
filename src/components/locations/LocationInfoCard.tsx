@@ -1,7 +1,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { LocationReference } from "@/types/locations";
-import { Building2, Navigation, Landmark, Gate, GitFork } from "lucide-react";
+import { Building2, Navigation, Landmark, MapPin, GitFork } from "lucide-react";
 
 interface LocationInfoCardProps {
   references: LocationReference[];
@@ -17,7 +17,7 @@ const ReferenceIcon = ({ type }: { type: LocationReference['referenceType'] }) =
     case 'landmark':
       return <Landmark className="h-4 w-4" />;
     case 'gate':
-      return <Gate className="h-4 w-4" />;
+      return <MapPin className="h-4 w-4" />; // Changed from Gate to MapPin
     case 'path':
       return <Navigation className="h-4 w-4" />;
   }

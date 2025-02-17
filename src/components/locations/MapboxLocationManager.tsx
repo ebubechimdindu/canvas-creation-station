@@ -11,7 +11,7 @@ import { MapPin, Search, Layers } from 'lucide-react';
 import { useMap } from '@/components/map/MapProvider';
 import { useCampusLocations } from '@/hooks/use-campus-locations';
 import { useLocationReferences } from '@/hooks/use-location-references';
-import { LocationReference, LocationInfoCard } from '@/components/location-info-card';
+import { LocationInfoCard } from '@/components/locations/LocationInfoCard';
 
 const CAMPUS_LANDMARKS: Record<string, [number, number]> = {
   'Main Gate': [3.7242, 6.8923],
