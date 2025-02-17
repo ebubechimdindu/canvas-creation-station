@@ -61,6 +61,9 @@ import { cn } from "@/lib/utils";
 import RideMap from "@/components/map/RideMap";
 import { type CampusLocation } from "@/types/locations";
 import { LocationCombobox } from "@/components/locations/LocationCombobox";
+import { MapPin, Loader2, Navigation2 } from 'lucide-react';
+import { useStudentLocation } from '@/hooks/use-student-location';
+import { useMap } from '@/components/map/MapProvider';
 
 const rides = [
   {
@@ -130,6 +133,10 @@ export default function StudentRides() {
   const [selectedPickupLocation, setSelectedPickupLocation] = useState<CampusLocation | null>(null);
   const [selectedDropoffLocation, setSelectedDropoffLocation] = useState<CampusLocation | null>(null);
 
+  const { mapboxToken } = useMap();
+  const { currentLocation, error: locationError, isLoading: locationLoading, updateLocation } = useStudentLocation(mapboxToken);
+  const [useCurrentLocation, setUseCurrentLocation] = useState(true);
+
   const handleLocationSelect = (type: 'pickup' | 'dropoff', location: string) => {
     setRideRequest(prev => ({
       ...prev,
@@ -139,6 +146,94 @@ export default function StudentRides() {
       title: `${type.charAt(0).toUpperCase() + type.slice(1)} Location Selected`,
       description: location,
     });
+  };
+
+  const handleCurrentLocation = async () => {
+    if ('geolocation' in navigator) {
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0,
+          });
+        });
+
+        const { latitude, longitude } = position.coords;
+        await updateLocation(latitude, longitude);
+        
+        if (currentLocation) {
+          setRideRequest(prev => ({
+            ...prev,
+            pickup: currentLocation.address,
+            pickupLocation: {
+              lat: currentLocation.lat,
+              lng: currentLocation.lng,
+              address: currentLocation.address
+            }
+          }));
+
+          setSelectedPickupLocation({
+            id: 'current-location',
+            name: 'Current Location',
+            coordinates: {
+              lat: currentLocation.lat,
+              lng: currentLocation.lng
+            },
+            description: currentLocation.address,
+            locationType: 'pickup_point',
+            isActive: true,
+            isVerified: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+
+          setUseCurrentLocation(true);
+        }
+      } catch (error) {
+        console.error('Error getting location:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to get your current location. Please try selecting manually.',
+          variant: 'destructive',
+        });
+        setUseCurrentLocation(false);
+      }
+    } else {
+      toast({
+        title: 'Error',
+        description: 'Geolocation is not supported by your browser',
+        variant: 'destructive',
+      });
+      setUseCurrentLocation(false);
+    }
+  };
+
+  const handlePickupLocationSelect = (location: CampusLocation) => {
+    setSelectedPickupLocation(location);
+    setRideRequest(prev => ({
+      ...prev,
+      pickup: location.name,
+      pickupLocation: {
+        lat: location.coordinates.lat,
+        lng: location.coordinates.lng,
+        address: location.name
+      }
+    }));
+    setUseCurrentLocation(false);
+  };
+
+  const handleDropoffLocationSelect = (location: CampusLocation) => {
+    setSelectedDropoffLocation(location);
+    setRideRequest(prev => ({
+      ...prev,
+      dropoff: location.name,
+      dropoffLocation: {
+        lat: location.coordinates.lat,
+        lng: location.coordinates.lng,
+        address: location.name
+      }
+    }));
   };
 
   const handleRideRequest = async (e: React.FormEvent) => {
@@ -237,26 +332,45 @@ export default function StudentRides() {
                         <div className="space-y-4">
                           <div className="space-y-2">
                             <Label htmlFor="pickup">Pickup Location</Label>
-                            <LocationCombobox
-                              value={selectedPickupLocation?.name || ""}
-                              onSelect={(location) => {
-                                setSelectedPickupLocation(location);
-                                setRideRequest(prev => ({ ...prev, pickup: location.name }));
-                              }}
-                              locations={locations || []}
-                              placeholder="Select pickup location"
-                            />
+                            <div className="flex gap-2">
+                              <div className="flex-1">
+                                <LocationCombobox
+                                  value={selectedPickupLocation?.name || ""}
+                                  onSelect={handlePickupLocationSelect}
+                                  locations={locations || []}
+                                  placeholder="Select pickup location"
+                                  isLoading={locationsLoading}
+                                />
+                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="flex gap-2 items-center"
+                                onClick={handleCurrentLocation}
+                                disabled={locationLoading}
+                              >
+                                {locationLoading ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Navigation2 className="h-4 w-4" />
+                                )}
+                                {locationLoading ? "Getting Location..." : "Use Current"}
+                              </Button>
+                            </div>
+                            {locationError && (
+                              <p className="text-sm text-destructive mt-1">
+                                Error getting location: {locationError}
+                              </p>
+                            )}
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="dropoff">Dropoff Location</Label>
                             <LocationCombobox
                               value={selectedDropoffLocation?.name || ""}
-                              onSelect={(location) => {
-                                setSelectedDropoffLocation(location);
-                                setRideRequest(prev => ({ ...prev, dropoff: location.name }));
-                              }}
+                              onSelect={handleDropoffLocationSelect}
                               locations={locations || []}
                               placeholder="Select dropoff location"
+                              isLoading={locationsLoading}
                             />
                           </div>
                           <div className="grid grid-cols-2 gap-4">

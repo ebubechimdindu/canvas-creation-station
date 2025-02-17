@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import { Check, ChevronsUpDown, MapPin, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -18,6 +17,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { type CampusLocation } from "@/types/locations";
+import { useState } from "react";
 
 interface LocationComboboxProps {
   value: string;
@@ -47,8 +47,8 @@ export function LocationCombobox({
   onBlur,
   isLoading = false,
 }: LocationComboboxProps) {
-  const [open, setOpen] = React.useState(false);
-  const [searchQuery, setSearchQuery] = React.useState("");
+  const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Ensure locations is always an array
   const safeLocations = React.useMemo(() => {
