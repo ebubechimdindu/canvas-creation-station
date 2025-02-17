@@ -219,6 +219,9 @@ export type Database = {
       }
       ride_requests: {
         Row: {
+          cancel_reason: string | null
+          cancelled_at: string | null
+          completed_at: string | null
           created_at: string
           driver_id: string | null
           dropoff_address: string
@@ -226,15 +229,21 @@ export type Database = {
           estimated_distance: number | null
           estimated_duration: number | null
           id: number
+          matched_at: string | null
           notes: string | null
           pickup_address: string
           pickup_location: unknown
           special_requirements: string | null
-          status: Database["public"]["Enums"]["ride_status"]
+          started_at: string | null
+          status: Database["public"]["Enums"]["ride_status_enum"]
           student_id: string
+          timeout_at: string | null
           updated_at: string
         }
         Insert: {
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          completed_at?: string | null
           created_at?: string
           driver_id?: string | null
           dropoff_address: string
@@ -242,15 +251,21 @@ export type Database = {
           estimated_distance?: number | null
           estimated_duration?: number | null
           id?: number
+          matched_at?: string | null
           notes?: string | null
           pickup_address: string
           pickup_location: unknown
           special_requirements?: string | null
-          status?: Database["public"]["Enums"]["ride_status"]
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["ride_status_enum"]
           student_id: string
+          timeout_at?: string | null
           updated_at?: string
         }
         Update: {
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          completed_at?: string | null
           created_at?: string
           driver_id?: string | null
           dropoff_address?: string
@@ -258,12 +273,15 @@ export type Database = {
           estimated_distance?: number | null
           estimated_duration?: number | null
           id?: number
+          matched_at?: string | null
           notes?: string | null
           pickup_address?: string
           pickup_location?: unknown
           special_requirements?: string | null
-          status?: Database["public"]["Enums"]["ride_status"]
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["ride_status_enum"]
           student_id?: string
+          timeout_at?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -437,14 +455,31 @@ export type Database = {
       }
       ride_contact_info: {
         Row: {
+          driver_id: string | null
           driver_name: string | null
           driver_phone: string | null
           ride_id: number | null
-          status: Database["public"]["Enums"]["ride_status"] | null
+          status: Database["public"]["Enums"]["ride_status_enum"] | null
+          student_id: string | null
           student_name: string | null
           student_phone: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_driver"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_student"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "student_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
@@ -835,6 +870,16 @@ export type Database = {
           geom2: unknown
         }
         Returns: boolean
+      }
+      find_nearest_driver: {
+        Args: {
+          request_id: number
+        }
+        Returns: {
+          driver_id: string
+          distance: number
+          current_location: unknown
+        }[]
       }
       geography:
         | {
@@ -1269,6 +1314,14 @@ export type Database = {
         }
         Returns: unknown
       }
+      handle_driver_response: {
+        Args: {
+          request_id: number
+          driver_id: string
+          accepted: boolean
+        }
+        Returns: boolean
+      }
       json: {
         Args: {
           "": unknown
@@ -1283,6 +1336,12 @@ export type Database = {
       }
       longtransactionsenabled: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      match_ride_request: {
+        Args: {
+          request_id: number
+        }
         Returns: boolean
       }
       path: {
@@ -3470,6 +3529,14 @@ export type Database = {
         }
         Returns: number
       }
+      update_ride_status: {
+        Args: {
+          request_id: number
+          new_status: Database["public"]["Enums"]["ride_status_enum"]
+          reason?: string
+        }
+        Returns: boolean
+      }
       updategeometrysrid: {
         Args: {
           catalogn_name: string
@@ -3495,6 +3562,16 @@ export type Database = {
         | "in_progress"
         | "completed"
         | "cancelled"
+      ride_status_enum:
+        | "requested"
+        | "finding_driver"
+        | "driver_assigned"
+        | "en_route_to_pickup"
+        | "arrived_at_pickup"
+        | "in_progress"
+        | "completed"
+        | "cancelled"
+        | "timeout"
     }
     CompositeTypes: {
       geometry_dump: {
