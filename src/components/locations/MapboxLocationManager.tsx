@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { type CampusLocation } from '@/types/locations';
+import { type CampusLocation, type LocationReference } from '@/types/locations';
 import { MapPin, Search, Layers } from 'lucide-react';
 import { useMap } from '@/components/map/MapProvider';
 import { useCampusLocations } from '@/hooks/use-campus-locations';
