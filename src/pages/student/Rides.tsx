@@ -23,7 +23,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, Star, MessageSquare, Clock, Car, Search, Filter, Download, X } from "lucide-react";
+import { Calendar, MapPin, Star, MessageSquare, Clock, Car, Search, Filter, Download, X, Loader2, Navigation2 } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { MapProvider } from "@/components/map/MapProvider";
 import {
@@ -61,7 +61,6 @@ import { cn } from "@/lib/utils";
 import RideMap from "@/components/map/RideMap";
 import { type CampusLocation } from "@/types/locations";
 import { LocationCombobox } from "@/components/locations/LocationCombobox";
-import { MapPin, Loader2, Navigation2 } from 'lucide-react';
 import { useStudentLocation } from '@/hooks/use-student-location';
 import { useMap } from '@/components/map/MapProvider';
 
