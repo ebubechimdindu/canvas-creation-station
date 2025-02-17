@@ -56,6 +56,7 @@ export type Database = {
           driver_id: string
           heading: number | null
           id: number
+          is_active: boolean | null
           is_online: boolean | null
           last_updated: string
           location: unknown
@@ -66,6 +67,7 @@ export type Database = {
           driver_id: string
           heading?: number | null
           id?: number
+          is_active?: boolean | null
           is_online?: boolean | null
           last_updated?: string
           location: unknown
@@ -76,6 +78,7 @@ export type Database = {
           driver_id?: string
           heading?: number | null
           id?: number
+          is_active?: boolean | null
           is_online?: boolean | null
           last_updated?: string
           location?: unknown
