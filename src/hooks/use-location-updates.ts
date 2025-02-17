@@ -30,6 +30,7 @@ type SupabaseDriverLocation = {
     full_name: string | null;
     profile_picture_url: string | null;
     max_search_radius_km: number | null;
+    phone_number: string | null;
   } | null;
 };
 
@@ -53,7 +54,8 @@ export const useLocationUpdates = (mode: 'current-driver' | 'all-drivers') => {
             driver_profiles (
               full_name,
               profile_picture_url,
-              max_search_radius_km
+              max_search_radius_km,
+              phone_number
             )
           `)
           .eq('is_online', true);
@@ -80,6 +82,7 @@ export const useLocationUpdates = (mode: 'current-driver' | 'all-drivers') => {
           rating: 0, // Default value as per Driver type
           distance: 0, // Default value as per Driver type
           status: item.is_online ? 'available' as const : 'offline' as const,
+          phoneNumber: item.driver_profiles?.phone_number || '', // Add the phone number here
           accountDetails: {
             bankName: '',
             accountNumber: '',
