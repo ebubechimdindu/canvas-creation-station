@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import DriverSidebar from "@/components/driver/DriverSidebar";
@@ -11,6 +12,19 @@ import RideMap from "@/components/map/RideMap";
 import { useLocationUpdates } from "@/hooks/use-location-updates";
 import { useDriverLocation } from "@/hooks/use-driver-location";
 import { MapProvider } from "@/components/map/MapProvider";
+import { supabase } from "@/integrations/supabase/client";
+import RideRequestCard from "@/components/driver/RideRequestCard";
+
+interface RideRequest {
+  id: number;
+  pickup_address: string;
+  dropoff_address: string;
+  pickup_location: any;
+  dropoff_location: any;
+  estimated_distance: number;
+  estimated_duration: number;
+  estimated_earnings: number;
+}
 
 const DriverDashboard = () => {
   const { toast } = useToast();
@@ -20,43 +34,184 @@ const DriverDashboard = () => {
   const [isMapExpanded, setIsMapExpanded] = useState(false);
   const { driverLocation, nearbyDrivers, error: locationUpdateError } = useLocationUpdates("current-driver");
   const { error: locationError } = useDriverLocation();
+  const [currentRideRequest, setCurrentRideRequest] = useState<RideRequest | null>(null);
+  const [stats, setStats] = useState({
+    totalRides: 0,
+    todayEarnings: 0,
+    rating: 0,
+    activeHours: 0
+  });
 
   useEffect(() => {
-    // Simulate initial data loading
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
+    const loadStats = async () => {
+      try {
+        const { data: user } = await supabase.auth.getUser();
+        if (!user.user) return;
 
-    return () => clearTimeout(timer);
-  }, []);
+        // Get total rides
+        const { count: totalRides } = await supabase
+          .from('ride_requests')
+          .select('*', { count: 'exact', head: true })
+          .eq('driver_id', user.user.id)
+          .eq('status', 'completed');
+
+        // Get today's earnings
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const { data: earnings } = await supabase
+          .from('driver_earnings')
+          .select('amount')
+          .eq('driver_id', user.user.id)
+          .eq('status', 'paid')
+          .gte('created_at', today.toISOString());
+
+        const todayEarnings = earnings?.reduce((sum, record) => sum + Number(record.amount), 0) || 0;
+
+        setStats({
+          totalRides: totalRides || 0,
+          todayEarnings,
+          rating: 4.8, // TODO: Implement ratings
+          activeHours: 6.5 // TODO: Calculate from driver_locations
+        });
+
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading stats:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load dashboard stats",
+          variant: "destructive"
+        });
+      }
+    };
+
+    loadStats();
+  }, [toast]);
 
   useEffect(() => {
-    if (locationError) {
+    if (!driverStatus || driverStatus !== 'available') return;
+
+    const subscription = supabase
+      .channel('ride-requests')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'ride_requests',
+          filter: 'status=eq.requested'
+        },
+        async (payload) => {
+          const newRequest = payload.new as RideRequest;
+          
+          // Only show request if we don't already have one
+          if (!currentRideRequest) {
+            setCurrentRideRequest(newRequest);
+            
+            // Play notification sound
+            const audio = new Audio('/notification.mp3');
+            audio.play().catch(console.error);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [driverStatus, currentRideRequest]);
+
+  const handleAcceptRide = async (rideId: number) => {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error('Not authenticated');
+
+      const { error: updateError } = await supabase
+        .from('ride_requests')
+        .update({
+          status: 'driver_assigned',
+          driver_id: user.user.id
+        })
+        .eq('id', rideId)
+        .eq('status', 'requested');
+
+      if (updateError) throw updateError;
+
       toast({
-        title: "Location Error",
-        description: locationError,
-        variant: "destructive",
+        title: "Ride Accepted",
+        description: "Head to the pickup location",
+      });
+
+      setCurrentRideRequest(null);
+      dispatch(updateDriverStatus('busy'));
+
+    } catch (error) {
+      console.error('Error accepting ride:', error);
+      toast({
+        title: "Error",
+        description: "Failed to accept ride. Please try again.",
+        variant: "destructive"
       });
     }
-  }, [locationError, toast]);
+  };
 
-  useEffect(() => {
-    if (locationUpdateError) {
+  const handleRejectRide = async (rideId: number) => {
+    try {
+      const { error } = await supabase
+        .from('ride_requests')
+        .update({
+          status: 'finding_driver'
+        })
+        .eq('id', rideId)
+        .eq('status', 'requested');
+
+      if (error) throw error;
+
+      setCurrentRideRequest(null);
       toast({
-        title: "Location Update Error",
-        description: locationUpdateError,
-        variant: "destructive",
+        description: "Ride request rejected",
+      });
+
+    } catch (error) {
+      console.error('Error rejecting ride:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reject ride",
+        variant: "destructive"
       });
     }
-  }, [locationUpdateError, toast]);
+  };
 
-  const toggleAvailability = () => {
-    const newStatus = driverStatus === 'available' ? 'offline' : 'available';
-    dispatch(updateDriverStatus(newStatus));
-    toast({
-      title: "Status Updated",
-      description: `You are now ${newStatus}`,
-    });
+  const toggleAvailability = async () => {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error('Not authenticated');
+
+      const newStatus = driverStatus === 'available' ? 'offline' : 'available';
+      
+      const { error: locationError } = await supabase
+        .from('driver_locations')
+        .upsert({
+          driver_id: user.user.id,
+          is_online: newStatus === 'available'
+        });
+
+      if (locationError) throw locationError;
+
+      dispatch(updateDriverStatus(newStatus));
+      toast({
+        title: "Status Updated",
+        description: `You are now ${newStatus}`,
+      });
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update status",
+        variant: "destructive"
+      });
+    }
   };
 
   const toggleMapSize = () => {
@@ -96,6 +251,20 @@ const DriverDashboard = () => {
               <h1 className="text-3xl font-bold text-gray-900">Driver Dashboard</h1>
               <p className="text-gray-600">Welcome back, John</p>
             </div>
+
+            {/* Current Ride Request */}
+            {currentRideRequest && driverStatus === 'available' && (
+              <RideRequestCard
+                id={currentRideRequest.id}
+                pickupAddress={currentRideRequest.pickup_address}
+                dropoffAddress={currentRideRequest.dropoff_address}
+                estimatedEarnings={currentRideRequest.estimated_earnings || 0}
+                estimatedDistance={currentRideRequest.estimated_distance || 0}
+                estimatedDuration={currentRideRequest.estimated_duration || 0}
+                onAccept={handleAcceptRide}
+                onReject={handleRejectRide}
+              />
+            )}
 
             {/* Map Section */}
             <Card className={`transition-all duration-300 ${isMapExpanded ? 'fixed inset-4 z-50 shadow-2xl' : 'hover:shadow-lg'}`}>
@@ -164,11 +333,36 @@ const DriverDashboard = () => {
 
             {/* Stats Grid */}
             <div className={`grid gap-6 sm:grid-cols-2 lg:grid-cols-4 ${isMapExpanded ? 'hidden' : ''}`}>
-              {['Total Rides', "Today's Earnings", 'Rating', 'Active Hours'].map((stat, index) => (
-                <Card key={stat} className="animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
+              {[
+                {
+                  title: 'Total Rides',
+                  value: stats.totalRides.toString(),
+                  subtext: "+5 from last week",
+                  icon: <Users className="h-4 w-4" />
+                },
+                {
+                  title: "Today's Earnings",
+                  value: `₦${stats.todayEarnings.toFixed(2)}`,
+                  subtext: "+12% from yesterday",
+                  icon: <DollarSign className="h-4 w-4" />
+                },
+                {
+                  title: 'Rating',
+                  value: stats.rating.toString(),
+                  subtext: "From 96 ratings",
+                  icon: <Star className="h-4 w-4" />
+                },
+                {
+                  title: 'Active Hours',
+                  value: stats.activeHours.toString(),
+                  subtext: "Hours today",
+                  icon: <Car className="h-4 w-4" />
+                }
+              ].map((stat, index) => (
+                <Card key={stat.title} className="animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
                   <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                    <CardTitle className="text-sm font-medium">{stat}</CardTitle>
-                    {[<Users />, <DollarSign />, <Star />, <Car />][index]}
+                    <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+                    {stat.icon}
                   </CardHeader>
                   <CardContent>
                     {isLoading ? (
@@ -179,20 +373,10 @@ const DriverDashboard = () => {
                     ) : (
                       <>
                         <div className="text-2xl font-bold">
-                          {[
-                            "128",
-                            "₦5,240",
-                            "4.8",
-                            "6.5"
-                          ][index]}
+                          {stat.value}
                         </div>
                         <p className="text-xs text-gray-500">
-                          {[
-                            "+5 from last week",
-                            "+12% from yesterday",
-                            "From 96 ratings",
-                            "Hours today"
-                          ][index]}
+                          {stat.subtext}
                         </p>
                       </>
                     )}

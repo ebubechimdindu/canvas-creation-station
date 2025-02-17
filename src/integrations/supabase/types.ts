@@ -51,6 +51,51 @@ export type Database = {
         }
         Relationships: []
       }
+      driver_earnings: {
+        Row: {
+          amount: number
+          created_at: string | null
+          driver_id: string
+          id: number
+          ride_id: number
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          driver_id: string
+          id?: number
+          ride_id: number
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          driver_id?: string
+          id?: number
+          ride_id?: number
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_earnings_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: false
+            referencedRelation: "ride_contact_info"
+            referencedColumns: ["ride_id"]
+          },
+          {
+            foreignKeyName: "driver_earnings_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: false
+            referencedRelation: "ride_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       driver_locations: {
         Row: {
           driver_id: string
@@ -809,6 +854,13 @@ export type Database = {
             }
             Returns: string
           }
+      calculate_distance: {
+        Args: {
+          point1: unknown
+          point2: unknown
+        }
+        Returns: number
+      }
       disablelongtransactions: {
         Args: Record<PropertyKey, never>
         Returns: string
