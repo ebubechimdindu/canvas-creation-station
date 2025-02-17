@@ -205,6 +205,8 @@ const DriverDashboard = () => {
           is_active: newStatus === 'available',
           location: point,
           last_updated: new Date().toISOString()
+        }, {
+          onConflict: 'driver_id'  // Specify which column to use for conflict resolution
         });
 
       if (locationError) throw locationError;
