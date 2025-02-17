@@ -120,9 +120,9 @@ const StudentDashboard = () => {
           dropoff_location: `POINT(${rideRequest.dropoffLocation.lng} ${rideRequest.dropoffLocation.lat})`,
           pickup_address: rideRequest.pickupLocation.address,
           dropoff_address: rideRequest.dropoffLocation.address,
-          status: 'pending',
+          status: 'requested',
           notes: rideRequest.notes,
-          special_requirements: rideRequest.specialRequirements,
+          special_requirements: rideRequest.specialRequirements
         })
         .select()
         .single();
@@ -174,7 +174,7 @@ const StudentDashboard = () => {
         .from('ride_requests')
         .update({ status: 'cancelled' })
         .eq('student_id', user.user.id)
-        .eq('status', 'pending');
+        .eq('status', 'requested');
 
       if (error) throw error;
 
