@@ -11,9 +11,15 @@ import { MapPin, Search, Layers } from 'lucide-react';
 import { useMap } from '@/components/map/MapProvider';
 import { useCampusLocations } from '@/hooks/use-campus-locations';
 
+interface MarkerState {
+  pickup: mapboxgl.Marker | null;
+  dropoff: mapboxgl.Marker | null;
+  activeType: 'pickup' | 'dropoff';
+}
+
 interface MapboxLocationManagerProps {
-  onLocationSelect?: (location: CampusLocation) => void;
-  onCoordinatesSelect?: (lat: number, lng: number) => void;
+  onLocationSelect?: (location: CampusLocation, type: 'pickup' | 'dropoff') => void;
+  onCoordinatesSelect?: (lat: number, lng: number, type: 'pickup' | 'dropoff') => void;
   onRouteCalculated?: (distance: number, duration: number) => void;
   className?: string;
   initialView?: {
@@ -24,6 +30,10 @@ interface MapboxLocationManagerProps {
   mode?: 'student' | 'driver';
   nearbyDrivers?: Array<{ lat: number; lng: number }>;
   showNearbyRequests?: boolean;
+  selectedLocations?: {
+    pickup?: CampusLocation;
+    dropoff?: CampusLocation;
+  };
 }
 
 const MapboxLocationManager = ({
@@ -35,14 +45,19 @@ const MapboxLocationManager = ({
   showRoutePath,
   mode,
   nearbyDrivers,
-  showNearbyRequests
+  showNearbyRequests,
+  selectedLocations
 }: MapboxLocationManagerProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [mapStyle, setMapStyle] = useState<'streets' | 'satellite'>('streets');
   const { toast } = useToast();
-  const selectedMarker = useRef<mapboxgl.Marker | null>(null);
+  const markerRefs = useRef<MarkerState>({
+    pickup: null,
+    dropoff: null,
+    activeType: 'pickup'
+  });
   const driversMarkers = useRef<mapboxgl.Marker[]>([]);
   const routeSource = useRef<mapboxgl.GeoJSONSource | null>(null);
   const { mapboxToken } = useMap();
@@ -55,13 +70,9 @@ const MapboxLocationManager = ({
     [3.7292, 6.8973]  // Northeast coordinates
   ] as [[number, number], [number, number]];
 
-  const CAMPUS_LANDMARKS = {
-    "Student Center": [3.7242, 6.8923],
-    "Main Gate": [3.7240, 6.8920],
-    "Library": [3.7245, 6.8925],
-    "Science Complex": [3.7244, 6.8924],
-    "Sports Complex": [3.7243, 6.8922],
-    "Cafeteria": [3.7241, 6.8921]
+  const MARKER_COLORS = {
+    pickup: '#3B82F6', // Blue
+    dropoff: '#EF4444'  // Red
   };
 
   useEffect(() => {
@@ -86,21 +97,42 @@ const MapboxLocationManager = ({
     if (mode === 'student') {
       map.current.on('click', (e) => {
         const { lng, lat } = e.lngLat;
+        const currentType = markerRefs.current.activeType;
         
-        if (selectedMarker.current) {
-          selectedMarker.current.remove();
+        // Update or create marker for current type
+        if (markerRefs.current[currentType]) {
+          markerRefs.current[currentType]?.setLngLat([lng, lat]);
+        } else {
+          markerRefs.current[currentType] = new mapboxgl.Marker({ 
+            color: MARKER_COLORS[currentType],
+            draggable: true
+          })
+            .setLngLat([lng, lat])
+            .addTo(map.current!);
+
+          // Add dragend event listener
+          markerRefs.current[currentType]?.on('dragend', () => {
+            const marker = markerRefs.current[currentType];
+            if (marker) {
+              const { lng: newLng, lat: newLat } = marker.getLngLat();
+              onCoordinatesSelect?.(newLat, newLng, currentType);
+              toast({
+                title: `${currentType.charAt(0).toUpperCase() + currentType.slice(1)} Location Updated`,
+                description: `New coordinates: ${newLat.toFixed(6)}, ${newLng.toFixed(6)}`,
+              });
+            }
+          });
         }
 
-        selectedMarker.current = new mapboxgl.Marker({ color: '#FF0000' })
-          .setLngLat([lng, lat])
-          .addTo(map.current!);
-
-        onCoordinatesSelect?.(lat, lng);
+        onCoordinatesSelect?.(lat, lng, currentType);
 
         toast({
-          title: 'Location Selected',
+          title: `${currentType.charAt(0).toUpperCase() + currentType.slice(1)} Location Selected`,
           description: `Latitude: ${lat.toFixed(6)}, Longitude: ${lng.toFixed(6)}`,
         });
+
+        // Toggle active marker type
+        markerRefs.current.activeType = currentType === 'pickup' ? 'dropoff' : 'pickup';
       });
     }
 
@@ -121,9 +153,33 @@ const MapboxLocationManager = ({
   }, [mapboxToken, mode]);
 
   useEffect(() => {
-    if (!map.current) return;
-    map.current.setStyle(`mapbox://styles/mapbox/${mapStyle}-v12`);
-  }, [mapStyle]);
+    if (!map.current || !selectedLocations) return;
+
+    const updateMarker = (type: 'pickup' | 'dropoff', location?: CampusLocation) => {
+      if (!location) return;
+
+      const { lat, lng } = location.coordinates;
+      
+      if (markerRefs.current[type]) {
+        markerRefs.current[type]?.setLngLat([lng, lat]);
+      } else {
+        markerRefs.current[type] = new mapboxgl.Marker({ 
+          color: MARKER_COLORS[type],
+          draggable: true
+        })
+          .setLngLat([lng, lat])
+          .addTo(map.current!);
+      }
+    };
+
+    if (selectedLocations.pickup) {
+      updateMarker('pickup', selectedLocations.pickup);
+    }
+    if (selectedLocations.dropoff) {
+      updateMarker('dropoff', selectedLocations.dropoff);
+    }
+
+  }, [selectedLocations]);
 
   useEffect(() => {
     if (!map.current || !initialView || !showRoutePath) return;
@@ -352,14 +408,18 @@ const MapboxLocationManager = ({
       
       if (coordinates) {
         const [lng, lat] = coordinates;
+        const currentType = markerRefs.current.activeType;
 
-        if (selectedMarker.current) {
-          selectedMarker.current.remove();
+        if (markerRefs.current[currentType]) {
+          markerRefs.current[currentType]?.setLngLat([lng, lat]);
+        } else {
+          markerRefs.current[currentType] = new mapboxgl.Marker({ 
+            color: MARKER_COLORS[currentType],
+            draggable: true 
+          })
+            .setLngLat([lng, lat])
+            .addTo(map.current!);
         }
-
-        selectedMarker.current = new mapboxgl.Marker({ color: '#FF0000' })
-          .setLngLat([lng, lat])
-          .addTo(map.current!);
 
         map.current?.flyTo({
           center: [lng, lat],
@@ -368,12 +428,15 @@ const MapboxLocationManager = ({
           essential: true
         });
 
-        onCoordinatesSelect?.(lat, lng);
+        onCoordinatesSelect?.(lat, lng, currentType);
 
         toast({
-          title: 'Location Found',
+          title: `${currentType.charAt(0).toUpperCase() + currentType.slice(1)} Location Found`,
           description: `Selected: ${searchQuery}`,
         });
+
+        // Toggle active marker type
+        markerRefs.current.activeType = currentType === 'pickup' ? 'dropoff' : 'pickup';
       }
     } catch (error) {
       toast({
@@ -397,17 +460,28 @@ const MapboxLocationManager = ({
     <Card className={`${className} overflow-hidden`}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="text-xl font-bold">Campus Location Manager</CardTitle>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => {
-            const newStyle = mapStyle === 'streets' ? 'satellite' : 'streets';
-            setMapStyle(newStyle);
-          }}
-          className="ml-2"
-        >
-          <Layers className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded-full bg-blue-500" />
+              <span>Pickup</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded-full bg-red-500" />
+              <span>Dropoff</span>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => {
+              const newStyle = mapStyle === 'streets' ? 'satellite' : 'streets';
+              setMapStyle(newStyle);
+            }}
+          >
+            <Layers className="h-4 w-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4 p-0">
         <div className="relative w-full h-[600px]">

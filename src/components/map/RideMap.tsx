@@ -12,7 +12,11 @@ interface RideMapProps {
   nearbyDrivers?: Array<{ lat: number; lng: number }>;
   onRouteCalculated?: (distance: number, duration: number) => void;
   showNearbyRequests?: boolean;
-  onLocationSelect?: (location: CampusLocation) => void;
+  onLocationSelect?: (location: CampusLocation, type: 'pickup' | 'dropoff') => void;
+  selectedLocations?: {
+    pickup?: CampusLocation;
+    dropoff?: CampusLocation;
+  };
 }
 
 const RideMap: React.FC<RideMapProps> = ({
@@ -24,8 +28,14 @@ const RideMap: React.FC<RideMapProps> = ({
   nearbyDrivers,
   onRouteCalculated,
   showNearbyRequests,
-  onLocationSelect
+  onLocationSelect,
+  selectedLocations
 }) => {
+  const handleCoordinatesSelect = (lat: number, lng: number, type: 'pickup' | 'dropoff') => {
+    console.log(`Selected ${type} coordinates:`, { lat, lng });
+    // Additional coordinate handling logic here
+  };
+
   return (
     <div className="w-full h-full min-h-[300px] md:min-h-[400px]">
       <MapboxLocationManager
@@ -40,9 +50,12 @@ const RideMap: React.FC<RideMapProps> = ({
         onRouteCalculated={onRouteCalculated}
         showNearbyRequests={showNearbyRequests}
         onLocationSelect={onLocationSelect}
+        onCoordinatesSelect={handleCoordinatesSelect}
+        selectedLocations={selectedLocations}
       />
     </div>
   );
 };
 
 export default RideMap;
+
