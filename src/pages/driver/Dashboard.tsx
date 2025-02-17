@@ -187,14 +187,24 @@ const DriverDashboard = () => {
     try {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error('Not authenticated');
+      if (!driverLocation) throw new Error('Location not available');
 
       const newStatus = driverStatus === 'available' ? 'offline' : 'available';
       
+      // Convert location to PostGIS point format
+      const point = {
+        type: 'Point',
+        coordinates: [driverLocation.lng, driverLocation.lat]
+      };
+
       const { error: locationError } = await supabase
         .from('driver_locations')
         .upsert({
           driver_id: user.user.id,
-          is_online: newStatus === 'available'
+          is_online: newStatus === 'available',
+          is_active: newStatus === 'available',
+          location: point,
+          last_updated: new Date().toISOString()
         });
 
       if (locationError) throw locationError;
