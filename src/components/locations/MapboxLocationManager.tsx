@@ -71,6 +71,9 @@ const MapboxLocationManager = ({
   const { mapboxToken } = useMap();
   const { locations } = useCampusLocations();
   const locationMarkers = useRef<mapboxgl.Marker[]>([]);
+  const isMapLoaded = useRef(false);
+  const audioContext = useRef<AudioContext | null>(null);
+  const notificationSound = useRef<HTMLAudioElement | null>(null);
 
   const CAMPUS_CENTER = [3.7242, 6.8923] as [number, number];
   const CAMPUS_BOUNDS = [
@@ -98,8 +101,52 @@ const MapboxLocationManager = ({
       maxBounds: CAMPUS_BOUNDS
     });
 
+    map.current.on('load', () => {
+      isMapLoaded.current = true;
+      
+      // Initialize route layer
+      if (map.current && showRoutePath) {
+        map.current.addSource('route', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: []
+            }
+          }
+        });
+
+        map.current.addLayer({
+          id: 'route',
+          type: 'line',
+          source: 'route',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#3b82f6',
+            'line-width': 4,
+            'line-opacity': 0.75
+          }
+        });
+      }
+    });
+
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
     map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-right');
+
+    // Initialize audio context on user interaction
+    const initAudio = () => {
+      if (!audioContext.current) {
+        audioContext.current = new AudioContext();
+        notificationSound.current = new Audio('/notification.mp3');
+      }
+    };
+
+    document.addEventListener('click', initAudio, { once: true });
 
     if (mode === 'student') {
       map.current.on('click', (e) => {
@@ -150,6 +197,7 @@ const MapboxLocationManager = ({
     resizeMap();
 
     return () => {
+      document.removeEventListener('click', initAudio);
       window.removeEventListener('resize', resizeMap);
       map.current?.remove();
       map.current = null;
@@ -290,6 +338,19 @@ const MapboxLocationManager = ({
     if (!map.current || !mapboxToken) return;
 
     try {
+      if (!isMapLoaded.current) {
+        await new Promise<void>((resolve) => {
+          const checkLoaded = () => {
+            if (map.current?.isStyleLoaded()) {
+              resolve();
+            } else {
+              setTimeout(checkLoaded, 100);
+            }
+          };
+          checkLoaded();
+        });
+      }
+
       const pickupCoords = await geocode(pickup);
       const dropoffCoords = await geocode(dropoff);
 
@@ -315,33 +376,12 @@ const MapboxLocationManager = ({
 
         onRouteCalculated?.(distance, duration);
 
-        if (map.current.getSource('route')) {
-          (map.current.getSource('route') as mapboxgl.GeoJSONSource).setData({
+        const source = map.current.getSource('route') as mapboxgl.GeoJSONSource;
+        if (source) {
+          source.setData({
             type: 'Feature',
             properties: {},
             geometry: route.geometry
-          });
-        } else {
-          map.current.addLayer({
-            id: 'route',
-            type: 'line',
-            source: {
-              type: 'geojson',
-              data: {
-                type: 'Feature',
-                properties: {},
-                geometry: route.geometry
-              }
-            },
-            layout: {
-              'line-join': 'round',
-              'line-cap': 'round'
-            },
-            paint: {
-              'line-color': '#3b82f6',
-              'line-width': 4,
-              'line-opacity': 0.75
-            }
           });
         }
 
@@ -359,7 +399,7 @@ const MapboxLocationManager = ({
       console.error('Error drawing route:', error);
       toast({
         title: 'Error',
-        description: 'Could not draw route',
+        description: 'Could not draw route. Please try again.',
         variant: 'destructive'
       });
     }
@@ -478,6 +518,9 @@ const MapboxLocationManager = ({
             onClick={() => {
               const newStyle = mapStyle === 'streets' ? 'satellite' : 'streets';
               setMapStyle(newStyle);
+              if (map.current) {
+                map.current.setStyle(`mapbox://styles/mapbox/${newStyle}-v12`);
+              }
             }}
           >
             <Layers className="h-4 w-4" />
