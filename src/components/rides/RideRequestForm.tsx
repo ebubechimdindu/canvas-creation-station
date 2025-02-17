@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -33,7 +32,7 @@ export function RideRequestForm({
   onSubmit,
   onCancel,
   availableDrivers,
-  locations,
+  locations = [],
   locationsLoading
 }: RideRequestFormProps) {
   const [rideRequest, setRideRequest] = React.useState({
@@ -53,6 +52,10 @@ export function RideRequestForm({
   const { mapboxToken } = useMap();
   const { currentLocation, error: locationError, isLoading: locationLoading, updateLocation } = useStudentLocation(mapboxToken);
   const { toast } = useToast();
+
+  const safeLocations = React.useMemo(() => {
+    return Array.isArray(locations) ? locations : [];
+  }, [locations]);
 
   const handleCurrentLocation = async () => {
     if ('geolocation' in navigator) {
@@ -153,7 +156,7 @@ export function RideRequestForm({
                 <LocationCombobox
                   value={selectedPickupLocation?.name || ""}
                   onSelect={handlePickupLocationSelect}
-                  locations={locations}
+                  locations={safeLocations}
                   placeholder="Select pickup location"
                   isLoading={locationsLoading}
                 />
@@ -184,7 +187,7 @@ export function RideRequestForm({
             <LocationCombobox
               value={selectedDropoffLocation?.name || ""}
               onSelect={handleDropoffLocationSelect}
-              locations={locations}
+              locations={safeLocations}
               placeholder="Select dropoff location"
               isLoading={locationsLoading}
             />
@@ -277,3 +280,5 @@ export function RideRequestForm({
     </form>
   );
 }
+
+export default RideRequestForm;

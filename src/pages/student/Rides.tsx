@@ -6,15 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import RideDetailsModal from "@/components/rides/RideDetailsModal";
 import { useCampusLocations } from "@/hooks/use-campus-locations";
 import { Button } from "@/components/ui/button";
-import { Calendar, Car, Search, Download, MessageSquare, MapPin, Star } from "lucide-react";
+import { Calendar, Car, Search, Download } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { MapProvider } from "@/components/map/MapProvider";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
-import RideRequestForm from "@/components/rides/RideRequestForm";
+import { RideRequestForm } from "@/components/rides/RideRequestForm";
 import { ActiveRideRequest } from "@/components/rides/ActiveRideRequest";
 import { RideHistoryTable } from "@/components/rides/RideHistoryTable";
 import {
@@ -26,8 +26,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
 
 const rides = [
   {
