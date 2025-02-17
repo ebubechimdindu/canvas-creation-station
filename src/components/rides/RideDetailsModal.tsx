@@ -22,10 +22,11 @@ import {
 import RideMap from "../map/RideMap";
 import { RideTimeline } from "./RideTimeline";
 import { RideStatusBadge } from "./RideStatusBadge";
-import { MapPin, Calendar, Clock, User, MessageSquare, Upload } from "lucide-react";
+import { MapPin, Calendar, Clock, User, MessageSquare, Upload, Phone, CreditCard } from "lucide-react";
 import { Ride } from "@/types";
 import { format } from "date-fns";
 import { useCampusLocations } from "@/hooks/use-campus-locations";
+import { useAppSelector } from "@/hooks/redux";
 
 interface RideDetailsModalProps {
   ride: Ride | null;
@@ -39,6 +40,7 @@ const RideDetailsModal = ({ ride, open, onOpenChange }: RideDetailsModalProps) =
   const [duration, setDuration] = useState<number>(0);
   const [note, setNote] = useState("");
   const { locations, isLoading: isLoadingLocations } = useCampusLocations();
+  const userRole = useAppSelector(state => state.auth.user?.role);
 
   // Group locations by type
   const groupedLocations = locations.reduce((acc, location) => {
@@ -71,6 +73,10 @@ const RideDetailsModal = ({ ride, open, onOpenChange }: RideDetailsModalProps) =
       .join(' ');
   };
 
+  const formatPhoneNumberUrl = (phone: string) => {
+    return `tel:${phone.replace(/\D/g, '')}`;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[800px] max-h-[90vh] flex flex-col overflow-hidden">
@@ -86,7 +92,7 @@ const RideDetailsModal = ({ ride, open, onOpenChange }: RideDetailsModalProps) =
             <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="map">Map</TabsTrigger>
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
-            <TabsTrigger value="notes">Notes</TabsTrigger>
+            <TabsTrigger value="contact">Contact Info</TabsTrigger>
           </TabsList>
 
           <div className="flex-1 overflow-hidden">
@@ -211,39 +217,55 @@ const RideDetailsModal = ({ ride, open, onOpenChange }: RideDetailsModalProps) =
                 <RideTimeline ride={ride} />
               </TabsContent>
 
-              <TabsContent value="notes" className="space-y-4">
-                <div className="space-y-4">
-                  <div className="flex items-start gap-4">
-                    <Textarea
-                      placeholder="Add a note about this ride..."
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                    />
-                    <Button onClick={handleAddNote}>
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      Add Note
-                    </Button>
-                  </div>
-
-                  {ride.notes && (
+              <TabsContent value="contact" className="space-y-6">
+                {userRole === 'student' && ride.driverDetails && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">Driver Contact Information</h3>
                     <div className="space-y-2">
-                      <h3 className="font-semibold">Notes</h3>
-                      <p className="text-muted-foreground">{ride.notes}</p>
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span>{ride.driverDetails.name}</span>
+                      </div>
+                      <a 
+                        href={formatPhoneNumberUrl(ride.driverDetails.phoneNumber)}
+                        className="flex items-center gap-2 text-primary hover:underline"
+                      >
+                        <Phone className="h-4 w-4" />
+                        <span>{ride.driverDetails.phoneNumber}</span>
+                      </a>
                     </div>
-                  )}
-
-                  <div className="border-t pt-4">
-                    <h3 className="font-semibold mb-2">Upload Evidence</h3>
-                    <div className="flex items-center justify-center border-2 border-dashed rounded-lg p-6">
-                      <div className="text-center">
-                        <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                        <p className="text-sm text-muted-foreground">
-                          Drag and drop files here, or click to select files
-                        </p>
+                    <div className="space-y-2 pt-4">
+                      <h4 className="font-medium flex items-center gap-2">
+                        <CreditCard className="h-4 w-4" />
+                        Payment Details
+                      </h4>
+                      <div className="space-y-1 pl-6">
+                        <p>Bank: {ride.driverDetails.accountDetails.bankName}</p>
+                        <p>Account Name: {ride.driverDetails.accountDetails.accountName}</p>
+                        <p>Account Number: {ride.driverDetails.accountDetails.accountNumber}</p>
                       </div>
                     </div>
                   </div>
-                </div>
+                )}
+
+                {userRole === 'driver' && ride.studentDetails && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">Student Contact Information</h3>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span>{ride.studentDetails.name}</span>
+                      </div>
+                      <a 
+                        href={formatPhoneNumberUrl(ride.studentDetails.phoneNumber)}
+                        className="flex items-center gap-2 text-primary hover:underline"
+                      >
+                        <Phone className="h-4 w-4" />
+                        <span>{ride.studentDetails.phoneNumber}</span>
+                      </a>
+                    </div>
+                  </div>
+                )}
               </TabsContent>
             </ScrollArea>
           </div>
@@ -254,3 +276,4 @@ const RideDetailsModal = ({ ride, open, onOpenChange }: RideDetailsModalProps) =
 };
 
 export default RideDetailsModal;
+

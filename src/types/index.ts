@@ -3,6 +3,7 @@ export interface User {
   email: string;
   name: string;
   role: 'student' | 'driver';
+  phoneNumber?: string;
 }
 
 export interface Driver {
@@ -11,6 +12,7 @@ export interface Driver {
   rating: number;
   distance: number;
   status: 'available' | 'busy' | 'offline';
+  phoneNumber: string;
   accountDetails: {
     bankName: string;
     accountNumber: string;
@@ -50,6 +52,21 @@ export interface Ride {
     coordinates: [number, number][];
     duration: number;
     distance: number;
+  };
+  studentDetails?: {
+    id: string;
+    name: string;
+    phoneNumber: string;
+  };
+  driverDetails?: {
+    id: string;
+    name: string;
+    phoneNumber: string;
+    accountDetails: {
+      bankName: string;
+      accountNumber: string;
+      accountName: string;
+    };
   };
 }
 
