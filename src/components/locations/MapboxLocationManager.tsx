@@ -10,6 +10,8 @@ import { type CampusLocation } from '@/types/locations';
 import { MapPin, Search, Layers } from 'lucide-react';
 import { useMap } from '@/components/map/MapProvider';
 import { useCampusLocations } from '@/hooks/use-campus-locations';
+import { useLocationReferences } from '@/hooks/use-location-references';
+import { LocationReference, LocationInfoCard } from '@/components/location-info-card';
 
 const CAMPUS_LANDMARKS: Record<string, [number, number]> = {
   'Main Gate': [3.7242, 6.8923],
@@ -74,6 +76,8 @@ const MapboxLocationManager = ({
   const isMapLoaded = useRef(false);
   const audioContext = useRef<AudioContext | null>(null);
   const notificationSound = useRef<HTMLAudioElement | null>(null);
+  const { getNearbyReferences, formatLocationDescription } = useLocationReferences();
+  const [activeReferences, setActiveReferences] = useState<LocationReference[]>([]);
 
   const CAMPUS_CENTER = [3.7242, 6.8923] as [number, number];
   const CAMPUS_BOUNDS = [
@@ -150,40 +154,7 @@ const MapboxLocationManager = ({
 
     if (mode === 'student') {
       map.current.on('click', (e) => {
-        const { lng, lat } = e.lngLat;
-        const currentType = markerRefs.current.activeType;
-        
-        if (markerRefs.current[currentType]) {
-          markerRefs.current[currentType]?.setLngLat([lng, lat]);
-        } else {
-          markerRefs.current[currentType] = new mapboxgl.Marker({ 
-            color: MARKER_COLORS[currentType],
-            draggable: true
-          })
-            .setLngLat([lng, lat])
-            .addTo(map.current!);
-
-          markerRefs.current[currentType]?.on('dragend', () => {
-            const marker = markerRefs.current[currentType];
-            if (marker) {
-              const { lng: newLng, lat: newLat } = marker.getLngLat();
-              onCoordinatesSelect?.(newLat, newLng, currentType);
-              toast({
-                title: `${currentType.charAt(0).toUpperCase() + currentType.slice(1)} Location Updated`,
-                description: `New coordinates: ${newLat.toFixed(6)}, ${newLng.toFixed(6)}`,
-              });
-            }
-          });
-        }
-
-        onCoordinatesSelect?.(lat, lng, currentType);
-
-        toast({
-          title: `${currentType.charAt(0).toUpperCase() + currentType.slice(1)} Location Selected`,
-          description: `Latitude: ${lat.toFixed(6)}, Longitude: ${lng.toFixed(6)}`,
-        });
-
-        markerRefs.current.activeType = currentType === 'pickup' ? 'dropoff' : 'pickup';
+        handleMapClick(e);
       });
     }
 
@@ -497,42 +468,47 @@ const MapboxLocationManager = ({
            lat <= 90;
   };
 
+  const handleMapClick = async (e: mapboxgl.MapMouseEvent) => {
+    if (!map.current) return;
+    
+    const { lng, lat } = e.lngLat;
+    const currentType = markerRefs.current.activeType;
+    
+    // Get nearby references
+    const references = await getNearbyReferences(lat, lng);
+    setActiveReferences(references);
+    
+    // Update marker
+    if (currentType === 'pickup') {
+      if (markerRefs.current.pickup) markerRefs.current.pickup.remove();
+      markerRefs.current.pickup = new mapboxgl.Marker({ color: '#22c55e' })
+        .setLngLat([lng, lat])
+        .addTo(map.current);
+    } else {
+      if (markerRefs.current.dropoff) markerRefs.current.dropoff.remove();
+      markerRefs.current.dropoff = new mapboxgl.Marker({ color: '#ef4444' })
+        .setLngLat([lng, lat])
+        .addTo(map.current);
+    }
+
+    // Notify parent with location info
+    onCoordinatesSelect?.(lat, lng, currentType);
+    
+    toast({
+      title: `${currentType.charAt(0).toUpperCase() + currentType.slice(1)} Location Selected`,
+      description: formatLocationDescription(references),
+    });
+  };
+
   return (
-    <Card className={`${className} overflow-hidden`}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <CardTitle className="text-xl font-bold">Campus Location Manager</CardTitle>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full bg-blue-500" />
-              <span>Pickup</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full bg-red-500" />
-              <span>Dropoff</span>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => {
-              const newStyle = mapStyle === 'streets' ? 'satellite' : 'streets';
-              setMapStyle(newStyle);
-              if (map.current) {
-                map.current.setStyle(`mapbox://styles/mapbox/${newStyle}-v12`);
-              }
-            }}
-          >
-            <Layers className="h-4 w-4" />
-          </Button>
+    <div className="relative w-full h-full">
+      <div ref={mapContainer} className="w-full h-full" />
+      {activeReferences.length > 0 && (
+        <div className="absolute bottom-4 left-4 z-10 w-72">
+          <LocationInfoCard references={activeReferences} />
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4 p-0">
-        <div className="relative w-full h-[600px]">
-          <div ref={mapContainer} className="absolute inset-0" />
-        </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 };
 

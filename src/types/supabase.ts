@@ -9,6 +9,38 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      location_references: {
+        Row: {
+          id: string
+          location: unknown
+          name: string
+          reference_type: 'building' | 'intersection' | 'landmark' | 'gate' | 'path'
+          description: string | null
+          distance_threshold: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          location: unknown
+          name: string
+          reference_type: 'building' | 'intersection' | 'landmark' | 'gate' | 'path'
+          description?: string | null
+          distance_threshold?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          location?: unknown
+          name?: string
+          reference_type?: 'building' | 'intersection' | 'landmark' | 'gate' | 'path'
+          description?: string | null
+          distance_threshold?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
       driver_profiles: {
         Row: {
           id: string
@@ -88,7 +120,19 @@ export interface Database {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      find_nearest_references: {
+        Args: {
+          point: unknown
+          max_distance?: number
+        }
+        Returns: {
+          id: string
+          name: string
+          reference_type: 'building' | 'intersection' | 'landmark' | 'gate' | 'path'
+          description: string | null
+          distance: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
