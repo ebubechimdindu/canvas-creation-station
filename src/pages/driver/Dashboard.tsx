@@ -25,6 +25,13 @@ interface RideRequest {
   estimated_earnings: number;
 }
 
+interface DriverStats {
+  totalRides: number;
+  todayEarnings: number;
+  rating: number;
+  activeHours: number;
+}
+
 const DriverDashboard = () => {
   const { toast } = useToast();
   const dispatch = useAppDispatch();
@@ -37,46 +44,12 @@ const DriverDashboard = () => {
   const audioContext = useRef<AudioContext | null>(null);
   const notificationSound = useRef<HTMLAudioElement | null>(null);
   const [locationPermission, setLocationPermission] = useState<PermissionState>('prompt');
-
-  useEffect(() => {
-    const initAudio = () => {
-      if (!audioContext.current) {
-        audioContext.current = new AudioContext();
-        notificationSound.current = new Audio('/notification.mp3');
-      }
-    };
-
-    document.addEventListener('click', initAudio, { once: true });
-
-    return () => {
-      document.removeEventListener('click', initAudio);
-    };
-  }, []);
-
-  useEffect(() => {
-    const checkLocationPermission = async () => {
-      try {
-        const permission = await navigator.permissions.query({ name: 'geolocation' });
-        setLocationPermission(permission.state);
-
-        permission.addEventListener('change', () => {
-          setLocationPermission(permission.state);
-        });
-
-        if (permission.state === 'denied') {
-          toast({
-            title: "Location Access Required",
-            description: "Please enable location services to use the driver dashboard.",
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        console.error('Error checking location permission:', error);
-      }
-    };
-
-    checkLocationPermission();
-  }, [toast]);
+  const [stats, setStats] = useState<DriverStats>({
+    totalRides: 0,
+    todayEarnings: 0,
+    rating: 0,
+    activeHours: 0
+  });
 
   useEffect(() => {
     const loadStats = async () => {
@@ -124,8 +97,46 @@ const DriverDashboard = () => {
   }, [toast]);
 
   useEffect(() => {
-    if (!driverStatus || driverStatus !== 'available') return;
+    const initAudio = () => {
+      if (!audioContext.current) {
+        audioContext.current = new AudioContext();
+        notificationSound.current = new Audio('/notification.mp3');
+      }
+    };
 
+    document.addEventListener('click', initAudio, { once: true });
+
+    return () => {
+      document.removeEventListener('click', initAudio);
+    };
+  }, []);
+
+  useEffect(() => {
+    const checkLocationPermission = async () => {
+      try {
+        const permission = await navigator.permissions.query({ name: 'geolocation' });
+        setLocationPermission(permission.state);
+
+        permission.addEventListener('change', () => {
+          setLocationPermission(permission.state);
+        });
+
+        if (permission.state === 'denied') {
+          toast({
+            title: "Location Access Required",
+            description: "Please enable location services to use the driver dashboard.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error('Error checking location permission:', error);
+      }
+    };
+
+    checkLocationPermission();
+  }, [toast]);
+
+  useEffect(() => {
     const subscription = supabase
       .channel('ride-requests')
       .on(
