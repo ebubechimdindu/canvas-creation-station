@@ -11,6 +11,14 @@ import { MapPin, Search, Layers } from 'lucide-react';
 import { useMap } from '@/components/map/MapProvider';
 import { useCampusLocations } from '@/hooks/use-campus-locations';
 
+const CAMPUS_LANDMARKS: Record<string, [number, number]> = {
+  'Main Gate': [3.7242, 6.8923],
+  'Library': [3.7250, 6.8930],
+  'Cafeteria': [3.7245, 6.8925],
+  'Sports Complex': [3.7240, 6.8920],
+  'Administrative Block': [3.7248, 6.8928]
+};
+
 interface MarkerState {
   pickup: mapboxgl.Marker | null;
   dropoff: mapboxgl.Marker | null;
@@ -93,13 +101,11 @@ const MapboxLocationManager = ({
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
     map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-right');
 
-    // Only add click handler if we're in student mode
     if (mode === 'student') {
       map.current.on('click', (e) => {
         const { lng, lat } = e.lngLat;
         const currentType = markerRefs.current.activeType;
         
-        // Update or create marker for current type
         if (markerRefs.current[currentType]) {
           markerRefs.current[currentType]?.setLngLat([lng, lat]);
         } else {
@@ -110,7 +116,6 @@ const MapboxLocationManager = ({
             .setLngLat([lng, lat])
             .addTo(map.current!);
 
-          // Add dragend event listener
           markerRefs.current[currentType]?.on('dragend', () => {
             const marker = markerRefs.current[currentType];
             if (marker) {
@@ -131,7 +136,6 @@ const MapboxLocationManager = ({
           description: `Latitude: ${lat.toFixed(6)}, Longitude: ${lng.toFixed(6)}`,
         });
 
-        // Toggle active marker type
         markerRefs.current.activeType = currentType === 'pickup' ? 'dropoff' : 'pickup';
       });
     }
@@ -178,7 +182,6 @@ const MapboxLocationManager = ({
     if (selectedLocations.dropoff) {
       updateMarker('dropoff', selectedLocations.dropoff);
     }
-
   }, [selectedLocations]);
 
   useEffect(() => {
@@ -199,7 +202,6 @@ const MapboxLocationManager = ({
       driversMarkers.current.push(marker);
     });
 
-    // If we're in driver mode, center on the driver's location
     if (mode === 'driver' && nearbyDrivers.length > 0) {
       map.current.flyTo({
         center: [nearbyDrivers[0].lng, nearbyDrivers[0].lat],
@@ -370,7 +372,7 @@ const MapboxLocationManager = ({
       name.toLowerCase().includes(location.toLowerCase())
     );
     if (landmarkEntry) {
-      return landmarkEntry[1] as [number, number];
+      return landmarkEntry[1];
     }
 
     try {
@@ -435,7 +437,6 @@ const MapboxLocationManager = ({
           description: `Selected: ${searchQuery}`,
         });
 
-        // Toggle active marker type
         markerRefs.current.activeType = currentType === 'pickup' ? 'dropoff' : 'pickup';
       }
     } catch (error) {
