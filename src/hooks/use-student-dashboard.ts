@@ -24,6 +24,14 @@ interface RecentActivity {
   fare_amount: number | null;
 }
 
+interface NearbyDriver {
+  id: string;
+  full_name: string;
+  average_rating: number;
+  distance_meters: number;
+  last_location_update: string;
+}
+
 export const useStudentDashboard = () => {
   const { toast } = useToast();
   const user = useAppSelector((state) => state.auth.user);
@@ -63,7 +71,7 @@ export const useStudentDashboard = () => {
     enabled: !!user?.id,
   });
 
-  const { data: nearbyDrivers, isLoading: isLoadingDrivers } = useQuery({
+  const { data: nearbyDrivers, isLoading: isLoadingDrivers } = useQuery<NearbyDriver[]>({
     queryKey: ['nearbyDrivers', user?.id],
     queryFn: async () => {
       if (!user?.id) throw new Error('User not authenticated');
@@ -75,7 +83,7 @@ export const useStudentDashboard = () => {
         });
 
       if (error) throw error;
-      return data;
+      return data as NearbyDriver[];
     },
     enabled: !!user?.id,
     refetchInterval: 30000, // Refetch every 30 seconds
