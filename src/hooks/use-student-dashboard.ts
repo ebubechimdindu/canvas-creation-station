@@ -47,9 +47,24 @@ export const useStudentDashboard = () => {
         .from('student_dashboard_stats')
         .select('*')
         .eq('student_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching student stats:', error);
+        throw error;
+      }
+
+      if (!data) {
+        return {
+          total_rides: 0,
+          today_rides: 0,
+          monthly_rides: 0,
+          avg_wait_minutes: 0,
+          completed_rides: 0,
+          cancelled_rides: 0
+        };
+      }
+
       return data as StudentStats;
     },
     enabled: !!user?.id,
@@ -68,8 +83,12 @@ export const useStudentDashboard = () => {
         .order('created_at', { ascending: false })
         .limit(5);
 
-      if (error) throw error;
-      return data as RecentActivity[];
+      if (error) {
+        console.error('Error fetching recent activity:', error);
+        throw error;
+      }
+
+      return (data || []) as RecentActivity[];
     },
     enabled: !!user?.id,
     retry: false,
@@ -85,9 +104,13 @@ export const useStudentDashboard = () => {
         .select('*')
         .eq('status', 'verified')
         .not('last_known_location', 'is', null)
+        .eq('is_online', true)
         .limit(5);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching nearby drivers:', error);
+        throw error;
+      }
 
       return (data || []).map(driver => ({
         id: driver.driver_id,
