@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -25,7 +24,6 @@ export const useRideRequests = () => {
   const user = useAppSelector((state) => state.auth.user);
   const [isCreating, setIsCreating] = useState(false);
 
-  // Fetch active ride request for current user
   const { data: activeRide, isLoading: isLoadingActive } = useQuery({
     queryKey: ['activeRide', user?.id],
     queryFn: async () => {
@@ -60,14 +58,13 @@ export const useRideRequests = () => {
     enabled: !!user?.id,
   });
 
-  // Subscribe to ride status updates
   useEffect(() => {
     if (!user?.id || !activeRide?.id) return;
 
     const channel = supabase
       .channel(`ride_${activeRide.id}`)
       .on(
-        'postgres_changes',
+        'postgres_changes' as any,
         {
           event: '*',
           schema: 'public',
@@ -75,21 +72,22 @@ export const useRideRequests = () => {
           filter: `id=eq.${activeRide.id}`
         },
         (payload: PostgresChangePayload) => {
-          // Update ride data in React Query cache
           queryClient.setQueryData(['activeRide', user.id], payload.new);
 
-          // Show notifications for important status changes
           if (payload.new.status !== payload.old.status) {
-            const statusMessages = {
+            const statusMessages: Record<RideStatus, string> = {
               driver_assigned: 'Driver has been assigned to your ride',
               en_route_to_pickup: 'Driver is on the way to pick you up',
               arrived_at_pickup: 'Driver has arrived at pickup location',
               in_progress: 'Your ride has started',
               completed: 'Your ride has been completed',
-              cancelled: 'Your ride has been cancelled'
+              cancelled: 'Your ride has been cancelled',
+              requested: 'Ride requested',
+              finding_driver: 'Finding a driver',
+              timeout: 'Ride request timed out'
             };
 
-            const message = statusMessages[payload.new.status as keyof typeof statusMessages];
+            const message = statusMessages[payload.new.status];
             if (message) {
               toast({
                 title: 'Ride Update',
@@ -106,7 +104,6 @@ export const useRideRequests = () => {
     };
   }, [user?.id, activeRide?.id, queryClient, toast]);
 
-  // Create new ride request
   const createRideRequest = async ({ pickup, dropoff, notes, specialRequirements }: CreateRideRequestParams) => {
     if (!user?.id) {
       throw new Error('User must be logged in to request a ride');
@@ -118,11 +115,10 @@ export const useRideRequests = () => {
 
     setIsCreating(true);
     try {
-      // First, find nearest reference points
       const { data: pickupRef, error: pickupError } = await supabase
         .rpc('find_nearest_references', {
           point: pickup.coordinates,
-          max_distance: 100 // meters
+          max_distance: 100
         });
 
       if (pickupError) throw pickupError;
@@ -135,7 +131,6 @@ export const useRideRequests = () => {
 
       if (dropoffError) throw dropoffError;
 
-      // Create the ride request
       const { data, error } = await supabase
         .from('ride_requests')
         .insert({
@@ -157,7 +152,6 @@ export const useRideRequests = () => {
 
       if (error) throw error;
 
-      // Invalidate queries to refetch data
       queryClient.invalidateQueries({ queryKey: ['activeRide'] });
       
       toast({
@@ -179,7 +173,6 @@ export const useRideRequests = () => {
     }
   };
 
-  // Cancel ride request
   const cancelRideRequest = async (rideId: number) => {
     try {
       const { error } = await supabase
@@ -211,7 +204,6 @@ export const useRideRequests = () => {
     }
   };
 
-  // Fetch ride history
   const { data: rideHistory, isLoading: isLoadingHistory } = useQuery({
     queryKey: ['rideHistory', user?.id],
     queryFn: async () => {

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { navigationMenuTriggerStyle } from "@/components/ui/navigation-menu";
 import { Button } from "@/components/ui/button";
@@ -53,6 +52,28 @@ interface RideLocation {
   lng: number;
   address: string;
 }
+
+interface DriverProfile {
+  id: string;
+  full_name: string;
+  phone_number: string;
+  status: 'verified' | 'unverified';
+}
+
+interface RideStatus {
+  status: 'requested' | 'cancelled' | 'completed';
+}
+
+const mockRide = {
+  status: 'requested' as RideStatus,
+  driver: {
+    id: '1',
+    full_name: 'John Doe',
+    phone_number: '+1234567890',
+    status: 'verified' as const,
+  } as DriverProfile,
+  // ... other required fields
+};
 
 const StudentDashboard = () => {
   const [isRequestOpen, setIsRequestOpen] = useState(false);
@@ -147,7 +168,7 @@ const StudentDashboard = () => {
         pickup: rideRequest.pickupLocation.address,
         dropoff: rideRequest.dropoffLocation.address,
         status: 'Upcoming',
-        driver: '',
+        driver: mockRide.driver,
         payment: {
           method: 'cash',
           status: 'pending',

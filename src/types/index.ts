@@ -27,7 +27,14 @@ export interface Driver {
   };
 }
 
-export type RideStatusUI = 'Completed' | 'Upcoming' | 'In Progress' | 'Cancelled';
+export const RIDE_STATUS_UI = {
+  COMPLETED: 'Completed',
+  UPCOMING: 'Upcoming',
+  IN_PROGRESS: 'In Progress',
+  CANCELLED: 'Cancelled'
+} as const;
+
+export type RideStatusUI = typeof RIDE_STATUS_UI[keyof typeof RIDE_STATUS_UI];
 
 export type RideStatus = 
   | 'requested'
@@ -43,18 +50,18 @@ export type RideStatus =
 export const mapRideStatusToUI = (status: RideStatus): RideStatusUI => {
   switch (status) {
     case 'completed':
-      return 'Completed';
+      return RIDE_STATUS_UI.COMPLETED;
     case 'requested':
     case 'finding_driver':
     case 'driver_assigned':
-      return 'Upcoming';
+      return RIDE_STATUS_UI.UPCOMING;
     case 'en_route_to_pickup':
     case 'arrived_at_pickup':
     case 'in_progress':
-      return 'In Progress';
+      return RIDE_STATUS_UI.IN_PROGRESS;
     case 'cancelled':
     case 'timeout':
-      return 'Cancelled';
+      return RIDE_STATUS_UI.CANCELLED;
   }
 };
 
@@ -82,6 +89,9 @@ export interface RideRequest {
     status: 'pending' | 'paid';
     amount: number;
   };
+  date?: string;
+  pickup?: string;
+  dropoff?: string;
 }
 
 export interface DriverProfile {
