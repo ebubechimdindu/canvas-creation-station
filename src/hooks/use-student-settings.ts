@@ -25,14 +25,15 @@ export const useStudentSettings = () => {
       if (profileError) throw profileError;
 
       // Get settings data
-      const { data: settings, error: settingsError } = await supabase
+      let settingsData;
+      const { data: existingSettings, error: settingsError } = await supabase
         .from('student_settings')
         .select('*')
         .eq('student_id', user.id)
         .maybeSingle();
 
       // If no settings exist, create default settings
-      if (!settings) {
+      if (!existingSettings) {
         const defaultSettings = {
           student_id: user.id,
           preferred_payment_type: 'cash',
@@ -49,7 +50,9 @@ export const useStudentSettings = () => {
           .single();
 
         if (createError) throw createError;
-        settings = newSettings;
+        settingsData = newSettings;
+      } else {
+        settingsData = existingSettings;
       }
 
       return {
@@ -60,13 +63,13 @@ export const useStudentSettings = () => {
         studentId: profile.student_id,
         profileImage: profile.profile_picture_url ? {
           url: profile.profile_picture_url,
-          lastUpdated: settings.updated_at
+          lastUpdated: settingsData.updated_at
         } : undefined,
-        preferredPaymentType: settings.preferred_payment_type,
-        notifications: settings.notifications_config,
-        defaultLocations: settings.default_locations,
-        theme: settings.theme_preference,
-        language: settings.language_preference,
+        preferredPaymentType: settingsData.preferred_payment_type,
+        notifications: settingsData.notifications_config,
+        defaultLocations: settingsData.default_locations,
+        theme: settingsData.theme_preference,
+        language: settingsData.language_preference,
       } as StudentSettings;
     },
   });
