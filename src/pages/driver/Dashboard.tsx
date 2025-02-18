@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef } from "react";
+
+import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import DriverSidebar from "@/components/driver/DriverSidebar";
 import { Button } from "@/components/ui/button";
@@ -25,13 +26,6 @@ interface RideRequest {
   estimated_earnings: number;
 }
 
-interface DriverStats {
-  totalRides: number;
-  todayEarnings: number;
-  rating: number;
-  activeHours: number;
-}
-
 const DriverDashboard = () => {
   const { toast } = useToast();
   const dispatch = useAppDispatch();
@@ -41,10 +35,7 @@ const DriverDashboard = () => {
   const { driverLocation, nearbyDrivers, error: locationUpdateError } = useLocationUpdates("current-driver");
   const { error: locationError } = useDriverLocation();
   const [currentRideRequest, setCurrentRideRequest] = useState<RideRequest | null>(null);
-  const audioContext = useRef<AudioContext | null>(null);
-  const notificationSound = useRef<HTMLAudioElement | null>(null);
-  const [locationPermission, setLocationPermission] = useState<PermissionState>('prompt');
-  const [stats, setStats] = useState<DriverStats>({
+  const [stats, setStats] = useState({
     totalRides: 0,
     todayEarnings: 0,
     rating: 0,
@@ -57,12 +48,14 @@ const DriverDashboard = () => {
         const { data: user } = await supabase.auth.getUser();
         if (!user.user) return;
 
+        // Get total rides
         const { count: totalRides } = await supabase
           .from('ride_requests')
           .select('*', { count: 'exact', head: true })
           .eq('driver_id', user.user.id)
           .eq('status', 'completed');
 
+        // Get today's earnings
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
@@ -78,8 +71,8 @@ const DriverDashboard = () => {
         setStats({
           totalRides: totalRides || 0,
           todayEarnings,
-          rating: 4.8,
-          activeHours: 6.5
+          rating: 4.8, // TODO: Implement ratings
+          activeHours: 6.5 // TODO: Calculate from driver_locations
         });
 
         setIsLoading(false);
@@ -97,46 +90,8 @@ const DriverDashboard = () => {
   }, [toast]);
 
   useEffect(() => {
-    const initAudio = () => {
-      if (!audioContext.current) {
-        audioContext.current = new AudioContext();
-        notificationSound.current = new Audio('/notification.mp3');
-      }
-    };
+    if (!driverStatus || driverStatus !== 'available') return;
 
-    document.addEventListener('click', initAudio, { once: true });
-
-    return () => {
-      document.removeEventListener('click', initAudio);
-    };
-  }, []);
-
-  useEffect(() => {
-    const checkLocationPermission = async () => {
-      try {
-        const permission = await navigator.permissions.query({ name: 'geolocation' });
-        setLocationPermission(permission.state);
-
-        permission.addEventListener('change', () => {
-          setLocationPermission(permission.state);
-        });
-
-        if (permission.state === 'denied') {
-          toast({
-            title: "Location Access Required",
-            description: "Please enable location services to use the driver dashboard.",
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        console.error('Error checking location permission:', error);
-      }
-    };
-
-    checkLocationPermission();
-  }, [toast]);
-
-  useEffect(() => {
     const subscription = supabase
       .channel('ride-requests')
       .on(
@@ -150,21 +105,13 @@ const DriverDashboard = () => {
         async (payload) => {
           const newRequest = payload.new as RideRequest;
           
+          // Only show request if we don't already have one
           if (!currentRideRequest) {
             setCurrentRideRequest(newRequest);
             
-            if (notificationSound.current && audioContext.current) {
-              try {
-                await notificationSound.current.play();
-              } catch (error) {
-                console.error('Error playing notification sound:', error);
-              }
-            }
-
-            toast({
-              title: "New Ride Request",
-              description: "You have a new ride request waiting!",
-            });
+            // Play notification sound
+            const audio = new Audio('/notification.mp3');
+            audio.play().catch(console.error);
           }
         }
       )
@@ -173,13 +120,12 @@ const DriverDashboard = () => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [driverStatus, currentRideRequest, toast]);
+  }, [driverStatus, currentRideRequest]);
 
   const handleAcceptRide = async (rideId: number) => {
     try {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error('Not authenticated');
-      if (!driverLocation) throw new Error('Location not available');
 
       const { error: updateError } = await supabase
         .from('ride_requests')
@@ -199,6 +145,7 @@ const DriverDashboard = () => {
 
       setCurrentRideRequest(null);
       dispatch(updateDriverStatus('busy'));
+
     } catch (error) {
       console.error('Error accepting ride:', error);
       toast({
@@ -237,15 +184,6 @@ const DriverDashboard = () => {
   };
 
   const toggleAvailability = async () => {
-    if (locationPermission === 'denied') {
-      toast({
-        title: "Location Access Required",
-        description: "Please enable location services to go online.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error('Not authenticated');
@@ -253,6 +191,7 @@ const DriverDashboard = () => {
 
       const newStatus = driverStatus === 'available' ? 'offline' : 'available';
       
+      // Convert location to PostGIS point format
       const point = {
         type: 'Point',
         coordinates: [driverLocation.lng, driverLocation.lat]
@@ -267,7 +206,7 @@ const DriverDashboard = () => {
           location: point,
           last_updated: new Date().toISOString()
         }, {
-          onConflict: 'driver_id'
+          onConflict: 'driver_id'  // Specify which column to use for conflict resolution
         });
 
       if (locationError) throw locationError;
@@ -281,7 +220,7 @@ const DriverDashboard = () => {
       console.error('Error updating status:', error);
       toast({
         title: "Error",
-        description: "Failed to update status. Please check your location settings.",
+        description: "Failed to update status",
         variant: "destructive"
       });
     }
@@ -319,11 +258,13 @@ const DriverDashboard = () => {
         
         <main className="flex-1 overflow-y-auto p-8">
           <div className="space-y-8">
+            {/* Header */}
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Driver Dashboard</h1>
               <p className="text-gray-600">Welcome back, John</p>
             </div>
 
+            {/* Current Ride Request */}
             {currentRideRequest && driverStatus === 'available' && (
               <RideRequestCard
                 id={currentRideRequest.id}
@@ -337,6 +278,7 @@ const DriverDashboard = () => {
               />
             )}
 
+            {/* Map Section */}
             <Card className={`transition-all duration-300 ${isMapExpanded ? 'fixed inset-4 z-50 shadow-2xl' : 'hover:shadow-lg'}`}>
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                 <CardTitle className="flex items-center gap-2">
@@ -374,6 +316,7 @@ const DriverDashboard = () => {
               </CardContent>
             </Card>
 
+            {/* Status Toggle */}
             <Card className={isMapExpanded ? 'hidden' : ''}>
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
@@ -400,6 +343,7 @@ const DriverDashboard = () => {
               </CardContent>
             </Card>
 
+            {/* Stats Grid */}
             <div className={`grid gap-6 sm:grid-cols-2 lg:grid-cols-4 ${isMapExpanded ? 'hidden' : ''}`}>
               {[
                 {
@@ -453,6 +397,7 @@ const DriverDashboard = () => {
               ))}
             </div>
 
+            {/* Recent Activity */}
             <Card className={isMapExpanded ? 'hidden' : ''}>
               <CardHeader>
                 <CardTitle>Recent Activity</CardTitle>

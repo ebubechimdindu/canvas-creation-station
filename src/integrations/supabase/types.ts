@@ -220,39 +220,6 @@ export type Database = {
           },
         ]
       }
-      location_references: {
-        Row: {
-          created_at: string | null
-          description: string | null
-          distance_threshold: number | null
-          id: string
-          location: unknown
-          name: string
-          reference_type: Database["public"]["Enums"]["location_reference_type"]
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          distance_threshold?: number | null
-          id?: string
-          location: unknown
-          name: string
-          reference_type: Database["public"]["Enums"]["location_reference_type"]
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          distance_threshold?: number | null
-          id?: string
-          location?: unknown
-          name?: string
-          reference_type?: Database["public"]["Enums"]["location_reference_type"]
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       ride_ratings: {
         Row: {
           comment: string | null
@@ -964,19 +931,6 @@ export type Database = {
           driver_id: string
           distance: number
           current_location: unknown
-        }[]
-      }
-      find_nearest_references: {
-        Args: {
-          point: unknown
-          max_distance?: number
-        }
-        Returns: {
-          id: string
-          name: string
-          reference_type: Database["public"]["Enums"]["location_reference_type"]
-          description: string
-          distance: number
         }[]
       }
       geography:
@@ -3653,12 +3607,6 @@ export type Database = {
         | "common_area"
         | "administrative"
         | "pickup_point"
-      location_reference_type:
-        | "building"
-        | "intersection"
-        | "landmark"
-        | "gate"
-        | "path"
       location_type: "pickup_point" | "dropoff_point" | "campus_boundary"
       ride_status:
         | "pending"

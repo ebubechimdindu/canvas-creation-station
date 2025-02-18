@@ -1,16 +1,6 @@
 
 export type LocationCategory = 'academic' | 'residence' | 'common_area' | 'administrative' | 'pickup_point' | 'dropoff_point' | 'campus_boundary';
 
-export type LocationReferenceType = 'building' | 'intersection' | 'landmark' | 'gate' | 'path';
-
-export interface LocationReference {
-  id: string;
-  name: string;
-  referenceType: LocationReferenceType;
-  description?: string;
-  distance: number;
-}
-
 export interface CampusLocation {
   id: string;
   name: string;
@@ -28,15 +18,6 @@ export interface CampusLocation {
   updatedAt: string;
 }
 
-export interface LocationWithReferences {
-  coordinates: {
-    lat: number;
-    lng: number;
-  };
-  nearbyReferences: LocationReference[];
-  address?: string;
-}
-
 export interface LocationFeedback {
   id: string;
   locationId: string;
@@ -50,4 +31,3 @@ export interface LocationFeedback {
   status: 'pending' | 'reviewed' | 'implemented' | 'rejected';
   createdAt: string;
 }
-
