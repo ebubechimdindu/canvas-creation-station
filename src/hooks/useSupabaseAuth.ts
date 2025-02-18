@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -87,7 +88,7 @@ export const useSupabaseAuth = () => {
           driver_license_number: driverId,
           phone_number: phone,
           profile_picture_url: filePath,
-          status: 'pending_verification'
+          status: 'verified'
         });
 
       if (profileError) throw profileError;
@@ -199,3 +200,4 @@ export const useSupabaseAuth = () => {
     resendVerificationEmail,
   };
 };
+

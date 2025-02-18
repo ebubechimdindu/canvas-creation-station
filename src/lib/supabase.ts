@@ -25,3 +25,4 @@ declare module '@supabase/supabase-js' {
     ): Promise<{ data: R; error: null } | { data: null; error: Error }>;
   }
 }
+
