@@ -24,15 +24,15 @@ export const useStudentLogin = () => {
         .from('student_profiles')
         .select('*')
         .eq('student_id', studentId)
-        .single();
+        .maybeSingle(); // Changed from .single() to .maybeSingle()
 
       if (profileError) {
         console.error('Profile lookup error:', profileError);
-        throw new Error('Student ID not found. Please check your ID and try again.');
+        throw new Error('Error looking up student profile. Please try again.');
       }
 
       if (!studentProfile) {
-        throw new Error('Student profile not found');
+        throw new Error('Student ID not found. Please check your ID and try again.');
       }
 
       console.log('Found student profile:', studentProfile);
