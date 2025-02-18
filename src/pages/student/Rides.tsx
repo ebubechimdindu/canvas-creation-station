@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAppSelector, useAppDispatch } from "@/hooks/redux";
-import { setActiveRide, addToHistory, updateDrivers, updateRideStatus } from "@/features/rides/ridesSlice";
+import { setActiveRide, addToHistory, updateRideStatus } from "@/features/rides/ridesSlice";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import RideDetailsModal from "@/components/rides/RideDetailsModal";
@@ -17,6 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RideRequestForm } from "@/components/rides/RideRequestForm";
 import { ActiveRideRequest } from "@/components/rides/ActiveRideRequest";
 import { RideHistoryTable } from "@/components/rides/RideHistoryTable";
+import type { PostgresChangesPayload } from '@supabase/supabase-js';
+import type { RideRequest, RideStatus } from "@/types";
 import {
   Pagination,
   PaginationContent,
@@ -27,7 +29,13 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { supabase } from "@/lib/supabase";
-import type { RideRequest } from "@/types";
+
+interface PostgresChangePayload extends PostgresChangesPayload<{
+  [key: string]: any;
+}> {
+  new: RideRequest;
+  old: RideRequest;
+}
 
 const StudentRides: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -67,7 +75,7 @@ const StudentRides: React.FC = () => {
           table: 'ride_requests',
           filter: `id=eq.${activeRide.id}`
         },
-        (payload) => {
+        (payload: any) => {
           if (payload.new.status !== payload.old.status) {
             dispatch(updateRideStatus({
               rideId: payload.new.id,

@@ -58,6 +58,7 @@ interface DriverProfile {
   full_name: string;
   phone_number: string;
   status: 'verified' | 'unverified';
+  profile_picture_url: string | undefined;
 }
 
 interface RideStatus {
@@ -71,6 +72,7 @@ const mockRide = {
     full_name: 'John Doe',
     phone_number: '+1234567890',
     status: 'verified' as const,
+    profile_picture_url: undefined
   } as DriverProfile,
   // ... other required fields
 };

@@ -23,15 +23,34 @@ import { SearchFilters } from "@/components/rides/SearchFilters";
 import RideDetailsModal from "@/components/rides/RideDetailsModal";
 import { useAppDispatch } from "@/hooks/redux";
 import { markPaymentReceived } from "@/features/rides/ridesSlice";
-import type { Ride } from "@/types";
+import type { Ride, RideRequest, RideStatus, RideStatusUI, RIDE_STATUS_UI } from "@/types";
 import { useLocationUpdates } from "@/hooks/use-location-updates";
 import RideMap from "@/components/map/RideMap";
 import { MapProvider } from "@/components/map/MapProvider";
 
+const transformRideRequestToRide = (rideRequest: RideRequest): Ride => {
+  return {
+    id: rideRequest.id,
+    student_id: rideRequest.student_id,
+    driver_id: rideRequest.driver_id,
+    date: rideRequest.created_at,
+    pickup: rideRequest.pickup_address,
+    dropoff: rideRequest.dropoff_address,
+    driver: rideRequest.driver?.full_name || "",
+    status: mapRideStatusToUI(rideRequest.status),
+    payment: {
+      method: rideRequest.payment?.method || "cash",
+      status: rideRequest.payment?.status || "pending",
+      amount: rideRequest.payment?.amount || 0,
+    },
+    notes: rideRequest.notes,
+  };
+};
+
 const DriverRides = () => {
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<Ride['status'] | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<RideStatusUI | 'all'>('all');
   const [searchFilters, setSearchFilters] = useState({
     searchTerm: "",
     date: null,
@@ -42,39 +61,30 @@ const DriverRides = () => {
   const rides = useAppSelector((state) => state.rides.history);
   const dispatch = useAppDispatch();
 
-  // Get real-time driver locations
   const { driverLocation, error: locationError } = useLocationUpdates('current-driver');
 
   const filteredRides = rides.filter(ride => {
-    const matchesStatus = searchFilters.status === 'all' || ride.status === searchFilters.status;
+    const matchesStatus = searchFilters.status === 'all' || mapRideStatusToUI(ride.status) === searchFilters.status;
     const matchesSearch = searchFilters.searchTerm
-      ? ride.pickup.toLowerCase().includes(searchFilters.searchTerm.toLowerCase()) ||
-        ride.dropoff.toLowerCase().includes(searchFilters.searchTerm.toLowerCase())
+      ? ride.pickup_address.toLowerCase().includes(searchFilters.searchTerm.toLowerCase()) ||
+        ride.dropoff_address.toLowerCase().includes(searchFilters.searchTerm.toLowerCase())
       : true;
     const matchesDate = searchFilters.date
-      ? new Date(ride.date).toDateString() === new Date(searchFilters.date).toDateString()
+      ? new Date(ride.created_at).toDateString() === new Date(searchFilters.date).toDateString()
       : true;
 
     return matchesStatus && matchesSearch && matchesDate;
   });
 
-  const updateRideStatus = (rideId: number, newStatus: Ride['status']) => {
+  const updateRideStatus = (rideId: number, newStatus: RideStatus) => {
     toast({
       title: "Status Updated",
       description: `Ride #${rideId} status has been updated to ${newStatus}`,
     });
   };
 
-  const handlePaymentReceived = (rideId: number) => {
-    dispatch(markPaymentReceived(rideId));
-    toast({
-      title: "Payment Marked as Received",
-      description: "The ride payment has been marked as received.",
-    });
-  };
-
-  const handleRideClick = (ride: Ride) => {
-    setSelectedRide(ride);
+  const handleRideClick = (ride: RideRequest) => {
+    setSelectedRide(transformRideRequestToRide(ride));
     setShowDetailsModal(true);
   };
 
@@ -112,7 +122,6 @@ const DriverRides = () => {
         <DriverSidebar />
         <main className="flex-1 overflow-y-auto p-8">
           <div className="space-y-6">
-            {/* Header */}
             <div className="flex justify-between items-center">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Rides Management</h1>
@@ -120,7 +129,6 @@ const DriverRides = () => {
               </div>
             </div>
 
-            {/* Map View */}
             <Card>
               <CardHeader>
                 <CardTitle>Live Map View</CardTitle>
@@ -139,7 +147,6 @@ const DriverRides = () => {
               </CardContent>
             </Card>
 
-            {/* Search Filters */}
             <Card>
               <CardContent className="pt-6">
                 <SearchFilters
@@ -149,9 +156,8 @@ const DriverRides = () => {
               </CardContent>
             </Card>
 
-            {/* Status Filter Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {['all', 'Completed', 'Upcoming', 'In Progress', 'Cancelled'].map((status) => (
+              {['all', 'completed', 'upcoming', 'in_progress', 'cancelled'].map((status) => (
                 <Card 
                   key={status}
                   className={`cursor-pointer transition-colors ${
@@ -171,7 +177,6 @@ const DriverRides = () => {
               ))}
             </div>
 
-            {/* Rides Table */}
             <Card>
               <CardHeader>
                 <CardTitle>Recent Rides</CardTitle>
@@ -208,19 +213,19 @@ const DriverRides = () => {
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <Clock className="h-4 w-4 text-gray-500" />
-                              {new Date(ride.date).toLocaleDateString()}
+                              {new Date(ride.created_at).toLocaleDateString()}
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <MapPin className="h-4 w-4 text-gray-500" />
-                              {ride.pickup}
+                              {ride.pickup_address}
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <MapPin className="h-4 w-4 text-gray-500" />
-                              {ride.dropoff}
+                              {ride.dropoff_address}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -235,7 +240,7 @@ const DriverRides = () => {
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
-                              {ride.status === 'Completed' && ride.payment?.status === 'pending' && (
+                              {ride.status === 'completed' && ride.payment?.status === 'pending' && (
                                 <Button
                                   size="sm"
                                   className="gap-1"
@@ -248,14 +253,14 @@ const DriverRides = () => {
                                   Mark Paid
                                 </Button>
                               )}
-                              {ride.status === "Upcoming" && (
+                              {(ride.status === 'requested' || ride.status === 'finding_driver' || ride.status === 'driver_assigned') && (
                                 <>
                                   <Button
                                     size="sm"
                                     className="gap-1"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      updateRideStatus(ride.id, "In Progress");
+                                      updateRideStatus(ride.id, 'in_progress');
                                     }}
                                   >
                                     <CheckCircle className="h-4 w-4" />
@@ -267,7 +272,7 @@ const DriverRides = () => {
                                     className="gap-1"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      updateRideStatus(ride.id, "Cancelled");
+                                      updateRideStatus(ride.id, 'cancelled');
                                     }}
                                   >
                                     <XCircle className="h-4 w-4" />
@@ -275,13 +280,13 @@ const DriverRides = () => {
                                   </Button>
                                 </>
                               )}
-                              {ride.status === "In Progress" && (
+                              {ride.status === 'in_progress' && (
                                 <Button
                                   size="sm"
                                   className="gap-1"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    updateRideStatus(ride.id, "Completed");
+                                    updateRideStatus(ride.id, 'completed');
                                   }}
                                 >
                                   <CheckCircle className="h-4 w-4" />
