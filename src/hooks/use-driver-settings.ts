@@ -1,6 +1,10 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import type { Database } from '@/types/supabase';
+
+type DriverBankAccount = Database['public']['Tables']['driver_bank_accounts']['Row'];
 
 export interface DriverSettings {
   id: string;
@@ -11,7 +15,7 @@ export interface DriverSettings {
     url: string;
     lastUpdated: string;
   };
-  status: 'pending_verification' | 'verified' | 'suspended';
+  status: 'verified' | 'suspended';
 }
 
 export interface BankAccount {
@@ -165,7 +169,7 @@ export const useDriverSettings = () => {
         .from('driver_bank_accounts')
         .select('*')
         .eq('driver_id', user.id)
-        .order('created_at', { ascending: true });
+        .returns<DriverBankAccount[]>();
 
       if (error) throw error;
 
@@ -193,7 +197,8 @@ export const useDriverSettings = () => {
           account_number: data.accountNumber,
           account_holder_name: data.accountHolderName,
           is_primary: false,
-        });
+        })
+        .select();
 
       if (error) throw error;
     },
@@ -219,7 +224,8 @@ export const useDriverSettings = () => {
       const { error } = await supabase
         .from('driver_bank_accounts')
         .delete()
-        .eq('id', accountId);
+        .eq('id', accountId)
+        .select();
 
       if (error) throw error;
     },

@@ -8,5 +8,20 @@ if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KE
 
 export const supabase = createClient<Database>(
   import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
+  import.meta.env.VITE_SUPABASE_ANON_KEY,
+  {
+    db: {
+      schema: 'public'
+    }
+  }
 );
+
+// Add custom function types
+declare module '@supabase/supabase-js' {
+  interface SupabaseClient<T> {
+    rpc<R>(
+      fn: 'set_primary_bank_account',
+      args: { p_account_id: string; p_driver_id: string }
+    ): Promise<{ data: R; error: null } | { data: null; error: Error }>;
+  }
+}
