@@ -1,9 +1,10 @@
+
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { Ride, Driver } from '../../types';
+import { Driver, RideRequest, RideStatus } from '../../types';
 
 interface RidesState {
-  activeRide: Ride | null;
-  history: Ride[];
+  activeRide: RideRequest | null;
+  history: RideRequest[];
   availableDrivers: Driver[];
   status: 'idle' | 'loading' | 'succeeded' | 'failed';
   error: string | null;
@@ -43,20 +44,30 @@ const ridesSlice = createSlice({
   name: 'rides',
   initialState,
   reducers: {
-    setActiveRide: (state, action: PayloadAction<Ride | null>) => {
+    setActiveRide: (state, action: PayloadAction<RideRequest | null>) => {
       state.activeRide = action.payload;
     },
-    addToHistory: (state, action: PayloadAction<Ride>) => {
-      state.history.push(action.payload);
+    updateRideStatus: (state, action: PayloadAction<{ rideId: number; status: RideStatus }>) => {
+      if (state.activeRide?.id === action.payload.rideId) {
+        state.activeRide.status = action.payload.status;
+      }
+      
+      state.history = state.history.map(ride => 
+        ride.id === action.payload.rideId 
+          ? { ...ride, status: action.payload.status }
+          : ride
+      );
+    },
+    addToHistory: (state, action: PayloadAction<RideRequest>) => {
+      state.history.unshift(action.payload);
     },
     updateDrivers: (state, action: PayloadAction<Driver[]>) => {
       state.availableDrivers = action.payload;
     },
     markPaymentReceived: (state, action: PayloadAction<number>) => {
       const ride = state.history.find(ride => ride.id === action.payload);
-      if (ride && ride.payment) {
-        ride.payment.status = 'paid';
-        ride.payment.confirmedAt = new Date().toISOString();
+      if (ride) {
+        ride.status = 'completed';
       }
     },
     setError: (state, action: PayloadAction<string | null>) => {
@@ -88,6 +99,7 @@ const ridesSlice = createSlice({
 
 export const { 
   setActiveRide, 
+  updateRideStatus,
   addToHistory, 
   updateDrivers, 
   markPaymentReceived,

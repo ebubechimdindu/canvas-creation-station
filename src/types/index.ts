@@ -27,6 +27,55 @@ export interface Driver {
   };
 }
 
+export type RideStatus = 
+  | 'requested'
+  | 'finding_driver'
+  | 'driver_assigned'
+  | 'en_route_to_pickup'
+  | 'arrived_at_pickup'
+  | 'in_progress'
+  | 'completed'
+  | 'cancelled'
+  | 'timeout';
+
+export interface RideRequest {
+  id: number;
+  student_id: string;
+  driver_id?: string;
+  pickup_location: string;
+  dropoff_location: string;
+  pickup_address: string;
+  dropoff_address: string;
+  status: RideStatus;
+  notes?: string;
+  special_requirements?: string;
+  created_at: string;
+  updated_at: string;
+  matched_at?: string;
+  started_at?: string;
+  completed_at?: string;
+  cancelled_at?: string;
+  driver?: DriverProfile;
+  ratings?: RideRating[];
+}
+
+export interface DriverProfile {
+  id: string;
+  full_name: string;
+  phone_number: string;
+  profile_picture_url?: string;
+  status: 'verified' | 'suspended';
+}
+
+export interface RideRating {
+  id: number;
+  ride_id: number;
+  rated_by: string;
+  rating: number;
+  comment?: string;
+  created_at: string;
+}
+
 export interface Ride {
   id: number;
   date: string;

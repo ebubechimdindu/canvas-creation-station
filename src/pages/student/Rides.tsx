@@ -1,10 +1,12 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { useAppSelector, useAppDispatch } from "@/hooks/redux";
-import { setActiveRide, addToHistory, updateDrivers } from "@/features/rides/ridesSlice";
+import { setActiveRide, addToHistory, updateDrivers, updateRideStatus } from "@/features/rides/ridesSlice";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import RideDetailsModal from "@/components/rides/RideDetailsModal";
 import { useCampusLocations } from "@/hooks/use-campus-locations";
+import { useRideRequests } from "@/hooks/use-ride-requests";
 import { Button } from "@/components/ui/button";
 import { Calendar, Car, Search, Download } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -13,7 +15,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { format } from "date-fns";
 import { RideRequestForm } from "@/components/rides/RideRequestForm";
 import { ActiveRideRequest } from "@/components/rides/ActiveRideRequest";
 import { RideHistoryTable } from "@/components/rides/RideHistoryTable";
@@ -26,42 +27,11 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-
-const rides = [
-  {
-    id: 1,
-    date: "2024-04-10",
-    pickup: "Student Center",
-    dropoff: "Library",
-    driver: "John Doe",
-    status: "Completed" as const,
-    rating: 4,
-  },
-  {
-    id: 2,
-    date: "2024-04-11",
-    pickup: "Dorm A",
-    dropoff: "Science Building",
-    driver: "Jane Smith",
-    status: "Upcoming" as const,
-    rating: null,
-  },
-  {
-    id: 3,
-    date: "2024-04-09",
-    pickup: "Gym",
-    dropoff: "Student Center",
-    driver: "Mike Johnson",
-    status: "Completed" as const,
-    rating: 5,
-  },
-];
+import { supabase } from "@/lib/supabase";
+import type { RideRequest } from "@/types";
 
 export default function StudentRides() {
   const dispatch = useAppDispatch();
-  const { activeRide, history: rideHistory, availableDrivers } = useAppSelector(
-    (state) => state.rides
-  );
   const { locations = [], isLoading: locationsLoading } = useCampusLocations();
   const [selectedRide, setSelectedRide] = useState<number | null>(null);
   const [isRequestOpen, setIsRequestOpen] = useState(false);
@@ -72,84 +42,145 @@ export default function StudentRides() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const { toast } = useToast();
-  const [activeRequest, setActiveRequest] = useState({
-    status: "Searching for driver",
-    estimatedWait: "5-10 minutes",
-    nearbyDrivers: 3,
-  });
-  const [selectedRideDetails, setSelectedRideDetails] = useState<typeof rides[0] | null>(null);
+  const [selectedRideDetails, setSelectedRideDetails] = useState<RideRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
-  const handleRideRequest = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!locations || locations.length === 0) {
-      toast({
-        title: "Missing Locations",
-        description: "Please select both pickup and dropoff locations.",
-        variant: "destructive"
-      });
-      return;
-    }
+  const {
+    activeRide,
+    isLoadingActive,
+    isCreating,
+    createRideRequest,
+    cancelRideRequest,
+    rideHistory,
+    isLoadingHistory,
+  } = useRideRequests();
 
+  // Subscribe to active ride updates
+  useEffect(() => {
+    if (!activeRide?.id) return;
+
+    const channel = supabase
+      .channel(`ride_${activeRide.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ride_requests',
+          filter: `id=eq.${activeRide.id}`
+        },
+        (payload) => {
+          if (payload.new.status !== payload.old.status) {
+            dispatch(updateRideStatus({
+              rideId: payload.new.id,
+              status: payload.new.status
+            }));
+
+            const statusMessages = {
+              driver_assigned: 'Driver has been assigned to your ride',
+              en_route_to_pickup: 'Driver is on the way to pick you up',
+              arrived_at_pickup: 'Driver has arrived at pickup location',
+              in_progress: 'Your ride has started',
+              completed: 'Your ride has been completed',
+              cancelled: 'Your ride has been cancelled'
+            };
+
+            const message = statusMessages[payload.new.status as keyof typeof statusMessages];
+            if (message) {
+              toast({
+                title: 'Ride Update',
+                description: message,
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeRide?.id, dispatch, toast]);
+
+  const handleRideRequest = async (formData: any) => {
     try {
-      const newRide = {
-        id: Date.now(),
-        date: new Date().toISOString(),
-        pickup: "pickup",
-        dropoff: "dropoff",
-        driver: "Pending",
-        status: "Upcoming" as const,
-      };
-      
-      dispatch(setActiveRide(newRide));
-      toast({
-        title: "Ride Requested",
-        description: "Looking for available drivers...",
-      });
+      await createRideRequest(formData);
       setIsRequestOpen(false);
     } catch (error) {
+      console.error('Error creating ride request:', error);
       toast({
         title: "Error",
-        description: "Failed to submit ride request. Please try again.",
+        description: "Failed to create ride request. Please try again.",
         variant: "destructive"
       });
     }
   };
 
-  const handleRating = (rideId: number) => {
-    toast({
-      title: "Rating Submitted",
-      description: "Thank you for your feedback!",
-    });
-    setIsRatingOpen(false);
-    setRating(0);
-    setReview("");
+  const handleRating = async (rideId: number) => {
+    try {
+      const { error } = await supabase
+        .from('ride_ratings')
+        .insert({
+          ride_id: rideId,
+          rating,
+          comment: review,
+          rated_by: activeRide?.student_id
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Rating Submitted",
+        description: "Thank you for your feedback!",
+      });
+      setIsRatingOpen(false);
+      setRating(0);
+      setReview("");
+    } catch (error) {
+      console.error('Error submitting rating:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit rating. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleCancelRequest = () => {
-    dispatch(setActiveRide(null));
-    toast({
-      title: "Ride Cancelled",
-      description: "Your ride request has been cancelled.",
-    });
+  const handleCancelRequest = async () => {
+    if (!activeRide?.id) return;
+    
+    try {
+      await cancelRideRequest(activeRide.id);
+    } catch (error) {
+      console.error('Error cancelling ride:', error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel ride. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleExportHistory = () => {
+    // Implementation for exporting ride history
     toast({
       title: "Export Started",
       description: "Your ride history is being downloaded.",
     });
   };
 
-  const filteredRides = rides.filter((ride) => {
+  const filteredRides = rideHistory?.filter((ride) => {
     const matchesSearch =
-      ride.pickup.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ride.dropoff.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ride.driver.toLowerCase().includes(searchTerm.toLowerCase());
+      ride.pickup_address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ride.dropoff_address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (ride.driver?.full_name || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || ride.status === statusFilter;
     return matchesSearch && matchesStatus;
-  });
+  }) || [];
+
+  if (isLoadingActive || isLoadingHistory) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <SidebarProvider>
@@ -174,7 +205,6 @@ export default function StudentRides() {
                     <RideRequestForm
                       onSubmit={handleRideRequest}
                       onCancel={() => setIsRequestOpen(false)}
-                      availableDrivers={availableDrivers}
                       locations={locations}
                       locationsLoading={locationsLoading}
                     />
@@ -183,111 +213,14 @@ export default function StudentRides() {
               </div>
 
               <div className="grid gap-6">
-                {activeRequest.status !== "Cancelled" && (
+                {activeRide && (
                   <ActiveRideRequest
-                    {...activeRequest}
-                    pickup={activeRide?.pickup || ""}
-                    dropoff={activeRide?.dropoff || ""}
-                    availableDrivers={availableDrivers}
+                    status={activeRide.status}
+                    pickup={activeRide.pickup_address}
+                    dropoff={activeRide.dropoff_address}
+                    driver={activeRide.driver}
                     onCancel={handleCancelRequest}
                   />
                 )}
 
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-5 w-5" />
-                        Ride History
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <Input
-                          placeholder="Search rides..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          className="max-w-[200px]"
-                        />
-                        <Select onValueChange={setStatusFilter} defaultValue="all">
-                          <SelectTrigger className="w-[150px]">
-                            <SelectValue placeholder="Filter by status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Status</SelectItem>
-                            <SelectItem value="Completed">Completed</SelectItem>
-                            <SelectItem value="Upcoming">Upcoming</SelectItem>
-                            <SelectItem value="Cancelled">Cancelled</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={handleExportHistory}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="hidden md:block">
-                      <RideHistoryTable
-                        rides={filteredRides}
-                        onRideSelect={(ride) => {
-                          setSelectedRideDetails(ride);
-                          setIsDetailsModalOpen(true);
-                        }}
-                        onRateRide={handleRating}
-                        isRatingOpen={isRatingOpen}
-                        setIsRatingOpen={setIsRatingOpen}
-                        rating={rating}
-                        setRating={setRating}
-                        ratingHover={ratingHover}
-                        setRatingHover={setRatingHover}
-                        review={review}
-                        setReview={setReview}
-                        selectedRide={selectedRide}
-                        setSelectedRide={setSelectedRide}
-                      />
-                    </div>
-                    <div className="mt-4">
-                      <Pagination>
-                        <PaginationContent>
-                          <PaginationItem>
-                            <PaginationPrevious href="#" />
-                          </PaginationItem>
-                          <PaginationItem>
-                            <PaginationLink href="#" isActive>
-                              1
-                            </PaginationLink>
-                          </PaginationItem>
-                          <PaginationItem>
-                            <PaginationLink href="#">2</PaginationLink>
-                          </PaginationItem>
-                          <PaginationItem>
-                            <PaginationLink href="#">3</PaginationLink>
-                          </PaginationItem>
-                          <PaginationItem>
-                            <PaginationEllipsis />
-                          </PaginationItem>
-                          <PaginationItem>
-                            <PaginationNext href="#" />
-                          </PaginationItem>
-                        </PaginationContent>
-                      </Pagination>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-
-            <RideDetailsModal
-              ride={selectedRideDetails}
-              open={isDetailsModalOpen}
-              onOpenChange={setIsDetailsModalOpen}
-            />
-          </main>
-        </div>
-      </MapProvider>
-    </SidebarProvider>
-  );
-}

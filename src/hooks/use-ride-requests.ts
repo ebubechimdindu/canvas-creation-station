@@ -1,10 +1,11 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useAppSelector } from '@/hooks/redux';
 import { type CampusLocation } from '@/types/locations';
+import { type RideRequest, type DriverProfile } from '@/types';
 
 interface CreateRideRequestParams {
   pickup: CampusLocation;
@@ -29,10 +30,23 @@ export const useRideRequests = () => {
         .from('ride_requests')
         .select(`
           *,
-          driver:driver_profiles(*)
+          driver:driver_profiles(
+            id,
+            full_name,
+            phone_number,
+            profile_picture_url,
+            status
+          )
         `)
         .eq('student_id', user.id)
-        .in('status', ['pending', 'accepted', 'in_progress'])
+        .in('status', [
+          'requested',
+          'finding_driver',
+          'driver_assigned',
+          'en_route_to_pickup',
+          'arrived_at_pickup',
+          'in_progress'
+        ])
         .single();
 
       if (error) throw error;
@@ -40,6 +54,52 @@ export const useRideRequests = () => {
     },
     enabled: !!user?.id,
   });
+
+  // Subscribe to ride status updates
+  useEffect(() => {
+    if (!user?.id || !activeRide?.id) return;
+
+    const channel = supabase
+      .channel(`ride_${activeRide.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ride_requests',
+          filter: `id=eq.${activeRide.id}`
+        },
+        (payload) => {
+          // Update ride data in React Query cache
+          queryClient.setQueryData(['activeRide', user.id], payload.new);
+
+          // Show notifications for important status changes
+          if (payload.new.status !== payload.old.status) {
+            const statusMessages = {
+              driver_assigned: 'Driver has been assigned to your ride',
+              en_route_to_pickup: 'Driver is on the way to pick you up',
+              arrived_at_pickup: 'Driver has arrived at pickup location',
+              in_progress: 'Your ride has started',
+              completed: 'Your ride has been completed',
+              cancelled: 'Your ride has been cancelled'
+            };
+
+            const message = statusMessages[payload.new.status as keyof typeof statusMessages];
+            if (message) {
+              toast({
+                title: 'Ride Update',
+                description: message,
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, activeRide?.id, queryClient, toast]);
 
   // Create new ride request
   const createRideRequest = async ({ pickup, dropoff, notes, specialRequirements }: CreateRideRequestParams) => {
@@ -83,7 +143,7 @@ export const useRideRequests = () => {
           dropoff_reference_id: dropoffRef?.[0]?.id,
           notes,
           special_requirements: specialRequirements,
-          status: 'pending',
+          status: 'requested',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -121,6 +181,7 @@ export const useRideRequests = () => {
         .from('ride_requests')
         .update({
           status: 'cancelled',
+          cancelled_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
         .eq('id', rideId)
@@ -145,11 +206,42 @@ export const useRideRequests = () => {
     }
   };
 
+  // Fetch ride history
+  const { data: rideHistory, isLoading: isLoadingHistory } = useQuery({
+    queryKey: ['rideHistory', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+
+      const { data, error } = await supabase
+        .from('ride_requests')
+        .select(`
+          *,
+          driver:driver_profiles(
+            id,
+            full_name,
+            phone_number,
+            profile_picture_url,
+            status
+          ),
+          ratings:ride_ratings(*)
+        `)
+        .eq('student_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
   return {
     activeRide,
     isLoadingActive,
     isCreating,
     createRideRequest,
     cancelRideRequest,
+    rideHistory,
+    isLoadingHistory,
   };
 };
