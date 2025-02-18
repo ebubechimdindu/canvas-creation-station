@@ -32,5 +32,13 @@ declare module '@supabase/supabase-js' {
       fn: 'set_primary_bank_account',
       args: { p_account_id: string; p_driver_id: string }
     ): Promise<{ data: R; error: null } | { data: null; error: Error }>;
+
+    rpc<R>(
+      fn: 'find_nearest_driver',
+      args: { 
+        radius_meters: number;
+        limit_count: number;
+      }
+    ): Promise<{ data: R; error: null } | { data: null; error: Error }>;
   }
 }

@@ -69,9 +69,9 @@ export const useStudentDashboard = () => {
       if (!user?.id) throw new Error('User not authenticated');
 
       const { data, error } = await supabase
-        .rpc('get_nearby_drivers', { 
-          p_max_distance: 5000, // 5km radius
-          p_limit: 5 
+        .rpc('find_nearest_driver', { 
+          radius_meters: 5000, // 5km radius
+          limit_count: 5 
         });
 
       if (error) throw error;
