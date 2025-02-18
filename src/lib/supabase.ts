@@ -18,11 +18,10 @@ export const supabase = createClient<Database>(
 
 // Add custom function types
 declare module '@supabase/supabase-js' {
-  interface SupabaseClient<T> {
+  interface SupabaseClient<Database> {
     rpc<R>(
       fn: 'set_primary_bank_account',
       args: { p_account_id: string; p_driver_id: string }
     ): Promise<{ data: R; error: null } | { data: null; error: Error }>;
   }
 }
-

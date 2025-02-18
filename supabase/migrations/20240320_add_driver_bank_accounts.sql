@@ -92,4 +92,3 @@ CREATE TYPE public.bank_account_type AS (
     created_at TIMESTAMPTZ,
     updated_at TIMESTAMPTZ
 );
-
