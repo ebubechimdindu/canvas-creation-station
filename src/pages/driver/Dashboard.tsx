@@ -43,7 +43,7 @@ interface RecentActivity {
   created_at: string;
   pickup_address: string;
   dropoff_address: string;
-  rating: number;
+  rating: number | null;
   earnings: number;
   student_name: string;
 }
@@ -59,42 +59,80 @@ const DriverDashboard = () => {
   const [currentRideRequest, setCurrentRideRequest] = useState<RideRequest | null>(null);
   const [stats, setStats] = useState<DriverStats | null>(null);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const user = useAppSelector((state) => state.auth.user);
 
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
-        const { data: user } = await supabase.auth.getUser();
-        if (!user.user) return;
+        if (!user?.id) {
+          toast({
+            title: "Error",
+            description: "User not authenticated",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        console.log('Loading dashboard data for driver:', user.id);
 
         const { data: statsData, error: statsError } = await supabase
-          .from('driver_dashboard_stats')
+          .from('driver_stats_detailed')
           .select('*')
-          .eq('driver_id', user.user.id)
+          .eq('driver_id', user.id)
           .single();
 
-        if (statsError) throw statsError;
+        if (statsError) {
+          console.error('Error fetching driver stats:', statsError);
+          throw statsError;
+        }
 
-        const { data: hoursData, error: hoursError } = await supabase
-          .rpc('calculate_driver_active_hours', {
-            driver_id: user.user.id,
-            date_start: new Date(new Date().setHours(0,0,0,0)).toISOString(),
-            date_end: new Date().toISOString()
-          });
-
-        if (hoursError) throw hoursError;
+        console.log('Stats data:', statsData);
 
         const { data: activityData, error: activityError } = await supabase
           .from('driver_recent_activity')
           .select('*')
+          .eq('driver_id', user.id)
+          .order('created_at', { ascending: false })
           .limit(5);
 
-        if (activityError) throw activityError;
+        if (activityError) {
+          console.error('Error fetching activity:', activityError);
+          throw activityError;
+        }
+
+        console.log('Activity data:', activityData);
+
+        const { data: earningsData, error: earningsError } = await supabase
+          .from('driver_earnings')
+          .select('amount, created_at')
+          .eq('driver_id', user.id);
+
+        if (earningsError) {
+          console.error('Error fetching earnings:', earningsError);
+          throw earningsError;
+        }
+
+        console.log('Earnings data:', earningsData);
+
+        const today = new Date();
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay());
+
+        const todayEarnings = earningsData
+          ?.filter(e => new Date(e.created_at).toDateString() === today.toDateString())
+          ?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
+
+        const weekEarnings = earningsData
+          ?.filter(e => new Date(e.created_at) >= startOfWeek)
+          ?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
 
         setStats({
           ...statsData,
-          active_hours: hoursData
+          today_earnings: todayEarnings,
+          week_earnings: weekEarnings,
+          active_hours: statsData.active_hours || 0
         });
-        setRecentActivity(activityData);
+        setRecentActivity(activityData || []);
         setIsLoading(false);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -107,7 +145,7 @@ const DriverDashboard = () => {
     };
 
     loadDashboardData();
-  }, [toast]);
+  }, [toast, user?.id]);
 
   useEffect(() => {
     if (!driverStatus || driverStatus !== 'available') return;
