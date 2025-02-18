@@ -29,9 +29,28 @@ export const useStudentSettings = () => {
         .from('student_settings')
         .select('*')
         .eq('student_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (settingsError) throw settingsError;
+      // If no settings exist, create default settings
+      if (!settings) {
+        const defaultSettings = {
+          student_id: user.id,
+          preferred_payment_type: 'cash',
+          notifications_config: { email: true, push: true, sms: false },
+          default_locations: { home: null, school: null },
+          theme_preference: 'system',
+          language_preference: 'en'
+        };
+
+        const { data: newSettings, error: createError } = await supabase
+          .from('student_settings')
+          .insert(defaultSettings)
+          .select()
+          .single();
+
+        if (createError) throw createError;
+        settings = newSettings;
+      }
 
       return {
         id: user.id,

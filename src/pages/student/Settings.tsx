@@ -1,4 +1,3 @@
-
 import { StudentSidebar } from "@/components/student/StudentSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,8 +24,10 @@ import {
   Loader2
 } from "lucide-react";
 import { useStudentSettings } from "@/hooks/use-student-settings";
+import { useToast } from "@/hooks/use-toast";
 
 export default function StudentSettings() {
+  const { toast } = useToast();
   const { 
     settings, 
     isLoading, 

@@ -72,21 +72,23 @@ export interface Ride {
 
 export interface StudentSettings {
   id: string;
-  name?: string;
+  name: string | null;
+  email?: string;
+  phone?: string;
+  studentId?: string;
   profileImage?: {
     url: string;
     lastUpdated: string;
   };
-  preferredPaymentType: 'cash' | 'transfer';
+  preferredPaymentType: string;
   notifications: {
     email: boolean;
     push: boolean;
     sms: boolean;
   };
   defaultLocations: {
-    home?: string;
-    school?: string;
-    other?: string[];
+    home: string | null;
+    school: string | null;
   };
   theme: 'light' | 'dark' | 'system';
   language: 'en' | 'ig' | 'yo' | 'ha';
