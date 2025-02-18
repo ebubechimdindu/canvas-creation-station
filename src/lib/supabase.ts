@@ -20,6 +20,15 @@ export const supabase = createClient<Database>(
 declare module '@supabase/supabase-js' {
   interface SupabaseClient<Database> {
     rpc<R>(
+      fn: 'calculate_driver_active_hours',
+      args: { 
+        driver_id: string;
+        date_start: string;
+        date_end: string;
+      }
+    ): Promise<{ data: R; error: null } | { data: null; error: Error }>;
+    
+    rpc<R>(
       fn: 'set_primary_bank_account',
       args: { p_account_id: string; p_driver_id: string }
     ): Promise<{ data: R; error: null } | { data: null; error: Error }>;
