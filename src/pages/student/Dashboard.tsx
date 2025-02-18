@@ -62,7 +62,7 @@ const mockActiveRide = {
     phone_number: '+1234567890',
     status: 'verified' as const,
     profile_picture_url: null,
-  },
+  } as DriverProfile,
   pickup_address: "Main Campus",
   dropoff_address: "Student Housing"
 };
@@ -77,7 +77,7 @@ const mockRides = [
       phone_number: '+1234567890',
       status: 'verified' as const,
       profile_picture_url: null,
-    },
+    } as DriverProfile,
     pickup_address: "Main Campus",
     dropoff_address: "Student Housing",
     created_at: new Date().toISOString(),
@@ -165,12 +165,6 @@ const StudentDashboard = () => {
 
       if (rideError) throw rideError;
 
-      setActiveRequest({
-        status: "Searching for driver",
-        estimatedWait: "5-10 minutes",
-        nearbyDrivers: 3,
-      });
-
       dispatch(setActiveRide({
         id: rideData.id,
         student_id: user.id,
@@ -179,12 +173,18 @@ const StudentDashboard = () => {
         dropoff_location: rideRequest.dropoffLocation.address,
         pickup_address: rideRequest.pickupLocation.address,
         dropoff_address: rideRequest.dropoffLocation.address,
-        status: 'requested' as RideStatus,
+        status: 'requested',
         notes: rideRequest.notes,
         special_requirements: rideRequest.specialRequirements,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }));
+
+      setActiveRequest({
+        status: "Searching for driver",
+        estimatedWait: "5-10 minutes",
+        nearbyDrivers: 3,
+      });
 
       toast({
         title: "Ride Requested",
