@@ -66,7 +66,7 @@ interface RideStatus {
 }
 
 const mockActiveRide = {
-  status: 'requested' as RideStatus,
+  status: 'requested' as const,
   driver: {
     id: '1',
     full_name: 'John Doe',
@@ -81,7 +81,7 @@ const mockActiveRide = {
 const mockRides = [
   {
     id: 1,
-    status: 'requested' as RideStatus,
+    status: 'requested' as const,
     driver: {
       id: '1',
       full_name: 'John Doe',
@@ -187,7 +187,7 @@ const StudentDashboard = () => {
         date: new Date().toISOString(),
         pickup: rideRequest.pickupLocation.address,
         dropoff: rideRequest.dropoffLocation.address,
-        status: 'Upcoming',
+        status: 'requested' as RideStatus,
         driver: mockActiveRide.driver,
         payment: {
           method: 'cash',

@@ -20,13 +20,20 @@ import { RideHistoryTable } from "@/components/rides/RideHistoryTable";
 import { supabase } from "@/lib/supabase";
 import type { RideRequest, RideStatus } from "@/types";
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
-interface PostgresChangePayload extends RealtimePostgresChangesPayload<{
-  [key: string]: any;
-}> {
-  new: RideRequest;
+type PostgresChangePayload = RealtimePostgresChangesPayload<{
   old: RideRequest;
-}
+  new: RideRequest;
+}>;
 
 const StudentRides: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -270,22 +277,24 @@ const StudentRides: React.FC = () => {
                         setSelectedRide={setSelectedRide}
                       />
 
-                      <Pagination>
-                        <PaginationContent>
-                          <PaginationItem>
-                            <PaginationPrevious href="#" />
-                          </PaginationItem>
-                          <PaginationItem>
-                            <PaginationLink href="#">1</PaginationLink>
-                          </PaginationItem>
-                          <PaginationItem>
-                            <PaginationEllipsis />
-                          </PaginationItem>
-                          <PaginationItem>
-                            <PaginationNext href="#" />
-                          </PaginationItem>
-                        </PaginationContent>
-                      </Pagination>
+                      <div className="mt-4 flex justify-center">
+                        <Pagination>
+                          <PaginationContent>
+                            <PaginationItem>
+                              <PaginationPrevious href="#" />
+                            </PaginationItem>
+                            <PaginationItem>
+                              <PaginationLink href="#">1</PaginationLink>
+                            </PaginationItem>
+                            <PaginationItem>
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                            <PaginationItem>
+                              <PaginationNext href="#" />
+                            </PaginationItem>
+                          </PaginationContent>
+                        </Pagination>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
