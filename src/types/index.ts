@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   email: string;
@@ -28,6 +27,8 @@ export interface Driver {
   };
 }
 
+export type RideStatusUI = 'Completed' | 'Upcoming' | 'In Progress' | 'Cancelled';
+
 export type RideStatus = 
   | 'requested'
   | 'finding_driver'
@@ -38,6 +39,24 @@ export type RideStatus =
   | 'completed'
   | 'cancelled'
   | 'timeout';
+
+export const mapRideStatusToUI = (status: RideStatus): RideStatusUI => {
+  switch (status) {
+    case 'completed':
+      return 'Completed';
+    case 'requested':
+    case 'finding_driver':
+    case 'driver_assigned':
+      return 'Upcoming';
+    case 'en_route_to_pickup':
+    case 'arrived_at_pickup':
+    case 'in_progress':
+      return 'In Progress';
+    case 'cancelled':
+    case 'timeout':
+      return 'Cancelled';
+  }
+};
 
 export interface RideRequest {
   id: number;
@@ -63,9 +82,6 @@ export interface RideRequest {
     status: 'pending' | 'paid';
     amount: number;
   };
-  date?: string; // Added for compatibility
-  pickup?: string; // Added for compatibility
-  dropoff?: string; // Added for compatibility
 }
 
 export interface DriverProfile {
@@ -85,12 +101,15 @@ export interface RideRating {
   created_at: string;
 }
 
-export interface Ride extends RideRequest {
+export interface Ride {
+  id: number;
+  student_id: string;
+  driver_id?: string;
   date: string;
   pickup: string;
   dropoff: string;
   driver: string;
-  status: 'Completed' | 'Upcoming' | 'In Progress' | 'Cancelled';
+  status: RideStatusUI;
   rating?: number;
   payment: {
     method: 'cash' | 'transfer';

@@ -1,13 +1,18 @@
 
 import { cn } from "@/lib/utils";
-import type { Ride } from "@/types";
+import { type RideStatus, type RideStatusUI, mapRideStatusToUI } from "@/types";
 
 interface RideStatusBadgeProps {
-  status: Ride['status'];
+  status: RideStatus | RideStatusUI;
   animated?: boolean;
 }
 
 export function RideStatusBadge({ status, animated = false }: RideStatusBadgeProps) {
+  const displayStatus = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+  const uiStatus = (Object.values(RideStatusUI) as RideStatusUI[]).includes(status as RideStatusUI) 
+    ? status as RideStatusUI 
+    : mapRideStatusToUI(status as RideStatus);
+  
   const baseClasses = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
   
   const statusClasses = {
@@ -22,10 +27,10 @@ export function RideStatusBadge({ status, animated = false }: RideStatusBadgePro
   return (
     <span className={cn(
       baseClasses,
-      statusClasses[status],
+      statusClasses[uiStatus],
       animationClasses
     )}>
-      {status}
+      {displayStatus}
     </span>
   );
 }
