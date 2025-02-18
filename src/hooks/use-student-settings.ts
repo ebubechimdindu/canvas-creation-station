@@ -132,17 +132,42 @@ export const useStudentSettings = () => {
       if (userError) throw userError;
       if (!user) throw new Error('Not authenticated');
 
-      const fileName = `${user.id}-${Date.now()}`;
-      const { data, error: uploadError } = await supabase.storage
+      // First, try to get the existing file path to remove it
+      const { data: profile } = await supabase
+        .from('student_profiles')
+        .select('profile_picture_url')
+        .eq('id', user.id)
+        .single();
+
+      // If there's an existing file, remove it
+      if (profile?.profile_picture_url) {
+        const oldFileName = profile.profile_picture_url.split('/').pop();
+        if (oldFileName) {
+          await supabase.storage
+            .from('student-profiles')
+            .remove([oldFileName]);
+        }
+      }
+
+      // Upload new file with proper path structure
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
         .from('student-profiles')
-        .upload(fileName, file);
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
 
       if (uploadError) throw uploadError;
 
+      // Get the public URL
       const { data: { publicUrl } } = supabase.storage
         .from('student-profiles')
         .getPublicUrl(fileName);
 
+      // Update the profile with the new URL
       const { error: updateError } = await supabase
         .from('student_profiles')
         .update({ profile_picture_url: publicUrl })
