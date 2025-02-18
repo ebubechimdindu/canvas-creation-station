@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import DriverSidebar from "@/components/driver/DriverSidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Car, DollarSign, Star, Users, Map as MapIcon, Maximize2, Minimize2 } from "lucide-react";
+import { Car, DollarSign, Star, Users, Map as MapIcon, Maximize2, Minimize2, Activity } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { setError, updateDriverStatus } from "@/features/rides/ridesSlice";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,6 +14,7 @@ import { useDriverLocation } from "@/hooks/use-driver-location";
 import { MapProvider } from "@/components/map/MapProvider";
 import { supabase } from "@/integrations/supabase/client";
 import RideRequestCard from "@/components/driver/RideRequestCard";
+import { format, formatDistanceToNow } from "date-fns";
 
 interface RideRequest {
   id: number;
@@ -26,67 +27,90 @@ interface RideRequest {
   estimated_earnings: number;
 }
 
+interface DriverStats {
+  full_name: string;
+  total_rides: number;
+  today_rides: number;
+  average_rating: number;
+  total_ratings: number;
+  today_earnings: number;
+  week_earnings: number;
+  active_hours: number;
+}
+
+interface RecentActivity {
+  id: number;
+  status: string;
+  created_at: string;
+  pickup_address: string;
+  dropoff_address: string;
+  rating: number;
+  earnings: number;
+  student_name: string;
+}
+
 const DriverDashboard = () => {
   const { toast } = useToast();
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(true);
   const { error, driverStatus } = useAppSelector((state) => state.rides);
   const [isMapExpanded, setIsMapExpanded] = useState(false);
-  const { driverLocation, nearbyDrivers, error: locationUpdateError } = useLocationUpdates("current-driver");
+  const { driverLocation, nearbyDrivers } = useLocationUpdates("current-driver");
   const { error: locationError } = useDriverLocation();
   const [currentRideRequest, setCurrentRideRequest] = useState<RideRequest | null>(null);
-  const [stats, setStats] = useState({
-    totalRides: 0,
-    todayEarnings: 0,
-    rating: 0,
-    activeHours: 0
-  });
+  const [stats, setStats] = useState<DriverStats | null>(null);
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
 
   useEffect(() => {
-    const loadStats = async () => {
+    const loadDashboardData = async () => {
       try {
         const { data: user } = await supabase.auth.getUser();
         if (!user.user) return;
 
-        // Get total rides
-        const { count: totalRides } = await supabase
-          .from('ride_requests')
-          .select('*', { count: 'exact', head: true })
+        // Get driver stats
+        const { data: statsData, error: statsError } = await supabase
+          .from('driver_dashboard_stats')
+          .select('*')
           .eq('driver_id', user.user.id)
-          .eq('status', 'completed');
+          .single();
 
-        // Get today's earnings
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        const { data: earnings } = await supabase
-          .from('driver_earnings')
-          .select('amount')
-          .eq('driver_id', user.user.id)
-          .eq('status', 'paid')
-          .gte('created_at', today.toISOString());
+        if (statsError) throw statsError;
 
-        const todayEarnings = earnings?.reduce((sum, record) => sum + Number(record.amount), 0) || 0;
+        // Get active hours
+        const { data: hoursData, error: hoursError } = await supabase
+          .rpc('calculate_driver_active_hours', {
+            driver_id: user.user.id,
+            date_start: new Date(new Date().setHours(0,0,0,0)).toISOString(),
+            date_end: new Date().toISOString()
+          });
+
+        if (hoursError) throw hoursError;
+
+        // Get recent activity
+        const { data: activityData, error: activityError } = await supabase
+          .from('driver_recent_activity')
+          .select('*')
+          .limit(5);
+
+        if (activityError) throw activityError;
 
         setStats({
-          totalRides: totalRides || 0,
-          todayEarnings,
-          rating: 4.8, // TODO: Implement ratings
-          activeHours: 6.5 // TODO: Calculate from driver_locations
+          ...statsData,
+          active_hours: hoursData
         });
-
+        setRecentActivity(activityData);
         setIsLoading(false);
       } catch (error) {
-        console.error('Error loading stats:', error);
+        console.error('Error loading dashboard data:', error);
         toast({
           title: "Error",
-          description: "Failed to load dashboard stats",
+          description: "Failed to load dashboard data",
           variant: "destructive"
         });
       }
     };
 
-    loadStats();
+    loadDashboardData();
   }, [toast]);
 
   useEffect(() => {
@@ -261,7 +285,7 @@ const DriverDashboard = () => {
             {/* Header */}
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Driver Dashboard</h1>
-              <p className="text-gray-600">Welcome back, John</p>
+              <p className="text-gray-600">Welcome back, {stats?.full_name || 'Driver'}</p>
             </div>
 
             {/* Current Ride Request */}
@@ -270,9 +294,9 @@ const DriverDashboard = () => {
                 id={currentRideRequest.id}
                 pickupAddress={currentRideRequest.pickup_address}
                 dropoffAddress={currentRideRequest.dropoff_address}
-                estimatedEarnings={currentRideRequest.estimated_earnings || 0}
-                estimatedDistance={currentRideRequest.estimated_distance || 0}
-                estimatedDuration={currentRideRequest.estimated_duration || 0}
+                estimatedEarnings={currentRideRequest.estimated_earnings}
+                estimatedDistance={currentRideRequest.estimated_distance}
+                estimatedDuration={currentRideRequest.estimated_duration}
                 onAccept={handleAcceptRide}
                 onReject={handleRejectRide}
               />
@@ -290,26 +314,20 @@ const DriverDashboard = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={toggleMapSize}
-                  className="hover:bg-primary/10 transition-colors duration-200"
+                  onClick={() => setIsMapExpanded(!isMapExpanded)}
                 >
                   {isMapExpanded ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
                 </Button>
               </CardHeader>
               <CardContent className="p-0">
-                <div 
-                  className={`transition-all duration-500 ease-in-out transform ${
-                    isMapExpanded ? 'h-[calc(100vh-8rem)]' : 'h-[400px]'
-                  }`}
-                >
+                <div className={`transition-all duration-500 ease-in-out transform ${
+                  isMapExpanded ? 'h-[calc(100vh-8rem)]' : 'h-[400px]'
+                }`}>
                   <RideMap
                     pickup=""
                     dropoff=""
                     mode="driver"
-                    nearbyDrivers={nearbyDrivers?.map(driver => ({
-                      lat: driver.currentLocation?.lat || 0,
-                      lng: driver.currentLocation?.lng || 0
-                    })).filter(loc => loc.lat !== 0 && loc.lng !== 0)}
+                    nearbyDrivers={nearbyDrivers}
                     className="w-full h-full rounded-b-lg"
                   />
                 </div>
@@ -348,25 +366,25 @@ const DriverDashboard = () => {
               {[
                 {
                   title: 'Total Rides',
-                  value: stats.totalRides.toString(),
-                  subtext: "+5 from last week",
+                  value: stats?.total_rides.toString() || '0',
+                  subtext: `${stats?.today_rides || 0} rides today`,
                   icon: <Users className="h-4 w-4" />
                 },
                 {
                   title: "Today's Earnings",
-                  value: `₦${stats.todayEarnings.toFixed(2)}`,
-                  subtext: "+12% from yesterday",
+                  value: `₦${stats?.today_earnings.toFixed(2) || '0.00'}`,
+                  subtext: `₦${stats?.week_earnings.toFixed(2) || '0.00'} this week`,
                   icon: <DollarSign className="h-4 w-4" />
                 },
                 {
                   title: 'Rating',
-                  value: stats.rating.toString(),
-                  subtext: "From 96 ratings",
+                  value: (stats?.average_rating || 0).toFixed(1),
+                  subtext: `From ${stats?.total_ratings || 0} ratings`,
                   icon: <Star className="h-4 w-4" />
                 },
                 {
                   title: 'Active Hours',
-                  value: stats.activeHours.toString(),
+                  value: (stats?.active_hours || 0).toFixed(1),
                   subtext: "Hours today",
                   icon: <Car className="h-4 w-4" />
                 }
@@ -400,7 +418,10 @@ const DriverDashboard = () => {
             {/* Recent Activity */}
             <Card className={isMapExpanded ? 'hidden' : ''}>
               <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Recent Activity
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
@@ -409,10 +430,27 @@ const DriverDashboard = () => {
                       <Skeleton key={i} className="h-12 w-full" />
                     ))}
                   </div>
-                ) : (
+                ) : recentActivity.length > 0 ? (
                   <div className="space-y-4">
-                    <p className="text-sm text-gray-600">No recent activity</p>
+                    {recentActivity.map((activity) => (
+                      <div key={activity.id} className="flex items-center justify-between p-4 rounded-lg bg-gray-50">
+                        <div className="space-y-1">
+                          <p className="font-medium">{activity.student_name}</p>
+                          <p className="text-sm text-gray-500">
+                            {activity.pickup_address} → {activity.dropoff_address}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">₦{activity.earnings.toFixed(2)}</p>
+                          <p className="text-sm text-gray-500">
+                            {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
+                ) : (
+                  <p className="text-sm text-gray-600">No recent activity</p>
                 )}
               </CardContent>
             </Card>
