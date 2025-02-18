@@ -1,19 +1,37 @@
 
 import { configureStore } from '@reduxjs/toolkit';
+import { persistStore, persistReducer } from 'redux-persist';
+import storage from 'redux-persist/lib/storage';
 import authReducer from '../features/auth/authSlice';
 import ridesReducer from '../features/rides/ridesSlice';
 import { authMiddleware } from '../middleware/authMiddleware';
 
+const authPersistConfig = {
+  key: 'auth',
+  storage,
+  whitelist: ['user', 'isAuthenticated', 'sessionExpiry', 'lastSync']
+};
+
+const ridesPersistConfig = {
+  key: 'rides',
+  storage,
+  whitelist: ['activeRide', 'history', 'driverStatus']
+};
+
 export const store = configureStore({
   reducer: {
-    auth: authReducer,
-    rides: ridesReducer,
+    auth: persistReducer(authPersistConfig, authReducer),
+    rides: persistReducer(ridesPersistConfig, ridesReducer),
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(authMiddleware),
+    getDefaultMiddleware({
+      serializableCheck: {
+        ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
+      },
+    }).concat(authMiddleware),
 });
 
-// Infer the `RootState` and `AppDispatch` types from the store itself
-// This prevents circular type references
+export const persistor = persistStore(store);
+
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

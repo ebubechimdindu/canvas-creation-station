@@ -52,48 +52,36 @@ export const useRideRequests = () => {
         ])
         .single();
 
-      if (error) throw error;
-      return data as RideRequest;
+      if (error && error.code !== 'PGRST116') throw error;
+      return data as RideRequest | null;
     },
     enabled: !!user?.id,
+    staleTime: 1000 * 60, // 1 minute
+    cacheTime: 1000 * 60 * 60, // 1 hour
   });
 
   useEffect(() => {
-    if (!user?.id || !activeRide?.id) return;
+    if (!user?.id) return;
 
     const channel = supabase
-      .channel(`ride_${activeRide.id}`)
+      .channel(`ride_updates_${user.id}`)
       .on(
-        'postgres_changes' as any,
+        'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'ride_requests',
-          filter: `id=eq.${activeRide.id}`
+          filter: `student_id=eq.${user.id}`
         },
-        (payload: PostgresChangePayload) => {
-          queryClient.setQueryData(['activeRide', user.id], payload.new);
-
-          if (payload.new.status !== payload.old.status) {
-            const statusMessages: Record<RideStatus, string> = {
-              driver_assigned: 'Driver has been assigned to your ride',
-              en_route_to_pickup: 'Driver is on the way to pick you up',
-              arrived_at_pickup: 'Driver has arrived at pickup location',
-              in_progress: 'Your ride has started',
-              completed: 'Your ride has been completed',
-              cancelled: 'Your ride has been cancelled',
-              requested: 'Ride requested',
-              finding_driver: 'Finding a driver',
-              timeout: 'Ride request timed out'
-            };
-
-            const message = statusMessages[payload.new.status];
-            if (message) {
-              toast({
-                title: 'Ride Update',
-                description: message,
-              });
-            }
+        (payload) => {
+          queryClient.invalidateQueries({ queryKey: ['activeRide'] });
+          queryClient.invalidateQueries({ queryKey: ['rideHistory'] });
+          
+          if (payload.new && payload.old && payload.new.status !== payload.old.status) {
+            toast({
+              title: 'Ride Update',
+              description: `Your ride status has been updated to ${payload.new.status}`,
+            });
           }
         }
       )
@@ -102,7 +90,7 @@ export const useRideRequests = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, activeRide?.id, queryClient, toast]);
+  }, [user?.id, queryClient, toast]);
 
   const createRideRequest = async ({ pickup, dropoff, notes, specialRequirements }: CreateRideRequestParams) => {
     if (!user?.id) {
