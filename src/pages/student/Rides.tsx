@@ -224,3 +224,80 @@ export default function StudentRides() {
                 )}
 
                 <Card>
+                  <CardHeader>
+                    <CardTitle>Ride History</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex flex-col md:flex-row gap-4">
+                        <div className="flex-1">
+                          <Input
+                            placeholder="Search rides..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full"
+                          />
+                        </div>
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Filter by status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Status</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
+                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                            <SelectItem value="in_progress">In Progress</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button variant="outline" onClick={handleExportHistory}>
+                          <Download className="h-4 w-4 mr-2" />
+                          Export
+                        </Button>
+                      </div>
+
+                      <RideHistoryTable
+                        rides={filteredRides}
+                        onRideSelect={(ride) => {
+                          setSelectedRideDetails(ride);
+                          setIsDetailsModalOpen(true);
+                        }}
+                        onRateRide={handleRating}
+                        isRatingOpen={isRatingOpen}
+                        setIsRatingOpen={setIsRatingOpen}
+                        rating={rating}
+                        setRating={setRating}
+                        ratingHover={ratingHover}
+                        setRatingHover={setRatingHover}
+                        review={review}
+                        setReview={setReview}
+                        selectedRide={selectedRide}
+                        setSelectedRide={setSelectedRide}
+                      />
+
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious href="#" />
+                          </PaginationItem>
+                          <PaginationItem>
+                            <PaginationLink href="#">1</PaginationLink>
+                          </PaginationItem>
+                          <PaginationItem>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                          <PaginationItem>
+                            <PaginationNext href="#" />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </main>
+        </div>
+      </MapProvider>
+    </SidebarProvider>
+  );
+}
