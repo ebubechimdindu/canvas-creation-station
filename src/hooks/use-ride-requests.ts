@@ -52,14 +52,15 @@ export const useRideRequests = () => {
           'arrived_at_pickup',
           'in_progress'
         ])
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single to handle no rows case
 
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error) throw error;
       return data as RideRequest | null;
     },
     enabled: !!user?.id,
     staleTime: 1000 * 60, // 1 minute
     gcTime: 1000 * 60 * 60, // 1 hour
+    retry: false, // Don't retry on error since no active ride is a valid state
   });
 
   useEffect(() => {
@@ -68,7 +69,7 @@ export const useRideRequests = () => {
     const channel = supabase
       .channel(`ride_updates_${user.id}`)
       .on(
-        'postgres_changes' as any, // Temporary type assertion to fix the error
+        'postgres_changes' as any,
         {
           event: '*',
           schema: 'public',
@@ -93,6 +94,35 @@ export const useRideRequests = () => {
       supabase.removeChannel(channel);
     };
   }, [user?.id, queryClient, toast]);
+
+  const { data: rideHistory, isLoading: isLoadingHistory } = useQuery({
+    queryKey: ['rideHistory', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+
+      const { data, error } = await supabase
+        .from('ride_requests')
+        .select(`
+          *,
+          driver:driver_profiles(
+            id,
+            full_name,
+            phone_number,
+            profile_picture_url,
+            status
+          ),
+          ratings:ride_ratings(*)
+        `)
+        .eq('student_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+    retry: false,
+  });
 
   const createRideRequest = async ({ pickup, dropoff, notes, specialRequirements }: CreateRideRequestParams) => {
     if (!user?.id) {
@@ -193,34 +223,6 @@ export const useRideRequests = () => {
       throw error;
     }
   };
-
-  const { data: rideHistory, isLoading: isLoadingHistory } = useQuery({
-    queryKey: ['rideHistory', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
-
-      const { data, error } = await supabase
-        .from('ride_requests')
-        .select(`
-          *,
-          driver:driver_profiles(
-            id,
-            full_name,
-            phone_number,
-            profile_picture_url,
-            status
-          ),
-          ratings:ride_ratings(*)
-        `)
-        .eq('student_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.id,
-  });
 
   return {
     activeRide,
