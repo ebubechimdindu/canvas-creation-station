@@ -32,7 +32,12 @@ export function useSidebar() {
   return context;
 }
 
-export function Sidebar({ children, className }: { children: React.ReactNode; className?: string }) {
+interface SidebarProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ children, className }) => {
   const { isOpen } = useSidebar();
   return (
     <aside
@@ -45,41 +50,43 @@ export function Sidebar({ children, className }: { children: React.ReactNode; cl
       {children}
     </aside>
   );
-}
+};
 
-export function SidebarContent({ children, className }: { children: React.ReactNode; className?: string }) {
+export const SidebarContent: React.FC<SidebarProps> = ({ children, className }) => {
   return <div className={cn("h-full px-3 py-4", className)}>{children}</div>;
-}
+};
 
-export function SidebarGroup({ children }: { children: React.ReactNode }) {
+export const SidebarGroup: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <div className="space-y-3">{children}</div>;
-}
+};
 
-export function SidebarGroupLabel({ children }: { children: React.ReactNode }) {
+export const SidebarGroupLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <h2 className="px-4 text-lg font-semibold tracking-tight">{children}</h2>;
-}
+};
 
-export function SidebarGroupContent({ children }: { children: React.ReactNode }) {
+export const SidebarGroupContent: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <div className="space-y-1">{children}</div>;
-}
+};
 
-export function SidebarMenu({ children }: { children: React.ReactNode }) {
+export const SidebarMenu: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <nav className="space-y-1">{children}</nav>;
-}
+};
 
-export function SidebarMenuItem({ children }: { children: React.ReactNode }) {
+export const SidebarMenuItem: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <div className="px-3 py-1">{children}</div>;
-}
+};
 
-export function SidebarMenuButton({
-  children,
-  className,
-  asChild = false,
-}: {
+interface SidebarMenuButtonProps {
   children: React.ReactNode;
   className?: string;
   asChild?: boolean;
-}) {
+}
+
+export const SidebarMenuButton: React.FC<SidebarMenuButtonProps> = ({
+  children,
+  className,
+  asChild = false,
+}) => {
   const Comp = asChild ? "div" : "button";
   return (
     <Comp
@@ -91,4 +98,4 @@ export function SidebarMenuButton({
       {children}
     </Comp>
   );
-}
+};
