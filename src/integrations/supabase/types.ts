@@ -84,6 +84,13 @@ export type Database = {
             foreignKeyName: "driver_earnings_ride_id_fkey"
             columns: ["ride_id"]
             isOneToOne: false
+            referencedRelation: "driver_recent_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_earnings_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: false
             referencedRelation: "ride_contact_info"
             referencedColumns: ["ride_id"]
           },
@@ -131,6 +138,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_driver"
+            columns: ["driver_id"]
+            isOneToOne: true
+            referencedRelation: "driver_dashboard_stats"
+            referencedColumns: ["driver_id"]
+          },
           {
             foreignKeyName: "fk_driver"
             columns: ["driver_id"]
@@ -283,6 +297,13 @@ export type Database = {
             foreignKeyName: "fk_ride"
             columns: ["ride_id"]
             isOneToOne: false
+            referencedRelation: "driver_recent_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_ride"
+            columns: ["ride_id"]
+            isOneToOne: false
             referencedRelation: "ride_contact_info"
             referencedColumns: ["ride_id"]
           },
@@ -363,6 +384,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_driver"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_dashboard_stats"
+            referencedColumns: ["driver_id"]
+          },
           {
             foreignKeyName: "fk_driver"
             columns: ["driver_id"]
@@ -489,6 +517,34 @@ export type Database = {
       }
     }
     Views: {
+      driver_dashboard_stats: {
+        Row: {
+          average_rating: number | null
+          driver_id: string | null
+          full_name: string | null
+          status: string | null
+          today_earnings: number | null
+          today_rides: number | null
+          total_ratings: number | null
+          total_rides: number | null
+          week_earnings: number | null
+        }
+        Relationships: []
+      }
+      driver_recent_activity: {
+        Row: {
+          created_at: string | null
+          dropoff_address: string | null
+          earnings: number | null
+          id: number | null
+          pickup_address: string | null
+          rating: number | null
+          status: Database["public"]["Enums"]["ride_status_enum"] | null
+          student_name: string | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
       geography_columns: {
         Row: {
           coord_dimension: number | null
@@ -543,6 +599,13 @@ export type Database = {
           student_phone: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_driver"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_dashboard_stats"
+            referencedColumns: ["driver_id"]
+          },
           {
             foreignKeyName: "fk_driver"
             columns: ["driver_id"]
@@ -891,6 +954,14 @@ export type Database = {
         Args: {
           point1: unknown
           point2: unknown
+        }
+        Returns: number
+      }
+      calculate_driver_active_hours: {
+        Args: {
+          driver_id: string
+          date_start: string
+          date_end: string
         }
         Returns: number
       }
