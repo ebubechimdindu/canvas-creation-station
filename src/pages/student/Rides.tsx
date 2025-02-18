@@ -278,22 +278,24 @@ const StudentRides: React.FC = () => {
                       />
 
                       <div className="mt-4 flex justify-center">
-                        <Pagination>
-                          <PaginationContent>
-                            <PaginationItem>
-                              <PaginationPrevious href="#" />
-                            </PaginationItem>
-                            <PaginationItem>
-                              <PaginationLink href="#">1</PaginationLink>
-                            </PaginationItem>
-                            <PaginationItem>
-                              <PaginationEllipsis />
-                            </PaginationItem>
-                            <PaginationItem>
-                              <PaginationNext href="#" />
-                            </PaginationItem>
-                          </PaginationContent>
-                        </Pagination>
+                        <nav>
+                          <Pagination>
+                            <PaginationContent>
+                              <PaginationItem>
+                                <PaginationPrevious href="#" />
+                              </PaginationItem>
+                              <PaginationItem>
+                                <PaginationLink href="#">1</PaginationLink>
+                              </PaginationItem>
+                              <PaginationItem>
+                                <PaginationEllipsis />
+                              </PaginationItem>
+                              <PaginationItem>
+                                <PaginationNext href="#" />
+                              </PaginationItem>
+                            </PaginationContent>
+                          </Pagination>
+                        </nav>
                       </div>
                     </div>
                   </CardContent>
