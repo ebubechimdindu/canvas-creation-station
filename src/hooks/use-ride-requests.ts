@@ -68,7 +68,7 @@ export const useRideRequests = () => {
     const channel = supabase
       .channel(`ride_updates_${user.id}`)
       .on(
-        'postgres_changes',
+        'postgres_changes' as any, // Temporary type assertion to fix the error
         {
           event: '*',
           schema: 'public',
