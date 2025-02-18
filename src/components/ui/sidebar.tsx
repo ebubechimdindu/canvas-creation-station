@@ -1,7 +1,7 @@
 
 import React from "react";
 import { createContext, useContext } from "react";
-import { SidePanel } from "./side-panel";
+import { cn } from "@/lib/utils";
 
 interface SidebarContextType {
   isOpen: boolean;
@@ -30,4 +30,65 @@ export function useSidebar() {
     throw new Error("useSidebar must be used within a SidebarProvider");
   }
   return context;
+}
+
+export function Sidebar({ children, className }: { children: React.ReactNode; className?: string }) {
+  const { isOpen } = useSidebar();
+  return (
+    <aside
+      className={cn(
+        "fixed left-0 top-0 z-40 h-screen w-64 border-r bg-background transition-transform",
+        isOpen ? "translate-x-0" : "-translate-x-full",
+        className
+      )}
+    >
+      {children}
+    </aside>
+  );
+}
+
+export function SidebarContent({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <div className={cn("h-full px-3 py-4", className)}>{children}</div>;
+}
+
+export function SidebarGroup({ children }: { children: React.ReactNode }) {
+  return <div className="space-y-3">{children}</div>;
+}
+
+export function SidebarGroupLabel({ children }: { children: React.ReactNode }) {
+  return <h2 className="px-4 text-lg font-semibold tracking-tight">{children}</h2>;
+}
+
+export function SidebarGroupContent({ children }: { children: React.ReactNode }) {
+  return <div className="space-y-1">{children}</div>;
+}
+
+export function SidebarMenu({ children }: { children: React.ReactNode }) {
+  return <nav className="space-y-1">{children}</nav>;
+}
+
+export function SidebarMenuItem({ children }: { children: React.ReactNode }) {
+  return <div className="px-3 py-1">{children}</div>;
+}
+
+export function SidebarMenuButton({
+  children,
+  className,
+  asChild = false,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  asChild?: boolean;
+}) {
+  const Comp = asChild ? "div" : "button";
+  return (
+    <Comp
+      className={cn(
+        "flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+        className
+      )}
+    >
+      {children}
+    </Comp>
+  );
 }
