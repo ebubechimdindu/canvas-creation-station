@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   email: string;
@@ -57,6 +58,14 @@ export interface RideRequest {
   cancelled_at?: string;
   driver?: DriverProfile;
   ratings?: RideRating[];
+  payment?: {
+    method: 'cash' | 'transfer';
+    status: 'pending' | 'paid';
+    amount: number;
+  };
+  date?: string; // Added for compatibility
+  pickup?: string; // Added for compatibility
+  dropoff?: string; // Added for compatibility
 }
 
 export interface DriverProfile {
@@ -76,15 +85,14 @@ export interface RideRating {
   created_at: string;
 }
 
-export interface Ride {
-  id: number;
+export interface Ride extends RideRequest {
   date: string;
   pickup: string;
   dropoff: string;
   driver: string;
-  status: 'Completed' | 'Upcoming' | 'Cancelled' | 'In Progress';
+  status: 'Completed' | 'Upcoming' | 'In Progress' | 'Cancelled';
   rating?: number;
-  payment?: {
+  payment: {
     method: 'cash' | 'transfer';
     status: 'pending' | 'paid';
     amount: number;

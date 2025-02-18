@@ -1,121 +1,69 @@
-import React from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Clock, X, Loader2 } from "lucide-react";
-import RideMap from "@/components/map/RideMap";
-import { type Driver } from "@/types";
-import { useRideRequests } from "@/hooks/use-ride-requests";
-import { useStudentLocation } from "@/hooks/use-student-location";
 
-interface ActiveRideRequestProps {
-  status: string;
-  estimatedWait: string;
-  nearbyDrivers: number;
+import React from 'react';
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { RideStatusBadge } from "./RideStatusBadge";
+import { MapPin, Clock, X } from "lucide-react";
+import { type RideStatus, type DriverProfile } from "@/types";
+
+export interface ActiveRideRequestProps {
+  status: RideStatus;
   pickup: string;
   dropoff: string;
-  availableDrivers?: Driver[];
+  driver?: DriverProfile;
   onCancel: () => void;
 }
 
 export function ActiveRideRequest({
   status,
-  estimatedWait,
-  nearbyDrivers,
   pickup,
   dropoff,
-  availableDrivers,
+  driver,
   onCancel
 }: ActiveRideRequestProps) {
-  const { activeRide, isLoadingActive } = useRideRequests();
-  const { currentLocation } = useStudentLocation();
-
-  if (isLoadingActive) {
-    return (
-      <Card className="border-l-4 border-l-blue-500">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-center space-x-4">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-            <p className="text-lg font-medium">Loading ride request...</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!activeRide) return null;
-
   return (
-    <Card className="border-l-4 border-l-blue-500">
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5 animate-pulse text-blue-500" />
-            Active Request
-          </div>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <X className="h-4 w-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Cancel Ride Request?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to cancel your current ride request?
-                  This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Keep Request</AlertDialogCancel>
-                <AlertDialogAction onClick={onCancel}>
-                  Cancel Ride
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid md:grid-cols-2 gap-6">
+    <Card className="relative overflow-hidden border-l-4 border-l-blue-500">
+      <CardContent className="p-6">
+        <div className="flex justify-between items-start">
           <div className="space-y-4">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Status:</span>
-              <span className="font-medium">{status}</span>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <RideStatusBadge status={status} />
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Clock className="h-4 w-4" />
+                <span>Estimated arrival: 10 minutes</span>
+              </div>
             </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Estimated Wait:</span>
-              <span className="font-medium">{estimatedWait}</span>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-green-500" />
+                <span className="font-medium">{pickup}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-red-500" />
+                <span className="font-medium">{dropoff}</span>
+              </div>
             </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Nearby Drivers:</span>
-              <span className="font-medium">{nearbyDrivers}</span>
-            </div>
+
+            {driver && (
+              <div className="mt-4 p-4 bg-muted rounded-lg">
+                <h4 className="font-medium mb-2">Driver Details</h4>
+                <p>{driver.full_name}</p>
+                <p className="text-sm text-muted-foreground">{driver.phone_number}</p>
+              </div>
+            )}
           </div>
-          <div className="relative aspect-video md:aspect-square rounded-lg overflow-hidden">
-            <RideMap
-              pickup={pickup}
-              dropoff={dropoff}
-              className="w-full h-full"
-              showRoutePath={true}
-              mode="student"
-              nearbyDrivers={availableDrivers?.map(driver => ({
-                lat: driver.currentLocation?.lat || 0,
-                lng: driver.currentLocation?.lng || 0
-              })).filter(loc => loc.lat !== 0 && loc.lng !== 0)}
-            />
-          </div>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hover:bg-destructive/10 hover:text-destructive"
+            onClick={onCancel}
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </div>
       </CardContent>
     </Card>

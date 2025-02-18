@@ -5,13 +5,18 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useAppSelector } from '@/hooks/redux';
 import { type CampusLocation } from '@/types/locations';
-import { type RideRequest, type DriverProfile } from '@/types';
+import { type RideRequest, type DriverProfile, type RideStatus } from '@/types';
 
 interface CreateRideRequestParams {
   pickup: CampusLocation;
   dropoff: CampusLocation;
   notes?: string;
   specialRequirements?: string;
+}
+
+interface PostgresChangePayload {
+  new: RideRequest;
+  old: RideRequest;
 }
 
 export const useRideRequests = () => {
@@ -50,7 +55,7 @@ export const useRideRequests = () => {
         .single();
 
       if (error) throw error;
-      return data;
+      return data as RideRequest;
     },
     enabled: !!user?.id,
   });
@@ -69,7 +74,7 @@ export const useRideRequests = () => {
           table: 'ride_requests',
           filter: `id=eq.${activeRide.id}`
         },
-        (payload) => {
+        (payload: PostgresChangePayload) => {
           // Update ride data in React Query cache
           queryClient.setQueryData(['activeRide', user.id], payload.new);
 
