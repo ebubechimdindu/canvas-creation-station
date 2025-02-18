@@ -14,7 +14,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { format } from "date-fns";
 import { RideRequestForm } from "@/components/rides/RideRequestForm";
 import { ActiveRideRequest } from "@/components/rides/ActiveRideRequest";
 import { RideHistoryTable } from "@/components/rides/RideHistoryTable";
@@ -123,6 +122,16 @@ export default function StudentRides() {
         variant: "destructive"
       });
     }
+  };
+
+  const handleRating = (rideId: number) => {
+    toast({
+      title: "Rating Submitted",
+      description: "Thank you for your feedback!",
+    });
+    setIsRatingOpen(false);
+    setRating(0);
+    setReview("");
   };
 
   const handleCancelRequest = () => {
@@ -234,10 +243,7 @@ export default function StudentRides() {
                           setSelectedRideDetails(ride);
                           setIsDetailsModalOpen(true);
                         }}
-                        onRateRide={(rideId) => {
-                          setSelectedRide(rideId);
-                          setIsRatingOpen(true);
-                        }}
+                        onRateRide={handleRating}
                         isRatingOpen={isRatingOpen}
                         setIsRatingOpen={setIsRatingOpen}
                         rating={rating}
@@ -247,6 +253,7 @@ export default function StudentRides() {
                         review={review}
                         setReview={setReview}
                         selectedRide={selectedRide}
+                        setSelectedRide={setSelectedRide}
                       />
                     </div>
                     <div className="mt-4">
