@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,9 +12,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Clock, X } from "lucide-react";
+import { Clock, X, Loader2 } from "lucide-react";
 import RideMap from "@/components/map/RideMap";
 import { type Driver } from "@/types";
+import { useRideRequests } from "@/hooks/use-ride-requests";
+import { useStudentLocation } from "@/hooks/use-student-location";
 
 interface ActiveRideRequestProps {
   status: string;
@@ -36,6 +37,24 @@ export function ActiveRideRequest({
   availableDrivers,
   onCancel
 }: ActiveRideRequestProps) {
+  const { activeRide, isLoadingActive } = useRideRequests();
+  const { currentLocation } = useStudentLocation();
+
+  if (isLoadingActive) {
+    return (
+      <Card className="border-l-4 border-l-blue-500">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-center space-x-4">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+            <p className="text-lg font-medium">Loading ride request...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!activeRide) return null;
+
   return (
     <Card className="border-l-4 border-l-blue-500">
       <CardHeader>
