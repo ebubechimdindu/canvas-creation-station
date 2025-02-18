@@ -118,35 +118,31 @@ export function RideRequestForm({
     }
   };
 
-  const handleLocationSelect = (location: CampusLocation, type: 'pickup' | 'dropoff') => {
-    if (type === 'pickup') {
-      setSelectedPickupLocation(location);
-      setRideRequest(prev => ({
-        ...prev,
-        pickup: location.name,
-        pickupLocation: {
-          lat: location.coordinates.lat,
-          lng: location.coordinates.lng,
-          address: location.name
-        }
-      }));
-      setUseCurrentLocation(false);
-    } else {
-      setSelectedDropoffLocation(location);
-      setRideRequest(prev => ({
-        ...prev,
-        dropoff: location.name,
-        dropoffLocation: {
-          lat: location.coordinates.lat,
-          lng: location.coordinates.lng,
-          address: location.name
-        }
-      }));
-    }
+  const handlePickupLocationSelect = (location: CampusLocation) => {
+    setSelectedPickupLocation(location);
+    setRideRequest(prev => ({
+      ...prev,
+      pickup: location.name,
+      pickupLocation: {
+        lat: location.coordinates.lat,
+        lng: location.coordinates.lng,
+        address: location.name
+      }
+    }));
+    setUseCurrentLocation(false);
   };
 
-  const handleMapLocationSelect = (location: CampusLocation, type: 'pickup' | 'dropoff') => {
-    handleLocationSelect(location, type);
+  const handleDropoffLocationSelect = (location: CampusLocation) => {
+    setSelectedDropoffLocation(location);
+    setRideRequest(prev => ({
+      ...prev,
+      dropoff: location.name,
+      dropoffLocation: {
+        lat: location.coordinates.lat,
+        lng: location.coordinates.lng,
+        address: location.name
+      }
+    }));
   };
 
   return (
@@ -159,11 +155,10 @@ export function RideRequestForm({
               <div className="flex-1">
                 <LocationCombobox
                   value={selectedPickupLocation?.name || ""}
-                  onSelect={(location) => handleLocationSelect(location, 'pickup')}
+                  onSelect={handlePickupLocationSelect}
                   locations={safeLocations}
                   placeholder="Select pickup location"
                   isLoading={locationsLoading}
-                  type="pickup"
                 />
               </div>
               <Button
@@ -191,11 +186,10 @@ export function RideRequestForm({
             <Label htmlFor="dropoff">Dropoff Location</Label>
             <LocationCombobox
               value={selectedDropoffLocation?.name || ""}
-              onSelect={(location) => handleLocationSelect(location, 'dropoff')}
+              onSelect={handleDropoffLocationSelect}
               locations={safeLocations}
               placeholder="Select dropoff location"
               isLoading={locationsLoading}
-              type="dropoff"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -237,11 +231,6 @@ export function RideRequestForm({
                 lat: driver.currentLocation?.lat || 0,
                 lng: driver.currentLocation?.lng || 0
               })).filter(loc => loc.lat !== 0 && loc.lng !== 0)}
-              onLocationSelect={handleMapLocationSelect}
-              selectedLocations={{
-                pickup: selectedPickupLocation,
-                dropoff: selectedDropoffLocation
-              }}
             />
           </div>
         </div>

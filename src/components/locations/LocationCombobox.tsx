@@ -1,6 +1,5 @@
-
 import * as React from "react";
-import { Check, ChevronsUpDown, MapPin, Loader2, Clock, Star } from "lucide-react";
+import { Check, ChevronsUpDown, MapPin, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,9 +18,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { type CampusLocation } from "@/types/locations";
 import { useState } from "react";
-import { useAppSelector, useAppDispatch } from "@/hooks/redux";
-import { addLocation } from "@/features/locations/locationHistorySlice";
-import { formatDistanceToNow } from "date-fns";
 
 interface LocationComboboxProps {
   value: string;
@@ -31,8 +27,16 @@ interface LocationComboboxProps {
   onFocus?: () => void;
   onBlur?: () => void;
   isLoading?: boolean;
-  type: 'pickup' | 'dropoff';
 }
+
+const typeLabels: Record<string, string> = {
+  academic: "Academic Buildings",
+  residence: "Residential Halls",
+  common_area: "Common Areas",
+  administrative: "Administrative",
+  pickup_point: "Pickup Points",
+  dropoff_point: "Dropoff Points",
+};
 
 export function LocationCombobox({
   value,
@@ -42,55 +46,45 @@ export function LocationCombobox({
   onFocus,
   onBlur,
   isLoading = false,
-  type,
 }: LocationComboboxProps) {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const dispatch = useAppDispatch();
-  const { recentLocations, frequentLocations } = useAppSelector(
-    (state) => state.locationHistory
-  );
 
-  const handleLocationSelect = (location: CampusLocation) => {
-    onSelect(location);
-    dispatch(addLocation({ location, type }));
-    setOpen(false);
-  };
+  // Ensure locations is always an array
+  const safeLocations = React.useMemo(() => {
+    return Array.isArray(locations) ? locations : [];
+  }, [locations]);
 
-  const renderLocationItem = (location: CampusLocation, meta?: { lastUsed?: string; useCount?: number }) => (
-    <CommandItem
-      key={location.id}
-      value={location.name}
-      onSelect={() => handleLocationSelect(location)}
-      className="flex items-center justify-between"
-    >
-      <div className="flex items-center gap-2">
-        <MapPin className="h-4 w-4 text-muted-foreground" />
-        <span>{location.name}</span>
-        {location.buildingCode && (
-          <Badge variant="secondary" className="text-xs">
-            {location.buildingCode}
-          </Badge>
-        )}
-      </div>
-      {meta && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          {meta.useCount && (
-            <span className="flex items-center gap-1">
-              <Star className="h-3 w-3" />
-              {meta.useCount}
-            </span>
-          )}
-          {meta.lastUsed && (
-            <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              {formatDistanceToNow(new Date(meta.lastUsed), { addSuffix: true })}
-            </span>
-          )}
-        </div>
-      )}
-    </CommandItem>
-  );
+  // Group locations by type with additional safety checks
+  const groupedLocations = React.useMemo(() => {
+    const validLocations = safeLocations.filter((loc): loc is CampusLocation => 
+      Boolean(loc) && 
+      typeof loc === 'object' && 
+      'name' in loc && 
+      'locationType' in loc
+    );
+
+    return validLocations.reduce((groups, location) => {
+      const type = location.locationType || "other";
+      if (!groups[type]) {
+        groups[type] = [];
+      }
+      groups[type].push(location);
+      return groups;
+    }, {} as Record<string, CampusLocation[]>);
+  }, [safeLocations]);
+
+  // Find selected location with strict type checking
+  const selectedLocation = React.useMemo(() => {
+    return safeLocations.find(loc => loc && loc.name === value) || null;
+  }, [safeLocations, value]);
+
+  // Ensure we have valid data for the Command component
+  const commandGroups = React.useMemo(() => {
+    return Object.entries(groupedLocations).filter(([_, locs]) => 
+      Array.isArray(locs) && locs.length > 0
+    );
+  }, [groupedLocations]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -111,7 +105,7 @@ export function LocationCombobox({
               <MapPin className="h-4 w-4 shrink-0 opacity-50" />
             )}
             <span className="truncate">
-              {value || placeholder}
+              {selectedLocation ? selectedLocation.name : placeholder}
             </span>
           </div>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -130,43 +124,65 @@ export function LocationCombobox({
                 <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                 <p className="text-sm text-muted-foreground mt-2">Loading locations...</p>
               </div>
+            ) : commandGroups.length === 0 ? (
+              <div className="p-4 text-center text-sm text-muted-foreground">
+                No locations available
+              </div>
             ) : (
-              <>
-                {recentLocations[type].length > 0 && (
-                  <CommandGroup heading="Recent Locations">
-                    {recentLocations[type].map((entry) => 
-                      renderLocationItem(entry.location, { lastUsed: entry.lastUsed })
-                    )}
-                  </CommandGroup>
-                )}
-                
-                {frequentLocations[type].length > 0 && (
-                  <CommandGroup heading="Most Visited">
-                    {frequentLocations[type].map((entry) => 
-                      renderLocationItem(entry.location, { useCount: entry.useCount })
-                    )}
-                  </CommandGroup>
-                )}
+              commandGroups.map(([type, locations]) => {
+                if (!Array.isArray(locations)) return null;
 
-                <CommandGroup heading="All Locations">
-                  {locations
-                    .filter(location => 
-                      location.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      (location.commonNames?.some(name => 
-                        name.toLowerCase().includes(searchQuery.toLowerCase()))
-                      )
+                const filteredLocations = locations.filter(location => 
+                  location && typeof location.name === 'string' && (
+                    location.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    Array.isArray(location.commonNames) && location.commonNames.some(name => 
+                      name.toLowerCase().includes(searchQuery.toLowerCase())
                     )
-                    .map((location) => renderLocationItem(location))}
-                </CommandGroup>
-              </>
+                  )
+                );
+
+                if (filteredLocations.length === 0) return null;
+
+                return (
+                  <CommandGroup key={type} heading={typeLabels[type] || type}>
+                    {filteredLocations.map((location) => (
+                      <CommandItem
+                        key={location.id}
+                        value={location.name}
+                        onSelect={() => {
+                          onSelect(location);
+                          setOpen(false);
+                        }}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span>{location.name}</span>
+                          {location.buildingCode && (
+                            <Badge variant="secondary" className="text-xs">
+                              {location.buildingCode}
+                            </Badge>
+                          )}
+                        </div>
+                        {location.name === value && (
+                          <Check className="h-4 w-4" />
+                        )}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                );
+              })
             )}
-            {!isLoading && searchQuery && locations.length > 0 && 
-              locations.filter(loc => 
-                loc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (loc.commonNames?.some(name => 
-                  name.toLowerCase().includes(searchQuery.toLowerCase()))
-                )
-              ).length === 0 && (
+            {!isLoading && searchQuery && commandGroups.length > 0 && 
+              Object.values(groupedLocations)
+                .flat()
+                .filter(loc => 
+                  loc && typeof loc.name === 'string' && (
+                    loc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    Array.isArray(loc.commonNames) && loc.commonNames.some(name => 
+                      name.toLowerCase().includes(searchQuery.toLowerCase())
+                    )
+                  )
+                ).length === 0 && (
               <CommandEmpty>No locations found.</CommandEmpty>
             )}
           </ScrollArea>
@@ -175,4 +191,3 @@ export function LocationCombobox({
     </Popover>
   );
 }
-

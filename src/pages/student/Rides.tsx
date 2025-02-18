@@ -1,7 +1,6 @@
-
 import React, { useState } from "react";
 import { useAppSelector, useAppDispatch } from "@/hooks/redux";
-import { setActiveRide, addToHistory } from "@/features/rides/ridesSlice";
+import { setActiveRide, addToHistory, updateDrivers } from "@/features/rides/ridesSlice";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import RideDetailsModal from "@/components/rides/RideDetailsModal";
@@ -14,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { format } from "date-fns";
 import { RideRequestForm } from "@/components/rides/RideRequestForm";
 import { ActiveRideRequest } from "@/components/rides/ActiveRideRequest";
 import { RideHistoryTable } from "@/components/rides/RideHistoryTable";
@@ -82,13 +82,8 @@ export default function StudentRides() {
 
   const handleRideRequest = async (e: React.FormEvent) => {
     e.preventDefault();
-    const form = e.target as HTMLFormElement;
-    const formData = new FormData(form);
     
-    const pickupLocation = formData.get('pickup')?.toString();
-    const dropoffLocation = formData.get('dropoff')?.toString();
-
-    if (!pickupLocation || !dropoffLocation) {
+    if (!locations || locations.length === 0) {
       toast({
         title: "Missing Locations",
         description: "Please select both pickup and dropoff locations.",
@@ -101,15 +96,13 @@ export default function StudentRides() {
       const newRide = {
         id: Date.now(),
         date: new Date().toISOString(),
-        pickup: pickupLocation,
-        dropoff: dropoffLocation,
+        pickup: "pickup",
+        dropoff: "dropoff",
         driver: "Pending",
         status: "Upcoming" as const,
       };
       
       dispatch(setActiveRide(newRide));
-      dispatch(addToHistory(newRide));
-      
       toast({
         title: "Ride Requested",
         description: "Looking for available drivers...",
