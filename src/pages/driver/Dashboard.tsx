@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import DriverSidebar from "@/components/driver/DriverSidebar";
@@ -12,7 +11,7 @@ import RideMap from "@/components/map/RideMap";
 import { useLocationUpdates } from "@/hooks/use-location-updates";
 import { useDriverLocation } from "@/hooks/use-driver-location";
 import { MapProvider } from "@/components/map/MapProvider";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import RideRequestCard from "@/components/driver/RideRequestCard";
 import { format, formatDistanceToNow } from "date-fns";
 
@@ -67,7 +66,6 @@ const DriverDashboard = () => {
         const { data: user } = await supabase.auth.getUser();
         if (!user.user) return;
 
-        // Get driver stats
         const { data: statsData, error: statsError } = await supabase
           .from('driver_dashboard_stats')
           .select('*')
@@ -76,7 +74,6 @@ const DriverDashboard = () => {
 
         if (statsError) throw statsError;
 
-        // Get active hours
         const { data: hoursData, error: hoursError } = await supabase
           .rpc('calculate_driver_active_hours', {
             driver_id: user.user.id,
@@ -86,7 +83,6 @@ const DriverDashboard = () => {
 
         if (hoursError) throw hoursError;
 
-        // Get recent activity
         const { data: activityData, error: activityError } = await supabase
           .from('driver_recent_activity')
           .select('*')
@@ -129,11 +125,9 @@ const DriverDashboard = () => {
         async (payload) => {
           const newRequest = payload.new as RideRequest;
           
-          // Only show request if we don't already have one
           if (!currentRideRequest) {
             setCurrentRideRequest(newRequest);
             
-            // Play notification sound
             const audio = new Audio('/notification.mp3');
             audio.play().catch(console.error);
           }
@@ -215,7 +209,6 @@ const DriverDashboard = () => {
 
       const newStatus = driverStatus === 'available' ? 'offline' : 'available';
       
-      // Convert location to PostGIS point format
       const point = {
         type: 'Point',
         coordinates: [driverLocation.lng, driverLocation.lat]
@@ -230,7 +223,7 @@ const DriverDashboard = () => {
           location: point,
           last_updated: new Date().toISOString()
         }, {
-          onConflict: 'driver_id'  // Specify which column to use for conflict resolution
+          onConflict: 'driver_id'
         });
 
       if (locationError) throw locationError;
@@ -253,6 +246,11 @@ const DriverDashboard = () => {
   const toggleMapSize = () => {
     setIsMapExpanded(!isMapExpanded);
   };
+
+  const mappedNearbyDrivers = nearbyDrivers.map(driver => ({
+    lat: driver.currentLocation?.lat || 0,
+    lng: driver.currentLocation?.lng || 0
+  }));
 
   if (error) {
     return (
@@ -282,13 +280,11 @@ const DriverDashboard = () => {
         
         <main className="flex-1 overflow-y-auto p-8">
           <div className="space-y-8">
-            {/* Header */}
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Driver Dashboard</h1>
               <p className="text-gray-600">Welcome back, {stats?.full_name || 'Driver'}</p>
             </div>
 
-            {/* Current Ride Request */}
             {currentRideRequest && driverStatus === 'available' && (
               <RideRequestCard
                 id={currentRideRequest.id}
@@ -302,7 +298,6 @@ const DriverDashboard = () => {
               />
             )}
 
-            {/* Map Section */}
             <Card className={`transition-all duration-300 ${isMapExpanded ? 'fixed inset-4 z-50 shadow-2xl' : 'hover:shadow-lg'}`}>
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                 <CardTitle className="flex items-center gap-2">
@@ -327,14 +322,13 @@ const DriverDashboard = () => {
                     pickup=""
                     dropoff=""
                     mode="driver"
-                    nearbyDrivers={nearbyDrivers}
+                    nearbyDrivers={mappedNearbyDrivers}
                     className="w-full h-full rounded-b-lg"
                   />
                 </div>
               </CardContent>
             </Card>
 
-            {/* Status Toggle */}
             <Card className={isMapExpanded ? 'hidden' : ''}>
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
@@ -361,7 +355,6 @@ const DriverDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Stats Grid */}
             <div className={`grid gap-6 sm:grid-cols-2 lg:grid-cols-4 ${isMapExpanded ? 'hidden' : ''}`}>
               {[
                 {
@@ -415,7 +408,6 @@ const DriverDashboard = () => {
               ))}
             </div>
 
-            {/* Recent Activity */}
             <Card className={isMapExpanded ? 'hidden' : ''}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
