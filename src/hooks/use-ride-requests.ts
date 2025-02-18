@@ -52,7 +52,7 @@ export const useRideRequests = () => {
           'arrived_at_pickup',
           'in_progress'
         ])
-        .maybeSingle(); // Use maybeSingle instead of single to handle no rows case
+        .maybeSingle();
 
       if (error) throw error;
       return data as RideRequest | null;
@@ -60,7 +60,7 @@ export const useRideRequests = () => {
     enabled: !!user?.id,
     staleTime: 1000 * 60, // 1 minute
     gcTime: 1000 * 60 * 60, // 1 hour
-    retry: false, // Don't retry on error since no active ride is a valid state
+    retry: false,
   });
 
   useEffect(() => {

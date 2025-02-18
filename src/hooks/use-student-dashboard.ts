@@ -21,7 +21,8 @@ interface RecentActivity {
   created_at: string;
   driver_name: string | null;
   rating: number;
-  fare_amount: number | null;
+  cancelled_at: string | null;
+  completed_at: string | null;
 }
 
 interface NearbyDriver {
@@ -30,6 +31,7 @@ interface NearbyDriver {
   average_rating: number;
   distance_meters: number;
   last_location_update: string;
+  is_online: boolean;
 }
 
 export const useStudentDashboard = () => {
@@ -51,6 +53,7 @@ export const useStudentDashboard = () => {
       return data as StudentStats;
     },
     enabled: !!user?.id,
+    retry: false,
   });
 
   const { data: recentActivity, isLoading: isLoadingActivity } = useQuery({
@@ -69,6 +72,7 @@ export const useStudentDashboard = () => {
       return data as RecentActivity[];
     },
     enabled: !!user?.id,
+    retry: false,
   });
 
   const { data: nearbyDrivers, isLoading: isLoadingDrivers } = useQuery<NearbyDriver[]>({
@@ -76,7 +80,6 @@ export const useStudentDashboard = () => {
     queryFn: async () => {
       if (!user?.id) throw new Error('User not authenticated');
 
-      // Instead of using the missing RPC function, let's query the driver_locations view
       const { data, error } = await supabase
         .from('driver_stats_detailed')
         .select('*')
@@ -91,11 +94,13 @@ export const useStudentDashboard = () => {
         full_name: driver.full_name || 'Unknown Driver',
         average_rating: driver.average_rating || 0,
         distance_meters: 0, // We'll implement distance calculation later
-        last_location_update: new Date().toISOString()
+        last_location_update: new Date().toISOString(),
+        is_online: driver.is_online || false
       }));
     },
     enabled: !!user?.id,
     refetchInterval: 30000, // Refetch every 30 seconds
+    retry: false,
   });
 
   return {
