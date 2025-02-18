@@ -17,6 +17,7 @@ interface CreateRideRequestParams {
 interface PostgresChangePayload {
   new: RideRequest;
   old: RideRequest;
+  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
 }
 
 export const useRideRequests = () => {
