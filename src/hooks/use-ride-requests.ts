@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -57,7 +58,7 @@ export const useRideRequests = () => {
     },
     enabled: !!user?.id,
     staleTime: 1000 * 60, // 1 minute
-    cacheTime: 1000 * 60 * 60, // 1 hour
+    gcTime: 1000 * 60 * 60, // 1 hour
   });
 
   useEffect(() => {
@@ -73,7 +74,7 @@ export const useRideRequests = () => {
           table: 'ride_requests',
           filter: `student_id=eq.${user.id}`
         },
-        (payload) => {
+        (payload: PostgresChangePayload) => {
           queryClient.invalidateQueries({ queryKey: ['activeRide'] });
           queryClient.invalidateQueries({ queryKey: ['rideHistory'] });
           

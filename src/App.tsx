@@ -3,8 +3,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { persistQueryClient } from '@tanstack/react-query-persist-client';
-import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -30,20 +28,9 @@ const queryClient = new QueryClient({
       retry: 2,
       staleTime: 1000 * 60 * 5, // 5 minutes
       refetchOnWindowFocus: false,
-      cacheTime: 1000 * 60 * 60 * 24, // 24 hours
+      gcTime: 1000 * 60 * 60 * 24, // 24 hours
     },
   },
-});
-
-// Set up QueryClient persistence
-const localStoragePersister = createSyncStoragePersister({
-  storage: window.localStorage,
-});
-
-persistQueryClient({
-  queryClient,
-  persister: localStoragePersister,
-  maxAge: 1000 * 60 * 60 * 24, // 24 hours
 });
 
 const App = () => {

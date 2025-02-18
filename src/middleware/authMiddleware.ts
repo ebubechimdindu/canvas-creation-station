@@ -1,10 +1,10 @@
 
-import { Middleware } from '@reduxjs/toolkit';
+import { Middleware, AnyAction } from '@reduxjs/toolkit';
 import { RootState } from '../store';
 import { supabase } from '@/lib/supabase';
 import { logout, syncUser } from '../features/auth/authSlice';
 
-export const authMiddleware: Middleware = (store) => (next) => async (action) => {
+export const authMiddleware: Middleware = (store) => (next) => async (action: AnyAction) => {
   const result = next(action);
   const state = store.getState() as RootState;
 
@@ -55,13 +55,11 @@ export const authMiddleware: Middleware = (store) => (next) => async (action) =>
             filter: `student_id=eq.${state.auth.user.id}`
           },
           (payload) => {
-            // Handle real-time updates here
             console.log('Real-time update:', payload);
           }
         )
         .subscribe();
 
-      // Store channel reference for cleanup
       (window as any).__supabaseChannel = channel;
     }
 
