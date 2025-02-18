@@ -1,6 +1,5 @@
-
 import { useForm } from "react-hook-form";
-import { useDriverSettings, type DriverSettings } from "@/hooks/use-driver-settings";
+import { useDriverSettings, type DriverSettings, type BankAccount } from "@/hooks/use-driver-settings";
 import DriverSidebar from "@/components/driver/DriverSidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { UserCircle } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { UserCircle, Trash2, Star } from "lucide-react";
 
 type FormValues = {
   name: string;
@@ -16,14 +16,37 @@ type FormValues = {
   driverLicenseNumber: string;
 };
 
+type BankAccountFormValues = {
+  bankName: string;
+  accountNumber: string;
+  accountHolderName: string;
+};
+
 const DriverSettings = () => {
-  const { settings, isLoading, updateSettings, updateProfileImage } = useDriverSettings();
+  const { 
+    settings, 
+    isLoading, 
+    updateSettings, 
+    updateProfileImage,
+    bankAccounts,
+    addBankAccount,
+    deleteBankAccount,
+    setPrimaryAccount,
+  } = useDriverSettings();
   
   const form = useForm<FormValues>({
     defaultValues: {
       name: settings?.name ?? "",
       phone: settings?.phone ?? "",
       driverLicenseNumber: settings?.driverLicenseNumber ?? "",
+    },
+  });
+
+  const bankForm = useForm<BankAccountFormValues>({
+    defaultValues: {
+      bankName: "",
+      accountNumber: "",
+      accountHolderName: "",
     },
   });
 
@@ -38,6 +61,14 @@ const DriverSettings = () => {
     }
   };
 
+  const onBankAccountSubmit = (data: BankAccountFormValues) => {
+    addBankAccount.mutate(data, {
+      onSuccess: () => {
+        bankForm.reset();
+      },
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="flex h-screen bg-gray-50">
@@ -48,6 +79,8 @@ const DriverSettings = () => {
       </div>
     );
   }
+
+  const canAddBankAccount = !bankAccounts || bankAccounts.length < 2;
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -153,6 +186,111 @@ const DriverSettings = () => {
                   </Button>
                 </form>
               </Form>
+            </CardContent>
+          </Card>
+
+          <Card className="mt-8">
+            <CardHeader>
+              <CardTitle>Bank Account Details</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {bankAccounts && bankAccounts.length > 0 && (
+                <div className="mb-6">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Bank Name</TableHead>
+                        <TableHead>Account Number</TableHead>
+                        <TableHead>Account Holder</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {bankAccounts.map((account) => (
+                        <TableRow key={account.id}>
+                          <TableCell>{account.bankName}</TableCell>
+                          <TableCell>{account.accountNumber}</TableCell>
+                          <TableCell>{account.accountHolderName}</TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setPrimaryAccount.mutate(account.id)}
+                                disabled={account.isPrimary}
+                              >
+                                <Star className={account.isPrimary ? "fill-yellow-400 text-yellow-400" : "text-gray-400"} />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => deleteBankAccount.mutate(account.id)}
+                              >
+                                <Trash2 className="text-red-500" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              {canAddBankAccount && (
+                <Form {...bankForm}>
+                  <form onSubmit={bankForm.handleSubmit(onBankAccountSubmit)} className="space-y-4">
+                    <FormField
+                      control={bankForm.control}
+                      name="bankName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Bank Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={bankForm.control}
+                      name="accountNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Account Number</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={bankForm.control}
+                      name="accountHolderName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Account Holder Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <Button 
+                      type="submit"
+                      disabled={addBankAccount.isPending}
+                    >
+                      {addBankAccount.isPending ? "Adding..." : "Add Bank Account"}
+                    </Button>
+                  </form>
+                </Form>
+              )}
             </CardContent>
           </Card>
         </div>
