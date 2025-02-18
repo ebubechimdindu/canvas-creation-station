@@ -41,6 +41,38 @@ export interface Database {
           updated_at?: string
         }
       }
+      driver_bank_accounts: {
+        Row: {
+          id: string
+          driver_id: string
+          bank_name: string
+          account_number: string
+          account_holder_name: string
+          is_primary: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          driver_id: string
+          bank_name: string
+          account_number: string
+          account_holder_name: string
+          is_primary?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          driver_id?: string
+          bank_name?: string
+          account_number?: string
+          account_holder_name?: string
+          is_primary?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
       ride_requests: {
         Row: {
           id: number
@@ -88,7 +120,13 @@ export interface Database {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      set_primary_bank_account: {
+        Args: {
+          p_account_id: string
+          p_driver_id: string
+        }
+        Returns: void
+      }
     }
     Enums: {
       [_ in never]: never
