@@ -46,6 +46,7 @@ import { useStudentLocation } from '@/hooks/use-student-location';
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { RideStatus, DriverProfile } from "@/types";
 
 interface RideLocation {
   lat: number;
@@ -53,20 +54,8 @@ interface RideLocation {
   address: string;
 }
 
-interface DriverProfile {
-  id: string;
-  full_name: string;
-  phone_number: string;
-  status: 'verified' | 'unverified';
-  profile_picture_url: string | undefined;
-}
-
-interface RideStatus {
-  status: 'requested' | 'cancelled' | 'completed';
-}
-
 const mockActiveRide = {
-  status: 'requested' as const,
+  status: 'requested' as RideStatus,
   driver: {
     id: '1',
     full_name: 'John Doe',
@@ -81,7 +70,7 @@ const mockActiveRide = {
 const mockRides = [
   {
     id: 1,
-    status: 'requested' as const,
+    status: 'requested' as RideStatus,
     driver: {
       id: '1',
       full_name: 'John Doe',
@@ -184,16 +173,17 @@ const StudentDashboard = () => {
 
       dispatch(setActiveRide({
         id: rideData.id,
-        date: new Date().toISOString(),
-        pickup: rideRequest.pickupLocation.address,
-        dropoff: rideRequest.dropoffLocation.address,
+        student_id: user.id,
+        driver_id: undefined,
+        pickup_location: rideRequest.pickupLocation.address,
+        dropoff_location: rideRequest.dropoffLocation.address,
+        pickup_address: rideRequest.pickupLocation.address,
+        dropoff_address: rideRequest.dropoffLocation.address,
         status: 'requested' as RideStatus,
-        driver: mockActiveRide.driver,
-        payment: {
-          method: 'cash',
-          status: 'pending',
-          amount: 0
-        }
+        notes: rideRequest.notes,
+        special_requirements: rideRequest.specialRequirements,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }));
 
       toast({
