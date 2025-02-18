@@ -17,7 +17,7 @@ export interface Database {
           driver_license_number: string
           phone_number: string
           profile_picture_url: string | null
-          status: 'pending_verification' | 'verified' | 'suspended'
+          status: 'verified' | 'suspended'
           created_at: string
           updated_at: string
         }
@@ -27,7 +27,7 @@ export interface Database {
           driver_license_number: string
           phone_number: string
           profile_picture_url?: string | null
-          status?: 'pending_verification' | 'verified' | 'suspended'
+          status?: 'verified' | 'suspended'
           created_at?: string
           updated_at?: string
         }
@@ -37,7 +37,7 @@ export interface Database {
           driver_license_number?: string
           phone_number?: string
           profile_picture_url?: string | null
-          status?: 'pending_verification' | 'verified' | 'suspended'
+          status?: 'verified' | 'suspended'
           created_at?: string
           updated_at?: string
         }
@@ -134,3 +134,4 @@ export interface Database {
     }
   }
 }
+
