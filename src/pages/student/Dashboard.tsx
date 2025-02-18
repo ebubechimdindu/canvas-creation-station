@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { navigationMenuTriggerStyle } from "@/components/ui/navigation-menu";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -113,13 +114,14 @@ const StudentDashboard = () => {
     }
 
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user?.id) throw new Error('Not authenticated');
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (!user?.id) throw new Error('Not authenticated');
 
       const { data: rideData, error: rideError } = await supabase
         .from('ride_requests')
         .insert({
-          student_id: user.user.id,
+          student_id: user.id,
           pickup_location: `POINT(${rideRequest.pickupLocation.lng} ${rideRequest.pickupLocation.lat})`,
           dropoff_location: `POINT(${rideRequest.dropoffLocation.lng} ${rideRequest.dropoffLocation.lat})`,
           pickup_address: rideRequest.pickupLocation.address,
@@ -171,13 +173,14 @@ const StudentDashboard = () => {
 
   const handleCancelRequest = async () => {
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user?.id) throw new Error('Not authenticated');
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (!user?.id) throw new Error('Not authenticated');
 
       const { error } = await supabase
         .from('ride_requests')
         .update({ status: 'cancelled' })
-        .eq('student_id', user.user.id)
+        .eq('student_id', user.id)
         .eq('status', 'requested');
 
       if (error) throw error;
