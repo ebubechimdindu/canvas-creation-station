@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useAppSelector, useAppDispatch } from "@/hooks/redux";
 import { setActiveRide, addToHistory, updateDrivers, updateRideStatus } from "@/features/rides/ridesSlice";
@@ -30,7 +29,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import type { RideRequest } from "@/types";
 
-export default function StudentRides() {
+const StudentRides: React.FC = () => {
   const dispatch = useAppDispatch();
   const { locations = [], isLoading: locationsLoading } = useCampusLocations();
   const [selectedRide, setSelectedRide] = useState<number | null>(null);
@@ -55,7 +54,6 @@ export default function StudentRides() {
     isLoadingHistory,
   } = useRideRequests();
 
-  // Subscribe to active ride updates
   useEffect(() => {
     if (!activeRide?.id) return;
 
@@ -162,7 +160,6 @@ export default function StudentRides() {
   };
 
   const handleExportHistory = () => {
-    // Implementation for exporting ride history
     toast({
       title: "Export Started",
       description: "Your ride history is being downloaded.",
@@ -300,4 +297,6 @@ export default function StudentRides() {
       </MapProvider>
     </SidebarProvider>
   );
-}
+};
+
+export default StudentRides;
