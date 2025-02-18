@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { navigationMenuTriggerStyle } from "@/components/ui/navigation-menu";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,7 +26,9 @@ import { useToast } from "@/hooks/use-toast";
 import MapboxLocationManager from "@/components/locations/MapboxLocationManager";
 import { useAppDispatch } from "@/hooks/redux";
 import { setActiveRide } from "@/features/rides/ridesSlice";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from '@/lib/supabase';
+import { useStudentDashboard } from '@/hooks/use-student-dashboard';
+import { format, formatDistanceToNow } from 'date-fns';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,6 +44,8 @@ import { MapProvider } from '@/components/map/MapProvider';
 import { useMap } from '@/components/map/MapProvider';
 import { useStudentLocation } from '@/hooks/use-student-location';
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface RideLocation {
   lat: number;
@@ -195,15 +199,38 @@ const StudentDashboard = () => {
     }
   };
 
+  const { stats, recentActivity, nearbyDrivers, isLoading } = useStudentDashboard();
+
+  if (isLoading) {
+    return (
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full bg-gradient-to-br from-[#F1F0FB] to-white dark:from-gray-900 dark:to-gray-800">
+          <StudentSidebar />
+          <main className="flex-1 p-6 animate-fade-in">
+            <div className="max-w-7xl mx-auto space-y-8">
+              <Skeleton className="h-8 w-48" />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="h-32" />
+                ))}
+              </div>
+              <Skeleton className="h-96" />
+            </div>
+          </main>
+        </div>
+      </SidebarProvider>
+    );
+  }
+
   return (
     <SidebarProvider>
       <MapProvider>
-        <div className="min-h-screen flex w-full bg-gradient-to-br from-[#F1F0FB] to-white dark:from-gray-900 dark:to-gray-800 transition-colors duration-500">
+        <div className="min-h-screen flex w-full bg-gradient-to-br from-[#F1F0FB] to-white dark:from-gray-900 dark:to-gray-800">
           <StudentSidebar />
           <main className="flex-1 p-6 animate-fade-in">
             <div className="max-w-7xl mx-auto">
               <div className="flex justify-between items-center mb-8">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white transition-colors">Dashboard</h1>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
                 <Dialog open={isRequestOpen} onOpenChange={setIsRequestOpen}>
                   <DialogTrigger asChild>
                     <Button className={`${navigationMenuTriggerStyle()} hover:scale-105 transition-transform duration-200`}>
@@ -335,28 +362,28 @@ const StudentDashboard = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <QuickStat
-                  title="Active Rides"
-                  value={activeRequest ? "1" : "0"}
-                  icon={<Activity className="h-6 w-6 text-purple-500" />}
-                  trend="+5% from last week"
-                />
-                <QuickStat
                   title="Total Rides"
-                  value="24"
-                  icon={<MapPin className="h-6 w-6 text-blue-500" />}
-                  trend="+12% from last month"
+                  value={stats?.total_rides.toString() || "0"}
+                  icon={<Activity className="h-6 w-6 text-purple-500" />}
+                  trend={`${stats?.monthly_rides || 0} this month`}
                 />
                 <QuickStat
-                  title="This Month"
-                  value="8"
+                  title="Today's Rides"
+                  value={stats?.today_rides.toString() || "0"}
+                  icon={<Car className="h-6 w-6 text-blue-500" />}
+                  trend="Live tracking"
+                />
+                <QuickStat
+                  title="Completed Rides"
+                  value={stats?.completed_rides.toString() || "0"}
                   icon={<Calendar className="h-6 w-6 text-green-500" />}
-                  trend="-2% from last month"
+                  trend={`${stats?.cancelled_rides || 0} cancelled`}
                 />
                 <QuickStat
                   title="Avg. Wait Time"
-                  value="5min"
+                  value={`${Math.round(stats?.avg_wait_minutes || 0)}min`}
                   icon={<Clock className="h-6 w-6 text-orange-500" />}
-                  trend="Same as last week"
+                  trend="Based on your history"
                 />
               </div>
 
@@ -432,34 +459,22 @@ const StudentDashboard = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {[
-                        {
-                          id: 1,
-                          route: "Campus Library → Dorm B",
-                          time: "Today, 2:30 PM",
-                          status: "Completed",
-                        },
-                        {
-                          id: 2,
-                          route: "Student Center → Main Gate",
-                          time: "Yesterday, 4:15 PM",
-                          status: "Cancelled",
-                        },
-                        {
-                          id: 3,
-                          route: "Sports Complex → Cafeteria",
-                          time: "2 days ago, 1:00 PM",
-                          status: "Completed",
-                        },
-                      ].map((ride, index) => (
+                      {recentActivity?.map((ride) => (
                         <div
                           key={ride.id}
-                          className={`flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 animate-fade-in`}
-                          style={{ animationDelay: `${index * 100}ms` }}
+                          className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-all duration-300"
                         >
                           <div>
-                            <p className="font-medium">{ride.route}</p>
-                            <p className="text-sm text-gray-500">{ride.time}</p>
+                            <p className="font-medium">{ride.pickup_address} → {ride.dropoff_address}</p>
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <span>{formatDistanceToNow(new Date(ride.created_at), { addSuffix: true })}</span>
+                              <Badge variant={
+                                ride.status === 'completed' ? 'success' :
+                                ride.status === 'cancelled' ? 'destructive' : 'default'
+                              }>
+                                {ride.status}
+                              </Badge>
+                            </div>
                           </div>
                           <Button 
                             variant="outline" 
@@ -480,26 +495,21 @@ const StudentDashboard = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {[
-                        { id: 1, name: "John D.", rating: 4.8, distance: 3 },
-                        { id: 2, name: "Sarah M.", rating: 4.9, distance: 5 },
-                        { id: 3, name: "Mike R.", rating: 4.7, distance: 7 },
-                      ].map((driver, index) => (
+                      {nearbyDrivers?.map((driver) => (
                         <div
                           key={driver.id}
-                          className={`flex items-center space-x-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 animate-fade-in`}
-                          style={{ animationDelay: `${index * 100}ms` }}
+                          className="flex items-center space-x-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-all duration-300"
                         >
                           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold">
-                            {driver.name.charAt(0)}
+                            {driver.full_name?.charAt(0)}
                           </div>
                           <div className="flex-1">
-                            <p className="font-medium">{driver.name}</p>
+                            <p className="font-medium">{driver.full_name}</p>
                             <div className="flex items-center text-sm text-gray-500">
                               <Star className="h-4 w-4 text-yellow-400 mr-1" />
-                              <span>{driver.rating}</span>
+                              <span>{driver.average_rating?.toFixed(1)}</span>
                               <span className="mx-2">•</span>
-                              <span>{driver.distance} min away</span>
+                              <span>{Math.round(driver.distance_meters / 1000)}km away</span>
                             </div>
                           </div>
                           <Button

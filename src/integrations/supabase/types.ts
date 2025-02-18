@@ -101,6 +101,13 @@ export type Database = {
             referencedRelation: "ride_requests"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "driver_earnings_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: false
+            referencedRelation: "student_recent_activity"
+            referencedColumns: ["id"]
+          },
         ]
       }
       driver_locations: {
@@ -151,6 +158,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "driver_profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_driver"
+            columns: ["driver_id"]
+            isOneToOne: true
+            referencedRelation: "driver_stats_detailed"
+            referencedColumns: ["driver_id"]
           },
         ]
       }
@@ -314,6 +328,13 @@ export type Database = {
             referencedRelation: "ride_requests"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_ride"
+            columns: ["ride_id"]
+            isOneToOne: false
+            referencedRelation: "student_recent_activity"
+            referencedColumns: ["id"]
+          },
         ]
       }
       ride_requests: {
@@ -397,6 +418,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "driver_profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_driver"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_stats_detailed"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "fk_student"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "student_dashboard_stats"
+            referencedColumns: ["student_id"]
           },
           {
             foreignKeyName: "fk_student"
@@ -545,6 +580,28 @@ export type Database = {
         }
         Relationships: []
       }
+      driver_stats_detailed: {
+        Row: {
+          average_rating: number | null
+          cancelled_rides: number | null
+          completed_rides: number | null
+          driver_id: string | null
+          full_name: string | null
+          last_known_location: unknown | null
+          month_earnings: number | null
+          month_rides: number | null
+          phone_number: string | null
+          profile_picture_url: string | null
+          status: string | null
+          today_earnings: number | null
+          today_rides: number | null
+          total_ratings: number | null
+          total_rides: number | null
+          week_earnings: number | null
+          week_rides: number | null
+        }
+        Relationships: []
+      }
       geography_columns: {
         Row: {
           coord_dimension: number | null
@@ -612,6 +669,64 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "driver_profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_driver"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_stats_detailed"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "fk_student"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "student_dashboard_stats"
+            referencedColumns: ["student_id"]
+          },
+          {
+            foreignKeyName: "fk_student"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "student_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_dashboard_stats: {
+        Row: {
+          avg_wait_minutes: number | null
+          cancelled_rides: number | null
+          completed_rides: number | null
+          full_name: string | null
+          monthly_rides: number | null
+          student_id: string | null
+          today_rides: number | null
+          total_rides: number | null
+        }
+        Relationships: []
+      }
+      student_recent_activity: {
+        Row: {
+          cancelled_at: string | null
+          completed_at: string | null
+          created_at: string | null
+          driver_name: string | null
+          dropoff_address: string | null
+          fare_amount: number | null
+          id: number | null
+          pickup_address: string | null
+          rating: number | null
+          status: Database["public"]["Enums"]["ride_status_enum"] | null
+          student_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_student"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "student_dashboard_stats"
+            referencedColumns: ["student_id"]
           },
           {
             foreignKeyName: "fk_student"
@@ -964,6 +1079,18 @@ export type Database = {
           date_end: string
         }
         Returns: number
+      }
+      calculate_earnings: {
+        Args: {
+          p_driver_id: string
+          p_start_date: string
+          p_end_date: string
+        }
+        Returns: {
+          total_earnings: number
+          completed_rides: number
+          average_per_ride: number
+        }[]
       }
       disablelongtransactions: {
         Args: Record<PropertyKey, never>
