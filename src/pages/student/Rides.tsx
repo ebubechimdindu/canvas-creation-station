@@ -1,6 +1,7 @@
+
 import React, { useState } from "react";
 import { useAppSelector, useAppDispatch } from "@/hooks/redux";
-import { setActiveRide, addToHistory, updateDrivers } from "@/features/rides/ridesSlice";
+import { setActiveRide, addToHistory } from "@/features/rides/ridesSlice";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import RideDetailsModal from "@/components/rides/RideDetailsModal";
@@ -82,8 +83,13 @@ export default function StudentRides() {
 
   const handleRideRequest = async (e: React.FormEvent) => {
     e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
     
-    if (!locations || locations.length === 0) {
+    const pickupLocation = formData.get('pickup')?.toString();
+    const dropoffLocation = formData.get('dropoff')?.toString();
+
+    if (!pickupLocation || !dropoffLocation) {
       toast({
         title: "Missing Locations",
         description: "Please select both pickup and dropoff locations.",
@@ -96,13 +102,15 @@ export default function StudentRides() {
       const newRide = {
         id: Date.now(),
         date: new Date().toISOString(),
-        pickup: "pickup",
-        dropoff: "dropoff",
+        pickup: pickupLocation,
+        dropoff: dropoffLocation,
         driver: "Pending",
         status: "Upcoming" as const,
       };
       
       dispatch(setActiveRide(newRide));
+      dispatch(addToHistory(newRide));
+      
       toast({
         title: "Ride Requested",
         description: "Looking for available drivers...",
@@ -115,16 +123,6 @@ export default function StudentRides() {
         variant: "destructive"
       });
     }
-  };
-
-  const handleRating = (rideId: number) => {
-    toast({
-      title: "Rating Submitted",
-      description: "Thank you for your feedback!",
-    });
-    setIsRatingOpen(false);
-    setRating(0);
-    setReview("");
   };
 
   const handleCancelRequest = () => {
@@ -236,7 +234,10 @@ export default function StudentRides() {
                           setSelectedRideDetails(ride);
                           setIsDetailsModalOpen(true);
                         }}
-                        onRateRide={handleRating}
+                        onRateRide={(rideId) => {
+                          setSelectedRide(rideId);
+                          setIsRatingOpen(true);
+                        }}
                         isRatingOpen={isRatingOpen}
                         setIsRatingOpen={setIsRatingOpen}
                         rating={rating}
@@ -246,7 +247,6 @@ export default function StudentRides() {
                         review={review}
                         setReview={setReview}
                         selectedRide={selectedRide}
-                        setSelectedRide={setSelectedRide}
                       />
                     </div>
                     <div className="mt-4">
