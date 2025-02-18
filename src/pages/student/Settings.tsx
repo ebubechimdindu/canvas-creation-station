@@ -1,4 +1,4 @@
-import { useState } from "react";
+
 import { StudentSidebar } from "@/components/student/StudentSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useToast } from "@/hooks/use-toast";
 import { 
   User, 
   Bell, 
@@ -22,74 +21,60 @@ import {
   Languages, 
   MapPin,
   Camera,
-  Trash2
+  Trash2,
+  Loader2
 } from "lucide-react";
-import { StudentSettings as StudentSettingsType } from "@/types";
+import { useStudentSettings } from "@/hooks/use-student-settings";
 
 export default function StudentSettings() {
-  const { toast } = useToast();
-  const [settings, setSettings] = useState<StudentSettingsType>({
-    id: "1",
-    name: "",
-    profileImage: undefined,
-    preferredPaymentType: "cash",
-    notifications: {
-      email: true,
-      push: true,
-      sms: false,
-    },
-    defaultLocations: {},
-    theme: "system",
-    language: "en",
-  });
+  const { 
+    settings, 
+    isLoading, 
+    updateSettings, 
+    updateProfileImage 
+  } = useStudentSettings();
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "Error",
-          description: "Image size should be less than 5MB",
-          variant: "destructive",
-        });
-        return;
-      }
+    if (!file) return;
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setSettings({
-          ...settings,
-          profileImage: {
-            url: e.target?.result as string,
-            lastUpdated: new Date().toISOString(),
-          },
-        });
-        toast({
-          title: "Success",
-          description: "Profile image updated successfully",
-        });
-      };
-      reader.readAsDataURL(file);
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "Image size should be less than 5MB",
+        variant: "destructive",
+      });
+      return;
     }
+
+    await updateProfileImage.mutateAsync(file);
   };
 
   const handleRemoveImage = () => {
-    setSettings({
+    updateSettings.mutate({
       ...settings,
       profileImage: undefined,
-    });
-    toast({
-      title: "Success",
-      description: "Profile image removed successfully",
     });
   };
 
   const handleSaveSettings = () => {
-    toast({
-      title: "Settings Saved",
-      description: "Your settings have been successfully updated.",
-    });
+    updateSettings.mutate(settings);
   };
+
+  if (isLoading) {
+    return (
+      <SidebarProvider>
+        <div className="flex min-h-screen w-full bg-background">
+          <StudentSidebar />
+          <main className="flex-1 p-8">
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+          </main>
+        </div>
+      </SidebarProvider>
+    );
+  }
 
   return (
     <SidebarProvider>
@@ -99,7 +84,15 @@ export default function StudentSettings() {
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h1 className="text-3xl font-bold">Settings</h1>
-              <Button onClick={handleSaveSettings}>Save Changes</Button>
+              <Button 
+                onClick={handleSaveSettings}
+                disabled={updateSettings.isPending}
+              >
+                {updateSettings.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Save Changes
+              </Button>
             </div>
 
             <div className="grid gap-6">
@@ -113,9 +106,9 @@ export default function StudentSettings() {
                 <CardContent className="space-y-6">
                   <div className="flex flex-col items-center space-y-4">
                     <Avatar className="h-32 w-32">
-                      <AvatarImage src={settings.profileImage?.url} />
+                      <AvatarImage src={settings?.profileImage?.url} />
                       <AvatarFallback className="text-4xl">
-                        {settings.name?.[0]?.toUpperCase() || "U"}
+                        {settings?.name?.[0]?.toUpperCase() || "U"}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex gap-2">
@@ -123,15 +116,21 @@ export default function StudentSettings() {
                         variant="outline"
                         className="flex items-center gap-2"
                         onClick={() => document.getElementById("image-upload")?.click()}
+                        disabled={updateProfileImage.isPending}
                       >
-                        <Camera className="h-4 w-4" />
+                        {updateProfileImage.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Camera className="h-4 w-4" />
+                        )}
                         Change Photo
                       </Button>
-                      {settings.profileImage && (
+                      {settings?.profileImage && (
                         <Button
                           variant="outline"
                           className="flex items-center gap-2"
                           onClick={handleRemoveImage}
+                          disabled={updateSettings.isPending}
                         >
                           <Trash2 className="h-4 w-4" />
                           Remove
@@ -152,19 +151,46 @@ export default function StudentSettings() {
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">Full Name</Label>
-                      <Input id="name" placeholder="Your full name" />
+                      <Input 
+                        id="name" 
+                        value={settings?.name || ''}
+                        onChange={(e) => updateSettings.mutate({
+                          ...settings,
+                          name: e.target.value,
+                        })}
+                        placeholder="Your full name" 
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" placeholder="Your email" />
+                      <Input 
+                        id="email" 
+                        type="email" 
+                        value={settings?.email || ''}
+                        disabled
+                        placeholder="Your email" 
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="phone">Phone Number</Label>
-                      <Input id="phone" placeholder="Your phone number" />
+                      <Input 
+                        id="phone" 
+                        value={settings?.phone || ''}
+                        onChange={(e) => updateSettings.mutate({
+                          ...settings,
+                          phone: e.target.value,
+                        })}
+                        placeholder="Your phone number" 
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="studentId">Student ID</Label>
-                      <Input id="studentId" placeholder="Your student ID" />
+                      <Input 
+                        id="studentId" 
+                        value={settings?.studentId || ''}
+                        disabled
+                        placeholder="Your student ID" 
+                      />
                     </div>
                   </div>
                 </CardContent>
@@ -183,12 +209,12 @@ export default function StudentSettings() {
                     <Input
                       id="homeLocation"
                       placeholder="Enter your home address"
-                      value={settings.defaultLocations.home || ""}
+                      value={settings?.defaultLocations?.home || ""}
                       onChange={(e) =>
-                        setSettings({
+                        updateSettings.mutate({
                           ...settings,
                           defaultLocations: {
-                            ...settings.defaultLocations,
+                            ...settings?.defaultLocations,
                             home: e.target.value,
                           },
                         })
@@ -200,12 +226,12 @@ export default function StudentSettings() {
                     <Input
                       id="schoolLocation"
                       placeholder="Enter your school address"
-                      value={settings.defaultLocations.school || ""}
+                      value={settings?.defaultLocations?.school || ""}
                       onChange={(e) =>
-                        setSettings({
+                        updateSettings.mutate({
                           ...settings,
                           defaultLocations: {
-                            ...settings.defaultLocations,
+                            ...settings?.defaultLocations,
                             school: e.target.value,
                           },
                         })
@@ -232,11 +258,11 @@ export default function StudentSettings() {
                         </p>
                       </div>
                       <Switch
-                        checked={settings.notifications.email}
+                        checked={settings?.notifications?.email}
                         onCheckedChange={(checked) =>
-                          setSettings({
+                          updateSettings.mutate({
                             ...settings,
-                            notifications: { ...settings.notifications, email: checked },
+                            notifications: { ...settings?.notifications, email: checked },
                           })
                         }
                       />
@@ -249,11 +275,11 @@ export default function StudentSettings() {
                         </p>
                       </div>
                       <Switch
-                        checked={settings.notifications.push}
+                        checked={settings?.notifications?.push}
                         onCheckedChange={(checked) =>
-                          setSettings({
+                          updateSettings.mutate({
                             ...settings,
-                            notifications: { ...settings.notifications, push: checked },
+                            notifications: { ...settings?.notifications, push: checked },
                           })
                         }
                       />
@@ -266,11 +292,11 @@ export default function StudentSettings() {
                         </p>
                       </div>
                       <Switch
-                        checked={settings.notifications.sms}
+                        checked={settings?.notifications?.sms}
                         onCheckedChange={(checked) =>
-                          setSettings({
+                          updateSettings.mutate({
                             ...settings,
-                            notifications: { ...settings.notifications, sms: checked },
+                            notifications: { ...settings?.notifications, sms: checked },
                           })
                         }
                       />
@@ -291,9 +317,9 @@ export default function StudentSettings() {
                     <div className="flex items-center space-x-2">
                       <Label>Theme</Label>
                       <Select
-                        value={settings.theme}
+                        value={settings?.theme}
                         onValueChange={(value: 'light' | 'dark' | 'system') =>
-                          setSettings({ ...settings, theme: value })
+                          updateSettings.mutate({ ...settings, theme: value })
                         }
                       >
                         <SelectTrigger>
@@ -320,9 +346,9 @@ export default function StudentSettings() {
                 <CardContent>
                   <div className="space-y-4">
                     <Select
-                      value={settings.language}
+                      value={settings?.language}
                       onValueChange={(value: 'en' | 'ig' | 'yo' | 'ha') =>
-                        setSettings({ ...settings, language: value })
+                        updateSettings.mutate({ ...settings, language: value })
                       }
                     >
                       <SelectTrigger>

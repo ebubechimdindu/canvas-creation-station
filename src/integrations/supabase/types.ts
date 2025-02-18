@@ -550,6 +550,54 @@ export type Database = {
         }
         Relationships: []
       }
+      student_settings: {
+        Row: {
+          created_at: string | null
+          default_locations: Json | null
+          language_preference: string | null
+          notifications_config: Json | null
+          preferred_payment_type: string | null
+          student_id: string
+          theme_preference: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          default_locations?: Json | null
+          language_preference?: string | null
+          notifications_config?: Json | null
+          preferred_payment_type?: string | null
+          student_id: string
+          theme_preference?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          default_locations?: Json | null
+          language_preference?: string | null
+          notifications_config?: Json | null
+          preferred_payment_type?: string | null
+          student_id?: string
+          theme_preference?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_settings_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "student_dashboard_stats"
+            referencedColumns: ["student_id"]
+          },
+          {
+            foreignKeyName: "student_settings_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "student_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       driver_dashboard_stats: {
