@@ -17,20 +17,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RideRequestForm } from "@/components/rides/RideRequestForm";
 import { ActiveRideRequest } from "@/components/rides/ActiveRideRequest";
 import { RideHistoryTable } from "@/components/rides/RideHistoryTable";
-import type { PostgresChangesPayload } from '@supabase/supabase-js';
-import type { RideRequest, RideStatus } from "@/types";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
 import { supabase } from "@/lib/supabase";
+import type { RideRequest, RideStatus } from "@/types";
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
-interface PostgresChangePayload extends PostgresChangesPayload<{
+interface PostgresChangePayload extends RealtimePostgresChangesPayload<{
   [key: string]: any;
 }> {
   new: RideRequest;

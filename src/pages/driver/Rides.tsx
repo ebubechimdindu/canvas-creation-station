@@ -24,6 +24,7 @@ import RideDetailsModal from "@/components/rides/RideDetailsModal";
 import { useAppDispatch } from "@/hooks/redux";
 import { markPaymentReceived } from "@/features/rides/ridesSlice";
 import type { Ride, RideRequest, RideStatus, RideStatusUI, RIDE_STATUS_UI } from "@/types";
+import { mapRideStatusToUI } from "@/types";
 import { useLocationUpdates } from "@/hooks/use-location-updates";
 import RideMap from "@/components/map/RideMap";
 import { MapProvider } from "@/components/map/MapProvider";
@@ -105,6 +106,14 @@ const DriverRides = () => {
     toast({
       title: "Filters Reset",
       description: "All filters have been cleared.",
+    });
+  };
+
+  const handlePaymentClick = (rideId: number) => {
+    dispatch(markPaymentReceived(rideId));
+    toast({
+      title: "Payment Marked as Received",
+      description: "The ride payment has been marked as received.",
     });
   };
 
@@ -246,7 +255,7 @@ const DriverRides = () => {
                                   className="gap-1"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handlePaymentReceived(ride.id);
+                                    handlePaymentClick(ride.id);
                                   }}
                                 >
                                   <DollarSign className="h-4 w-4" />

@@ -65,17 +65,35 @@ interface RideStatus {
   status: 'requested' | 'cancelled' | 'completed';
 }
 
-const mockRide = {
+const mockActiveRide = {
   status: 'requested' as RideStatus,
   driver: {
     id: '1',
     full_name: 'John Doe',
     phone_number: '+1234567890',
     status: 'verified' as const,
-    profile_picture_url: undefined
-  } as DriverProfile,
-  // ... other required fields
+    profile_picture_url: null,
+  },
+  pickup_address: "Main Campus",
+  dropoff_address: "Student Housing"
 };
+
+const mockRides = [
+  {
+    id: 1,
+    status: 'requested' as RideStatus,
+    driver: {
+      id: '1',
+      full_name: 'John Doe',
+      phone_number: '+1234567890',
+      status: 'verified' as const,
+      profile_picture_url: null,
+    },
+    pickup_address: "Main Campus",
+    dropoff_address: "Student Housing",
+    created_at: new Date().toISOString(),
+  }
+];
 
 const StudentDashboard = () => {
   const [isRequestOpen, setIsRequestOpen] = useState(false);
@@ -170,7 +188,7 @@ const StudentDashboard = () => {
         pickup: rideRequest.pickupLocation.address,
         dropoff: rideRequest.dropoffLocation.address,
         status: 'Upcoming',
-        driver: mockRide.driver,
+        driver: mockActiveRide.driver,
         payment: {
           method: 'cash',
           status: 'pending',
