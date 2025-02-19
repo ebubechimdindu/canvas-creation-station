@@ -10,6 +10,7 @@ import { RideStatusBadge } from '@/components/rides/RideStatusBadge';
 import { format } from 'date-fns';
 import { useRideRequests } from '@/hooks/use-ride-requests';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { mapRideStatusToUI, type RideStatus } from '@/types';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -108,7 +109,7 @@ export default function Dashboard() {
                         )}
                       </div>
                     </div>
-                    <RideStatusBadge status={activity.status} />
+                    <RideStatusBadge status={mapRideStatusToUI(activity.status as RideStatus)} />
                   </div>
                 ))
               )}

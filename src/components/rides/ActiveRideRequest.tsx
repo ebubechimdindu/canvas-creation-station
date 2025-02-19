@@ -4,23 +4,27 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RideStatusBadge } from "./RideStatusBadge";
 import { MapPin, Clock, X } from "lucide-react";
-import { type RideStatus, type DriverProfile } from "@/types";
+import { type RideRequest } from "@/types";
 
 export interface ActiveRideRequestProps {
-  status: RideStatus;
+  status: string;
   pickup: string;
   dropoff: string;
-  driver?: DriverProfile;
+  driver?: {
+    full_name: string;
+    phone_number: string;
+  };
   onCancel: () => void;
+  ride: RideRequest;
 }
 
 export function ActiveRideRequest({
-  status,
-  pickup,
-  dropoff,
-  driver,
+  ride,
   onCancel
-}: ActiveRideRequestProps) {
+}: {
+  ride: RideRequest;
+  onCancel: () => void;
+}) {
   return (
     <Card className="relative overflow-hidden border-l-4 border-l-blue-500">
       <CardContent className="p-6">
@@ -28,7 +32,7 @@ export function ActiveRideRequest({
           <div className="space-y-4">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <RideStatusBadge status={status} />
+                <RideStatusBadge status={ride.status} />
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Clock className="h-4 w-4" />
@@ -39,19 +43,19 @@ export function ActiveRideRequest({
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-green-500" />
-                <span className="font-medium">{pickup}</span>
+                <span className="font-medium">{ride.pickup_address}</span>
               </div>
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-red-500" />
-                <span className="font-medium">{dropoff}</span>
+                <span className="font-medium">{ride.dropoff_address}</span>
               </div>
             </div>
 
-            {driver && (
+            {ride.driver && (
               <div className="mt-4 p-4 bg-muted rounded-lg">
                 <h4 className="font-medium mb-2">Driver Details</h4>
-                <p>{driver.full_name}</p>
-                <p className="text-sm text-muted-foreground">{driver.phone_number}</p>
+                <p>{ride.driver.full_name}</p>
+                <p className="text-sm text-muted-foreground">{ride.driver.phone_number}</p>
               </div>
             )}
           </div>
