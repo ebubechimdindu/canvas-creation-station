@@ -47,10 +47,10 @@ export function RideRequestForm({
 
   const [selectedPickupLocation, setSelectedPickupLocation] = React.useState<CampusLocation | null>(null);
   const [selectedDropoffLocation, setSelectedDropoffLocation] = React.useState<CampusLocation | null>(null);
-  const [useCurrentLocation, setUseCurrentLocation] = React.useState(true);
+  const [useCurrentLocation, setUseCurrentLocation] = React.useState(false);
 
   const { mapboxToken } = useMap();
-  const { currentLocation, error: locationError, isLoading: locationLoading, updateLocation } = useStudentLocation(mapboxToken);
+  const { currentLocation, error: locationError, isLoading: locationLoading, updateLocation, isWithinCampus } = useStudentLocation(mapboxToken);
   const { toast } = useToast();
 
   const handleCurrentLocation = async () => {
@@ -65,15 +65,27 @@ export function RideRequestForm({
         });
 
         const { latitude, longitude } = position.coords;
+        
+        // Check if location is within campus before updating
+        if (!isWithinCampus(latitude, longitude)) {
+          toast({
+            title: "Location Outside Campus",
+            description: "Your current location is outside the campus boundaries. Please select a pickup location within campus.",
+            variant: "destructive",
+          });
+          setUseCurrentLocation(false);
+          return;
+        }
+
         await updateLocation(latitude, longitude);
         
         if (currentLocation) {
-          setSelectedPickupLocation({
+          const newPickupLocation: CampusLocation = {
             id: 'current-location',
             name: 'Current Location',
             coordinates: {
-              lat: currentLocation.lat,
-              lng: currentLocation.lng
+              lat: latitude,
+              lng: longitude
             },
             description: currentLocation.address,
             locationType: 'pickup_point',
@@ -81,9 +93,11 @@ export function RideRequestForm({
             isVerified: true,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
-          });
+          };
 
+          setSelectedPickupLocation(newPickupLocation);
           setUseCurrentLocation(true);
+
           toast({
             title: "Location Updated",
             description: "Your current location has been set as the pickup point",
@@ -109,6 +123,16 @@ export function RideRequestForm({
   };
 
   const handleLocationSelect = (location: CampusLocation, type: 'pickup' | 'dropoff') => {
+    // Check if location is within campus
+    if (!isWithinCampus(location.coordinates.lat, location.coordinates.lng)) {
+      toast({
+        title: "Invalid Location",
+        description: `The selected ${type} location is outside campus boundaries. Please select a location within campus.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     console.log(`Selected ${type} location:`, location);
     if (type === 'pickup') {
       setSelectedPickupLocation(location);
@@ -118,13 +142,21 @@ export function RideRequestForm({
     }
   };
 
+  const isValidRequest = () => {
+    if (!selectedPickupLocation || !selectedDropoffLocation) return false;
+    
+    // Verify both locations are within campus
+    return isWithinCampus(selectedPickupLocation.coordinates.lat, selectedPickupLocation.coordinates.lng) &&
+           isWithinCampus(selectedDropoffLocation.coordinates.lat, selectedDropoffLocation.coordinates.lng);
+  };
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedPickupLocation || !selectedDropoffLocation) {
+    if (!isValidRequest()) {
       toast({
-        title: "Error",
-        description: "Please select both pickup and dropoff locations from the map",
+        title: "Invalid Locations",
+        description: "Please ensure both pickup and dropoff locations are within campus boundaries",
         variant: "destructive",
       });
       return;
