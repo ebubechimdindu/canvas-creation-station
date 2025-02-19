@@ -57,8 +57,8 @@ export const useRideRequests = () => {
       return data as RideRequest | null;
     },
     enabled: !!user?.id,
-    staleTime: 1000 * 60, // 1 minute
-    gcTime: 1000 * 60 * 60, // 1 hour
+    staleTime: 1000 * 60,
+    gcTime: 1000 * 60 * 60,
     retry: false,
   });
 
@@ -94,35 +94,6 @@ export const useRideRequests = () => {
     };
   }, [user?.id, queryClient, toast]);
 
-  const { data: rideHistory, isLoading: isLoadingHistory } = useQuery({
-    queryKey: ['rideHistory', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
-
-      const { data, error } = await supabase
-        .from('ride_requests')
-        .select(`
-          *,
-          driver:driver_profiles(
-            id,
-            full_name,
-            phone_number,
-            profile_picture_url,
-            status
-          ),
-          ratings:ride_ratings(*)
-        `)
-        .eq('student_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.id,
-    retry: false,
-  });
-
   const createRideRequest = async ({ pickup, dropoff, notes, specialRequirements }: CreateRideRequestParams) => {
     if (!user?.id) {
       throw new Error('User must be logged in to request a ride');
@@ -132,10 +103,29 @@ export const useRideRequests = () => {
       throw new Error('You already have an active ride request');
     }
 
-    console.log('Creating ride request with locations:', { pickup, dropoff });
+    console.log('Creating ride request with locations:', { 
+      pickup: {
+        coordinates: pickup.coordinates,
+        name: pickup.name
+      }, 
+      dropoff: {
+        coordinates: dropoff.coordinates,
+        name: dropoff.name
+      }
+    });
     
     if (!pickup?.coordinates || !dropoff?.coordinates) {
+      console.error('Invalid coordinates:', { pickup, dropoff });
       throw new Error('Invalid pickup or dropoff location coordinates');
+    }
+
+    if (!pickup.coordinates.lat || !pickup.coordinates.lng || 
+        !dropoff.coordinates.lat || !dropoff.coordinates.lng) {
+      console.error('Missing coordinate values:', {
+        pickup: pickup.coordinates,
+        dropoff: dropoff.coordinates
+      });
+      throw new Error('Missing coordinate values');
     }
 
     setIsCreating(true);
@@ -237,6 +227,35 @@ export const useRideRequests = () => {
       throw error;
     }
   };
+
+  const { data: rideHistory, isLoading: isLoadingHistory } = useQuery({
+    queryKey: ['rideHistory', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+
+      const { data, error } = await supabase
+        .from('ride_requests')
+        .select(`
+          *,
+          driver:driver_profiles(
+            id,
+            full_name,
+            phone_number,
+            profile_picture_url,
+            status
+          ),
+          ratings:ride_ratings(*)
+        `)
+        .eq('student_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+    retry: false,
+  });
 
   return {
     activeRide,
