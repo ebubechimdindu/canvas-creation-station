@@ -33,7 +33,20 @@ const RideMap: React.FC<RideMapProps> = ({
 }) => {
   const handleCoordinatesSelect = (lat: number, lng: number, type: 'pickup' | 'dropoff') => {
     console.log(`Selected ${type} coordinates:`, { lat, lng });
-    // Additional coordinate handling logic here
+    // Create a temporary location object when coordinates are selected
+    const location: CampusLocation = {
+      id: `temp-${type}-${Date.now()}`,
+      name: `Selected ${type} point`,
+      coordinates: { lat, lng },
+      description: `Manually selected ${type} location`,
+      locationType: type === 'pickup' ? 'pickup_point' : 'dropoff_point',
+      isActive: true,
+      isVerified: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    // Call the parent's onLocationSelect with the created location
+    onLocationSelect?.(location, type);
   };
 
   return (
@@ -58,4 +71,3 @@ const RideMap: React.FC<RideMapProps> = ({
 };
 
 export default RideMap;
-
