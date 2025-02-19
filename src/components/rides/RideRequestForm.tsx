@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -10,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { LocationCombobox } from "@/components/locations/LocationCombobox";
 import { Loader2, Navigation2 } from "lucide-react";
 import { type CampusLocation } from "@/types/locations";
 import RideMap from "@/components/map/RideMap";
@@ -19,6 +19,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useStudentLocation } from '@/hooks/use-student-location';
 import { useMap } from '@/components/map/MapProvider';
 import { format } from "date-fns";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { MapPin } from "lucide-react";
 
 interface RideRequestFormProps {
   onSubmit: (e: React.FormEvent) => Promise<void>;
@@ -36,8 +38,6 @@ export function RideRequestForm({
   locationsLoading
 }: RideRequestFormProps) {
   const [rideRequest, setRideRequest] = React.useState({
-    pickup: "",
-    dropoff: "",
     date: format(new Date(), "yyyy-MM-dd"),
     time: format(new Date(), "HH:mm"),
     notes: "",
@@ -52,10 +52,6 @@ export function RideRequestForm({
   const { mapboxToken } = useMap();
   const { currentLocation, error: locationError, isLoading: locationLoading, updateLocation } = useStudentLocation(mapboxToken);
   const { toast } = useToast();
-
-  const safeLocations = React.useMemo(() => {
-    return Array.isArray(locations) ? locations : [];
-  }, [locations]);
 
   const handleCurrentLocation = async () => {
     if ('geolocation' in navigator) {
@@ -72,16 +68,6 @@ export function RideRequestForm({
         await updateLocation(latitude, longitude);
         
         if (currentLocation) {
-          setRideRequest(prev => ({
-            ...prev,
-            pickup: currentLocation.address,
-            pickupLocation: {
-              lat: currentLocation.lat,
-              lng: currentLocation.lng,
-              address: currentLocation.address
-            }
-          }));
-
           setSelectedPickupLocation({
             id: 'current-location',
             name: 'Current Location',
@@ -98,12 +84,16 @@ export function RideRequestForm({
           });
 
           setUseCurrentLocation(true);
+          toast({
+            title: "Location Updated",
+            description: "Your current location has been set as the pickup point",
+          });
         }
       } catch (error) {
         console.error('Error getting location:', error);
         toast({
           title: 'Error',
-          description: 'Failed to get your current location. Please try selecting manually.',
+          description: 'Failed to get your current location. Please select manually from the map.',
           variant: 'destructive',
         });
         setUseCurrentLocation(false);
@@ -118,52 +108,49 @@ export function RideRequestForm({
     }
   };
 
-  const handlePickupLocationSelect = (location: CampusLocation) => {
-    setSelectedPickupLocation(location);
-    setRideRequest(prev => ({
-      ...prev,
-      pickup: location.name,
-      pickupLocation: {
-        lat: location.coordinates.lat,
-        lng: location.coordinates.lng,
-        address: location.name
-      }
-    }));
-    setUseCurrentLocation(false);
+  const handleLocationSelect = (location: CampusLocation, type: 'pickup' | 'dropoff') => {
+    console.log(`Selected ${type} location:`, location);
+    if (type === 'pickup') {
+      setSelectedPickupLocation(location);
+      setUseCurrentLocation(false);
+    } else {
+      setSelectedDropoffLocation(location);
+    }
   };
 
-  const handleDropoffLocationSelect = (location: CampusLocation) => {
-    setSelectedDropoffLocation(location);
-    setRideRequest(prev => ({
-      ...prev,
-      dropoff: location.name,
-      dropoffLocation: {
-        lat: location.coordinates.lat,
-        lng: location.coordinates.lng,
-        address: location.name
-      }
-    }));
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedPickupLocation || !selectedDropoffLocation) {
+      toast({
+        title: "Error",
+        description: "Please select both pickup and dropoff locations from the map",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    await onSubmit(e);
   };
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form onSubmit={handleFormSubmit} className="space-y-4">
+      <Alert>
+        <MapPin className="h-4 w-4" />
+        <AlertDescription>
+          Click on the map to select your pickup and dropoff locations. Select pickup location first, then dropoff location.
+        </AlertDescription>
+      </Alert>
+
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="pickup">Pickup Location</Label>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <LocationCombobox
-                  value={selectedPickupLocation?.name || ""}
-                  onSelect={handlePickupLocationSelect}
-                  locations={safeLocations}
-                  placeholder="Select pickup location"
-                  isLoading={locationsLoading}
-                />
-              </div>
+            <div className="flex items-center justify-between">
+              <Label>Selected Locations</Label>
               <Button
                 type="button"
                 variant="outline"
+                size="sm"
                 className="flex gap-2 items-center"
                 onClick={handleCurrentLocation}
                 disabled={locationLoading}
@@ -173,25 +160,25 @@ export function RideRequestForm({
                 ) : (
                   <Navigation2 className="h-4 w-4" />
                 )}
-                {locationLoading ? "Getting Location..." : "Use Current"}
+                Use Current Location
               </Button>
             </div>
-            {locationError && (
-              <p className="text-sm text-destructive mt-1">
-                Error getting location: {locationError}
-              </p>
-            )}
+            <div className="space-y-2 p-4 rounded-lg border bg-muted">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-blue-500" />
+                <span className="text-sm font-medium">
+                  Pickup: {selectedPickupLocation?.name || "Not selected"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-red-500" />
+                <span className="text-sm font-medium">
+                  Dropoff: {selectedDropoffLocation?.name || "Not selected"}
+                </span>
+              </div>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="dropoff">Dropoff Location</Label>
-            <LocationCombobox
-              value={selectedDropoffLocation?.name || ""}
-              onSelect={handleDropoffLocationSelect}
-              locations={safeLocations}
-              placeholder="Select dropoff location"
-              isLoading={locationsLoading}
-            />
-          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="date">Date</Label>
@@ -220,7 +207,7 @@ export function RideRequestForm({
           </div>
         </div>
         <div className="space-y-4">
-          <Label>Location Preview</Label>
+          <Label>Location Selection Map</Label>
           <div className="h-[300px] md:h-[400px] rounded-lg overflow-hidden">
             <RideMap
               pickup={selectedPickupLocation?.name || ""}
@@ -231,6 +218,11 @@ export function RideRequestForm({
                 lat: driver.currentLocation?.lat || 0,
                 lng: driver.currentLocation?.lng || 0
               })).filter(loc => loc.lat !== 0 && loc.lng !== 0)}
+              onLocationSelect={handleLocationSelect}
+              selectedLocations={{
+                pickup: selectedPickupLocation,
+                dropoff: selectedDropoffLocation
+              }}
             />
           </div>
         </div>
@@ -260,7 +252,7 @@ export function RideRequestForm({
         <Label htmlFor="notes">Additional Notes</Label>
         <Textarea
           id="notes"
-          placeholder="Any special requirements?"
+          placeholder="Any special instructions or notes for the driver?"
           value={rideRequest.notes}
           onChange={(e) =>
             setRideRequest({ ...rideRequest, notes: e.target.value })
@@ -275,7 +267,12 @@ export function RideRequestForm({
         >
           Cancel
         </Button>
-        <Button type="submit">Request Ride</Button>
+        <Button 
+          type="submit"
+          disabled={!selectedPickupLocation || !selectedDropoffLocation}
+        >
+          Request Ride
+        </Button>
       </div>
     </form>
   );
