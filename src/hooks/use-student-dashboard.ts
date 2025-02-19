@@ -34,6 +34,14 @@ interface NearbyDriver {
   last_known_location: { lat: number; lng: number } | null;
 }
 
+interface DriverStatsDetailed {
+  driver_id: string;
+  full_name: string;
+  average_rating: number;
+  last_known_location: { lat: number; lng: number } | null;
+  phone_number: string;
+}
+
 export const useStudentDashboard = () => {
   const { toast } = useToast();
   const user = useAppSelector((state) => state.auth.user);
@@ -101,13 +109,7 @@ export const useStudentDashboard = () => {
 
       const { data, error } = await supabase
         .from('driver_stats_detailed')
-        .select(`
-          driver_id as id,
-          full_name,
-          average_rating,
-          last_known_location,
-          phone_number
-        `)
+        .select('driver_id, full_name, average_rating, last_known_location, phone_number')
         .eq('status', 'verified')
         .not('last_known_location', 'is', null)
         .limit(5);
@@ -117,8 +119,8 @@ export const useStudentDashboard = () => {
         throw error;
       }
 
-      return (data || []).map(driver => ({
-        id: driver.id,
+      return (data || []).map((driver: DriverStatsDetailed) => ({
+        id: driver.driver_id,
         full_name: driver.full_name || 'Unknown Driver',
         average_rating: driver.average_rating || 0,
         distance_meters: 0,
