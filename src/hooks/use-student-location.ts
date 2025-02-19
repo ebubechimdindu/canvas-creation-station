@@ -16,6 +16,7 @@ interface UseStudentLocationReturn {
   error: string | null;
   isLoading: boolean;
   updateLocation: (lat: number, lng: number) => Promise<void>;
+  isWithinCampus: (lat: number, lng: number) => boolean;
 }
 
 const CAMPUS_BOUNDS = {
@@ -30,7 +31,7 @@ export const useStudentLocation = (mapboxToken?: string): UseStudentLocationRetu
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const isWithinCampus = (lat: number, lng: number) => {
+  const isWithinCampus = (lat: number, lng: number): boolean => {
     return lat >= CAMPUS_BOUNDS.south && 
            lat <= CAMPUS_BOUNDS.north && 
            lng >= CAMPUS_BOUNDS.west && 
@@ -90,7 +91,7 @@ export const useStudentLocation = (mapboxToken?: string): UseStudentLocationRetu
         toast({
           title: "Outside Campus",
           description: "Your current location is outside the campus boundaries.",
-          variant: "default", // Changed from "warning" to "default" since "warning" is not a valid variant
+          variant: "default",
         });
       }
     } catch (err) {
@@ -149,5 +150,11 @@ export const useStudentLocation = (mapboxToken?: string): UseStudentLocationRetu
     };
   }, []);
 
-  return { currentLocation, error, isLoading, updateLocation };
+  return { 
+    currentLocation, 
+    error, 
+    isLoading, 
+    updateLocation,
+    isWithinCampus 
+  };
 };
