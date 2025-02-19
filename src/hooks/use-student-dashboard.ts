@@ -31,7 +31,7 @@ interface NearbyDriver {
   average_rating: number;
   distance_meters: number;
   last_location_update: string;
-  is_online: boolean;
+  last_known_location: { lat: number; lng: number } | null;
 }
 
 export const useStudentDashboard = () => {
@@ -101,10 +101,15 @@ export const useStudentDashboard = () => {
 
       const { data, error } = await supabase
         .from('driver_stats_detailed')
-        .select('*')
+        .select(`
+          driver_id as id,
+          full_name,
+          average_rating,
+          last_known_location,
+          phone_number
+        `)
         .eq('status', 'verified')
         .not('last_known_location', 'is', null)
-        .eq('is_online', true)
         .limit(5);
 
       if (error) {
@@ -113,12 +118,12 @@ export const useStudentDashboard = () => {
       }
 
       return (data || []).map(driver => ({
-        id: driver.driver_id,
+        id: driver.id,
         full_name: driver.full_name || 'Unknown Driver',
         average_rating: driver.average_rating || 0,
-        distance_meters: 0, // We'll implement distance calculation later
+        distance_meters: 0,
         last_location_update: new Date().toISOString(),
-        is_online: driver.is_online || false
+        last_known_location: driver.last_known_location
       }));
     },
     enabled: !!user?.id,

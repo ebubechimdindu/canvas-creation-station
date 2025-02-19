@@ -287,20 +287,11 @@ const MapboxLocationManager = ({
   };
 
   const drawRoute = async (pickup: string, dropoff: string) => {
-    if (!map.current || !mapboxToken) return;
+    if (!map.current || !mapboxToken || !selectedLocations?.pickup || !selectedLocations?.dropoff) return;
 
     try {
-      const pickupCoords = await geocode(pickup);
-      const dropoffCoords = await geocode(dropoff);
-
-      if (!pickupCoords || !dropoffCoords) {
-        toast({
-          title: 'Error',
-          description: 'Could not find locations',
-          variant: 'destructive'
-        });
-        return;
-      }
+      const pickupCoords = [selectedLocations.pickup.coordinates.lng, selectedLocations.pickup.coordinates.lat];
+      const dropoffCoords = [selectedLocations.dropoff.coordinates.lng, selectedLocations.dropoff.coordinates.lat];
 
       const response = await fetch(
         `https://api.mapbox.com/directions/v5/mapbox/driving/${pickupCoords.join(',')};${dropoffCoords.join(',')}?geometries=geojson&access_token=${mapboxToken}`
@@ -359,7 +350,7 @@ const MapboxLocationManager = ({
       console.error('Error drawing route:', error);
       toast({
         title: 'Error',
-        description: 'Could not draw route',
+        description: 'Could not draw route between selected locations',
         variant: 'destructive'
       });
     }
