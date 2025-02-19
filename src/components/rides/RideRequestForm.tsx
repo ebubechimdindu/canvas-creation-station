@@ -53,6 +53,12 @@ export function RideRequestForm({
   const { currentLocation, error: locationError, isLoading: locationLoading, updateLocation, isWithinCampus } = useStudentLocation(mapboxToken);
   const { toast } = useToast();
 
+  // Debug logs to track state changes
+  React.useEffect(() => {
+    console.log('Pickup Location:', selectedPickupLocation);
+    console.log('Dropoff Location:', selectedDropoffLocation);
+  }, [selectedPickupLocation, selectedDropoffLocation]);
+
   const handleCurrentLocation = async () => {
     if ('geolocation' in navigator) {
       try {
@@ -66,7 +72,6 @@ export function RideRequestForm({
 
         const { latitude, longitude } = position.coords;
         
-        // Check if location is within campus before updating
         if (!isWithinCampus(latitude, longitude)) {
           toast({
             title: "Location Outside Campus",
@@ -123,7 +128,8 @@ export function RideRequestForm({
   };
 
   const handleLocationSelect = (location: CampusLocation, type: 'pickup' | 'dropoff') => {
-    // Check if location is within campus
+    console.log(`Handling ${type} location selection:`, location);
+
     if (!isWithinCampus(location.coordinates.lat, location.coordinates.lng)) {
       toast({
         title: "Invalid Location",
@@ -133,22 +139,32 @@ export function RideRequestForm({
       return;
     }
 
-    console.log(`Selected ${type} location:`, location);
     if (type === 'pickup') {
       setSelectedPickupLocation(location);
       setUseCurrentLocation(false);
     } else {
       setSelectedDropoffLocation(location);
     }
+
+    // Provide immediate feedback on location selection
+    toast({
+      title: "Location Selected",
+      description: `${type === 'pickup' ? 'Pickup' : 'Dropoff'} location set to ${location.name}`,
+    });
   };
 
-  const isValidRequest = () => {
-    if (!selectedPickupLocation || !selectedDropoffLocation) return false;
+  const isValidRequest = React.useCallback(() => {
+    if (!selectedPickupLocation || !selectedDropoffLocation) {
+      console.log('Missing locations:', { pickup: !!selectedPickupLocation, dropoff: !!selectedDropoffLocation });
+      return false;
+    }
     
-    // Verify both locations are within campus
-    return isWithinCampus(selectedPickupLocation.coordinates.lat, selectedPickupLocation.coordinates.lng) &&
-           isWithinCampus(selectedDropoffLocation.coordinates.lat, selectedDropoffLocation.coordinates.lng);
-  };
+    const pickupValid = isWithinCampus(selectedPickupLocation.coordinates.lat, selectedPickupLocation.coordinates.lng);
+    const dropoffValid = isWithinCampus(selectedDropoffLocation.coordinates.lat, selectedDropoffLocation.coordinates.lng);
+    
+    console.log('Location validation:', { pickupValid, dropoffValid });
+    return pickupValid && dropoffValid;
+  }, [selectedPickupLocation, selectedDropoffLocation, isWithinCampus]);
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -280,6 +296,7 @@ export function RideRequestForm({
           </SelectContent>
         </Select>
       </div>
+
       <div className="space-y-2">
         <Label htmlFor="notes">Additional Notes</Label>
         <Textarea
@@ -291,6 +308,7 @@ export function RideRequestForm({
           }
         />
       </div>
+
       <div className="flex justify-end gap-2 pt-4">
         <Button
           type="button"
@@ -301,7 +319,7 @@ export function RideRequestForm({
         </Button>
         <Button 
           type="submit"
-          disabled={!selectedPickupLocation || !selectedDropoffLocation}
+          disabled={!isValidRequest()}
         >
           Request Ride
         </Button>
