@@ -12,6 +12,8 @@ import { Loader2 } from 'lucide-react';
 import { type CampusLocation } from '@/types/locations';
 import { type FormEvent } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { StudentSidebar } from '@/components/student/StudentSidebar';
+import RideMap from '@/components/map/RideMap';
 
 export default function Rides() {
   const [isRequestOpen, setIsRequestOpen] = useState(false);
@@ -94,38 +96,58 @@ export default function Rides() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {activeRide ? (
-        <ActiveRideRequest
-          ride={activeRide}
-          onCancel={() => cancelRideRequest(activeRide.id)}
-        />
-      ) : (
-        <div className="flex justify-end">
-          <Button onClick={() => setIsRequestOpen(true)}>Request Ride</Button>
-        </div>
-      )}
+    <div className="flex h-screen overflow-hidden">
+      <StudentSidebar />
+      <div className="flex-1 overflow-auto">
+        <div className="container mx-auto p-6 space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-6">
+              {activeRide ? (
+                <ActiveRideRequest
+                  ride={activeRide}
+                  onCancel={() => cancelRideRequest(activeRide.id)}
+                />
+              ) : (
+                <div className="flex justify-end">
+                  <Button onClick={() => setIsRequestOpen(true)}>Request Ride</Button>
+                </div>
+              )}
 
-      <Sheet open={isRequestOpen} onOpenChange={setIsRequestOpen}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Request a Ride</SheetTitle>
-          </SheetHeader>
-          <div className="mt-6">
-            <RideRequestForm
-              onSubmit={handleCreateRide}
-              onCancel={() => setIsRequestOpen(false)}
-              locations={locations}
-              locationsLoading={isLoadingLocations}
-            />
+              <RideHistoryTable 
+                rides={rideHistory} 
+                isLoading={isLoadingHistory}
+              />
+            </div>
+
+            <div className="h-[calc(100vh-2rem)] sticky top-4">
+              {activeRide && (
+                <RideMap
+                  pickup={activeRide.pickup_address}
+                  dropoff={activeRide.dropoff_address}
+                  showRoutePath
+                  className="rounded-lg overflow-hidden shadow-lg"
+                />
+              )}
+            </div>
           </div>
-        </SheetContent>
-      </Sheet>
+        </div>
 
-      <RideHistoryTable 
-        rides={rideHistory} 
-        isLoading={isLoadingHistory}
-      />
+        <Sheet open={isRequestOpen} onOpenChange={setIsRequestOpen}>
+          <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>Request a Ride</SheetTitle>
+            </SheetHeader>
+            <div className="mt-6">
+              <RideRequestForm
+                onSubmit={handleCreateRide}
+                onCancel={() => setIsRequestOpen(false)}
+                locations={locations}
+                locationsLoading={isLoadingLocations}
+              />
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
     </div>
   );
 }
