@@ -130,7 +130,7 @@ const DriverDashboard = () => {
           ...statsData,
           today_earnings: todayEarnings,
           week_earnings: weekEarnings,
-          active_hours: statsData.active_hours || 0
+          active_hours: statsData?.active_hours || 0
         });
         setRecentActivity(activityData || []);
         setIsLoading(false);
@@ -138,9 +138,10 @@ const DriverDashboard = () => {
         console.error('Error loading dashboard data:', error);
         toast({
           title: "Error",
-          description: "Failed to load dashboard data",
+          description: error instanceof Error ? error.message : "Failed to load dashboard data",
           variant: "destructive"
         });
+        setIsLoading(false);
       }
     };
 

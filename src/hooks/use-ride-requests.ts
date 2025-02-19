@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -133,23 +132,35 @@ export const useRideRequests = () => {
       throw new Error('You already have an active ride request');
     }
 
+    console.log('Creating ride request with locations:', { pickup, dropoff });
+    
+    if (!pickup?.coordinates || !dropoff?.coordinates) {
+      throw new Error('Invalid pickup or dropoff location coordinates');
+    }
+
     setIsCreating(true);
     try {
       const { data: pickupRef, error: pickupError } = await supabase
         .rpc('find_nearest_references', {
-          point: pickup.coordinates,
+          point: `POINT(${pickup.coordinates.lng} ${pickup.coordinates.lat})`,
           max_distance: 100
         });
 
-      if (pickupError) throw pickupError;
+      if (pickupError) {
+        console.error('Error finding pickup reference:', pickupError);
+        throw pickupError;
+      }
 
       const { data: dropoffRef, error: dropoffError } = await supabase
         .rpc('find_nearest_references', {
-          point: dropoff.coordinates,
+          point: `POINT(${dropoff.coordinates.lng} ${dropoff.coordinates.lat})`,
           max_distance: 100
         });
 
-      if (dropoffError) throw dropoffError;
+      if (dropoffError) {
+        console.error('Error finding dropoff reference:', dropoffError);
+        throw dropoffError;
+      }
 
       const { data, error } = await supabase
         .from('ride_requests')
@@ -170,7 +181,10 @@ export const useRideRequests = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating ride request:', error);
+        throw error;
+      }
 
       queryClient.invalidateQueries({ queryKey: ['activeRide'] });
       
