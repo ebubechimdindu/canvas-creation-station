@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -5,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useStudentDashboard } from '@/hooks/use-student-dashboard';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, MapPin, Clock, Star } from 'lucide-react';
-import RideStatusBadge from '@/components/rides/RideStatusBadge';
+import { RideStatusBadge } from '@/components/rides/RideStatusBadge';
 import { format } from 'date-fns';
 import { useRideRequests } from '@/hooks/use-ride-requests';
 import { Alert, AlertDescription } from '@/components/ui/alert';

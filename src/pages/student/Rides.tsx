@@ -4,17 +4,20 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useRideRequests } from '@/hooks/use-ride-requests';
 import { useCampusLocations } from '@/hooks/use-campus-locations';
-import RideRequestForm from '@/components/rides/RideRequestForm';
-import RideHistoryTable from '@/components/rides/RideHistoryTable';
-import ActiveRideRequest from '@/components/rides/ActiveRideRequest';
+import { RideRequestForm } from '@/components/rides/RideRequestForm';
+import { RideHistoryTable } from '@/components/rides/RideHistoryTable';
+import { ActiveRideRequest } from '@/components/rides/ActiveRideRequest';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Loader2 } from 'lucide-react';
 import { type CampusLocation } from '@/types/locations';
+import { type FormEvent } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Rides() {
   const [isRequestOpen, setIsRequestOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { locations, isLoading: isLoadingLocations } = useCampusLocations();
   const { 
     activeRide,
@@ -26,32 +29,59 @@ export default function Rides() {
     isCreating
   } = useRideRequests();
 
-  // Handle incoming state from Dashboard
   useEffect(() => {
     if (location.state?.openRideRequest) {
       setIsRequestOpen(true);
-      // Clear the state after using it
       navigate(location.pathname, { replace: true });
     }
   }, [location.state, navigate]);
 
-  const handleCreateRide = async (formData: {
-    pickup: CampusLocation;
-    dropoff: CampusLocation;
-    notes?: string;
-    specialRequirements?: string;
-  }) => {
+  const handleCreateRide = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    
     try {
-      // Validate coordinates before submitting
-      if (!formData.pickup?.coordinates || !formData.dropoff?.coordinates) {
-        throw new Error('Invalid pickup or dropoff location');
+      const pickup = locations.find(loc => loc.id === formData.get('pickup')?.toString());
+      const dropoff = locations.find(loc => loc.id === formData.get('dropoff')?.toString());
+      
+      if (!pickup || !dropoff) {
+        toast({
+          title: "Error",
+          description: "Please select both pickup and dropoff locations",
+          variant: "destructive",
+        });
+        return;
       }
 
-      await createRideRequest(formData);
+      if (!pickup.coordinates || !dropoff.coordinates) {
+        toast({
+          title: "Error",
+          description: "Invalid location coordinates",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await createRideRequest({
+        pickup,
+        dropoff,
+        notes: formData.get('notes')?.toString(),
+        specialRequirements: formData.get('specialRequirements')?.toString(),
+      });
+      
       setIsRequestOpen(false);
+      
+      toast({
+        title: "Success",
+        description: "Ride request created successfully",
+      });
     } catch (error) {
       console.error('Error creating ride:', error);
-      throw error; // Let the form handle the error
+      toast({
+        title: "Error",
+        description: "Failed to create ride request. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
