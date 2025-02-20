@@ -88,9 +88,25 @@ const DriverDashboard = () => {
 
         console.log('Stats data:', statsData);
 
+        // Update the query to match the actual schema
         const { data: activityData, error: activityError } = await supabase
-          .from('driver_recent_activity')
-          .select('*')
+          .from('ride_requests')
+          .select(`
+            id,
+            created_at,
+            status,
+            pickup_address,
+            dropoff_address,
+            student_profiles (
+              full_name
+            ),
+            ride_ratings (
+              rating
+            ),
+            driver_earnings (
+              amount
+            )
+          `)
           .eq('driver_id', user.id)
           .order('created_at', { ascending: false })
           .limit(5);
@@ -100,7 +116,19 @@ const DriverDashboard = () => {
           throw activityError;
         }
 
-        console.log('Activity data:', activityData);
+        // Transform the data to match the expected format
+        const formattedActivity = activityData?.map(activity => ({
+          id: activity.id,
+          created_at: activity.created_at,
+          status: activity.status,
+          pickup_address: activity.pickup_address,
+          dropoff_address: activity.dropoff_address,
+          student_name: activity.student_profiles?.full_name || 'Unknown Student',
+          rating: activity.ride_ratings?.[0]?.rating || null,
+          earnings: activity.driver_earnings?.[0]?.amount || 0
+        })) || [];
+
+        console.log('Activity data:', formattedActivity);
 
         const { data: earningsData, error: earningsError } = await supabase
           .from('driver_earnings')
@@ -132,7 +160,7 @@ const DriverDashboard = () => {
           week_earnings: weekEarnings,
           active_hours: statsData?.active_hours || 0
         });
-        setRecentActivity(activityData || []);
+        setRecentActivity(formattedActivity);
         setIsLoading(false);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
