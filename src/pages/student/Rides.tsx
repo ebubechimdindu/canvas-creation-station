@@ -32,6 +32,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { MapboxLocationManager } from "@/components/map/MapboxLocationManager";
 
 const StudentRides: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -44,6 +45,10 @@ const StudentRides: React.FC = () => {
   const [review, setReview] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [selectedLocations, setSelectedLocations] = useState<{
+    pickup?: CampusLocation;
+    dropoff?: CampusLocation;
+  }>({});
   const { toast } = useToast();
   const [selectedRideDetails, setSelectedRideDetails] = useState<RideRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -113,6 +118,10 @@ const StudentRides: React.FC = () => {
     specialRequirements?: string;
   }) => {
     try {
+      setSelectedLocations({
+        pickup: formData.pickup,
+        dropoff: formData.dropoff
+      });
       await createRideRequest(formData);
       setIsRequestOpen(false);
       toast({
@@ -235,6 +244,22 @@ const StudentRides: React.FC = () => {
                   onCancel={handleCancelRequest}
                 />
               )}
+
+              <Card className="mb-6">
+                <CardContent className="p-0">
+                  <div className="h-[400px] w-full">
+                    <MapboxLocationManager
+                      selectedLocations={selectedLocations}
+                      showRoutePath={true}
+                      mode="student"
+                      nearbyDrivers={nearbyDrivers?.map(driver => ({
+                        lat: driver.currentLocation?.lat || 0,
+                        lng: driver.currentLocation?.lng || 0
+                      }))}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">

@@ -1,4 +1,3 @@
-
 export type Json =
   | string
   | number
@@ -134,4 +133,3 @@ export interface Database {
     }
   }
 }
-
