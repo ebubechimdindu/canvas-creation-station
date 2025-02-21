@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useAppSelector, useAppDispatch } from "@/hooks/redux";
 import { setActiveRide, addToHistory, updateRideStatus } from "@/features/rides/ridesSlice";
@@ -63,11 +64,13 @@ const StudentRides: React.FC = () => {
     isLoadingHistory,
   } = useRideRequests();
 
+  // Get nearby drivers using the hook
   const { nearbyDrivers, error: locationError } = useLocationUpdates('all-drivers');
 
   useEffect(() => {
     if (!activeRide?.id) return;
 
+    // Subscribe to ride status changes
     const channel = supabase
       .channel(`ride_${activeRide.id}`)
       .on(
@@ -85,22 +88,23 @@ const StudentRides: React.FC = () => {
               status: payload.new.status
             }));
 
-            const statusMessages = {
+            // Status update notifications
+            const statusMessages: Record<RideStatus, string> = {
               driver_assigned: 'Driver has been assigned to your ride',
               en_route_to_pickup: 'Driver is on the way to pick you up',
               arrived_at_pickup: 'Driver has arrived at pickup location',
               in_progress: 'Your ride has started',
               completed: 'Your ride has been completed',
-              cancelled: 'Your ride has been cancelled'
+              cancelled: 'Your ride has been cancelled',
+              requested: 'Ride requested',
+              finding_driver: 'Finding a driver',
+              timeout: 'Request timed out'
             };
 
-            const message = statusMessages[payload.new.status as keyof typeof statusMessages];
-            if (message) {
-              toast({
-                title: 'Ride Update',
-                description: message,
-              });
-            }
+            toast({
+              title: 'Ride Update',
+              description: statusMessages[payload.new.status as RideStatus] || 'Status updated',
+            });
           }
         }
       )
