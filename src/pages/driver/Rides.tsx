@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from 'react';
 import DriverSidebar from '@/components/driver/DriverSidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useDriverLocation } from '@/hooks/use-driver-location';
@@ -59,6 +58,36 @@ const DriverRides = () => {
 
     fetchPendingRequests();
 
+    // Also fetch active ride if exists
+    const fetchActiveRide = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('ride_requests')
+        .select(`
+          *,
+          student_profiles:student_id (
+            full_name,
+            phone_number
+          )
+        `)
+        .eq('driver_id', user.id)
+        .in('status', ['driver_assigned', 'en_route_to_pickup', 'arrived_at_pickup', 'in_progress'])
+        .single();
+
+      if (error) {
+        console.error('Error fetching active ride:', error);
+        return;
+      }
+
+      if (data) {
+        setActiveRide(data);
+      }
+    };
+
+    fetchActiveRide();
+
     const channel = supabase
       .channel('ride_requests')
       .on(
@@ -70,6 +99,7 @@ const DriverRides = () => {
         },
         () => {
           fetchPendingRequests();
+          fetchActiveRide();
         }
       )
       .subscribe();
@@ -144,25 +174,40 @@ const DriverRides = () => {
     }
   };
 
-  const extractCoordinates = (location: string | null): { lat: number; lng: number } | null => {
+  const extractCoordinates = (location: string | null | unknown): { lat: number; lng: number } | null => {
     if (!location) return null;
     
     try {
-      // Handle PostGIS point format: "POINT(longitude latitude)"
-      const match = location.match(/POINT\(([-\d.]+) ([-\d.]+)\)/);
-      if (match) {
-        return {
-          lat: parseFloat(match[2]), // Latitude is second in PostGIS
-          lng: parseFloat(match[1])  // Longitude is first in PostGIS
-        };
+      // If location is already an object with coordinates
+      if (typeof location === 'object' && location !== null) {
+        const coords = location as any;
+        if ('coordinates' in coords) {
+          return {
+            lat: coords.coordinates[1],
+            lng: coords.coordinates[0]
+          };
+        }
       }
-      
-      // Fallback to comma-separated format
-      const [lat, lng] = location.split(',').map(parseFloat);
-      if (!isNaN(lat) && !isNaN(lng)) {
-        return { lat, lng };
+
+      // If location is a string
+      if (typeof location === 'string') {
+        // Handle PostGIS point format: "POINT(longitude latitude)"
+        const pointMatch = location.match(/POINT\(([-\d.]+) ([-\d.]+)\)/);
+        if (pointMatch) {
+          return {
+            lat: parseFloat(pointMatch[2]), // Latitude is second in PostGIS
+            lng: parseFloat(pointMatch[1])  // Longitude is first in PostGIS
+          };
+        }
+
+        // Try comma-separated format
+        const [lat, lng] = location.split(',').map(parseFloat);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          return { lat, lng };
+        }
       }
-      
+
+      console.warn('Could not parse location:', location);
       return null;
     } catch (error) {
       console.error('Error parsing location:', error);
@@ -174,8 +219,15 @@ const DriverRides = () => {
     let locations: { pickup?: CampusLocation; dropoff?: CampusLocation } = {};
 
     if (activeRide) {
+      console.log('Active ride locations:', {
+        pickup: activeRide.pickup_location,
+        dropoff: activeRide.dropoff_location
+      });
+
       const pickupCoords = extractCoordinates(activeRide.pickup_location);
       const dropoffCoords = extractCoordinates(activeRide.dropoff_location);
+
+      console.log('Extracted coordinates:', { pickupCoords, dropoffCoords });
 
       if (pickupCoords && dropoffCoords) {
         locations = {
