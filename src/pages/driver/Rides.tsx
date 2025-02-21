@@ -1,6 +1,5 @@
-
 import React, { useEffect, useState } from 'react';
-import { DriverSidebar } from '@/components/driver/DriverSidebar';
+import DriverSidebar from '@/components/driver/DriverSidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +10,7 @@ import { MapProvider } from '@/components/map/MapProvider';
 import MapboxLocationManager from '@/components/map/MapboxLocationManager';
 import { RideRequestCard } from '@/components/driver/RideRequestCard';
 import type { RideRequest } from '@/types';
+import type { CampusLocation } from '@/types/locations';
 import { SidebarProvider } from '@/components/ui/sidebar';
 
 const DriverRides = () => {
@@ -133,6 +133,40 @@ const DriverRides = () => {
     }
   };
 
+  // Convert ride locations to CampusLocation type
+  const getRideLocations = (ride: RideRequest | null): { pickup?: CampusLocation; dropoff?: CampusLocation } => {
+    if (!ride) return {};
+
+    return {
+      pickup: {
+        id: `pickup-${ride.id}`,
+        name: ride.pickup_address,
+        coordinates: {
+          lat: parseFloat(ride.pickup_location.split(',')[0]),
+          lng: parseFloat(ride.pickup_location.split(',')[1])
+        },
+        locationType: 'pickup_point',
+        isActive: true,
+        isVerified: true,
+        createdAt: ride.created_at,
+        updatedAt: ride.updated_at
+      },
+      dropoff: {
+        id: `dropoff-${ride.id}`,
+        name: ride.dropoff_address,
+        coordinates: {
+          lat: parseFloat(ride.dropoff_location.split(',')[0]),
+          lng: parseFloat(ride.dropoff_location.split(',')[1])
+        },
+        locationType: 'dropoff_point',
+        isActive: true,
+        isVerified: true,
+        createdAt: ride.created_at,
+        updatedAt: ride.updated_at
+      }
+    };
+  };
+
   return (
     <SidebarProvider>
       <MapProvider>
@@ -155,26 +189,7 @@ const DriverRides = () => {
                       <MapboxLocationManager
                         mode="driver"
                         currentLocation={currentLocation || undefined}
-                        selectedLocations={
-                          activeRide
-                            ? {
-                                pickup: {
-                                  name: activeRide.pickup_address,
-                                  coordinates: {
-                                    lat: 6.8923,
-                                    lng: 3.7242
-                                  }
-                                },
-                                dropoff: {
-                                  name: activeRide.dropoff_address,
-                                  coordinates: {
-                                    lat: 6.8913,
-                                    lng: 3.7252
-                                  }
-                                }
-                              }
-                            : undefined
-                        }
+                        selectedLocations={getRideLocations(activeRide)}
                         showRoutePath={!!activeRide}
                       />
                     </div>

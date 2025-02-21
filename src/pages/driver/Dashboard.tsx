@@ -13,7 +13,7 @@ import { useLocationUpdates } from "@/hooks/use-location-updates";
 import { useDriverLocation } from "@/hooks/use-driver-location";
 import { MapProvider } from "@/components/map/MapProvider";
 import { supabase } from "@/lib/supabase";
-import RideRequestCard from "@/components/driver/RideRequestCard";
+import { RideRequestCard } from "@/components/driver/RideRequestCard";
 import { format, formatDistanceToNow } from "date-fns";
 
 interface RideRequest {
