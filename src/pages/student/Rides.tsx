@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar, Car, Search, Download, Star } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { MapProvider } from "@/components/map/MapProvider";
+import MapboxLocationManager from "@/components/map/MapboxLocationManager";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -32,7 +33,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { MapboxLocationManager } from "@/components/map/MapboxLocationManager";
 
 const StudentRides: React.FC = () => {
   const dispatch = useAppDispatch();
