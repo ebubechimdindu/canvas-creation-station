@@ -370,14 +370,20 @@ const DriverDashboard = () => {
 
             {currentRideRequest && driverStatus === 'available' && (
               <RideRequestCard
-                id={currentRideRequest.id}
-                pickupAddress={currentRideRequest.pickup_address}
-                dropoffAddress={currentRideRequest.dropoff_address}
-                estimatedEarnings={currentRideRequest.estimated_earnings}
-                estimatedDistance={currentRideRequest.estimated_distance}
-                estimatedDuration={currentRideRequest.estimated_duration}
+                request={{
+                  id: currentRideRequest.id,
+                  pickup_address: currentRideRequest.pickup_address,
+                  dropoff_address: currentRideRequest.dropoff_address,
+                  status: 'requested',
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                  pickup_location: `${currentRideRequest.pickup_location}`,
+                  dropoff_location: `${currentRideRequest.dropoff_location}`,
+                  student_id: '',
+                  notes: `Estimated earnings: ₦${currentRideRequest.estimated_earnings.toFixed(2)}\nEstimated distance: ${currentRideRequest.estimated_distance.toFixed(1)}km\nEstimated duration: ${Math.round(currentRideRequest.estimated_duration)}mins`
+                }}
                 onAccept={handleAcceptRide}
-                onReject={handleRejectRide}
+                onDecline={handleRejectRide}
               />
             )}
 
