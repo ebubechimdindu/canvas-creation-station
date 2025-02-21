@@ -17,6 +17,10 @@ export const RideRequestCard: React.FC<RideRequestCardProps> = ({
   onAccept,
   onDecline
 }) => {
+  const notes = request.notes?.split('\n');
+  const studentName = notes?.find(note => note.startsWith('Student:'))?.replace('Student:', '')?.trim();
+  const phoneNumber = notes?.find(note => note.startsWith('Phone:'))?.replace('Phone:', '')?.trim();
+
   return (
     <Card className="w-full hover:shadow-lg transition-shadow duration-200">
       <CardContent className="p-4">
@@ -29,6 +33,19 @@ export const RideRequestCard: React.FC<RideRequestCardProps> = ({
               </span>
             </div>
             
+            {studentName && (
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <User className="h-4 w-4" />
+                <span>{studentName}</span>
+              </div>
+            )}
+            
+            {phoneNumber && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>{phoneNumber}</span>
+              </div>
+            )}
+            
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-green-500" />
@@ -40,9 +57,9 @@ export const RideRequestCard: React.FC<RideRequestCardProps> = ({
               </div>
             </div>
 
-            {request.notes && (
+            {notes && notes.length > 0 && !notes[0].startsWith('Student:') && !notes[0].startsWith('Phone:') && (
               <div className="text-sm text-muted-foreground">
-                Note: {request.notes}
+                {notes.filter(note => !note.startsWith('Student:') && !note.startsWith('Phone:')).join('\n')}
               </div>
             )}
           </div>

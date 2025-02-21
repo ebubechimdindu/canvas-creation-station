@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import DriverSidebar from '@/components/driver/DriverSidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,48 +14,42 @@ import type { RideRequest } from '@/types';
 import type { CampusLocation } from '@/types/locations';
 import { SidebarProvider } from '@/components/ui/sidebar';
 
+interface ExtendedRideRequest extends RideRequest {
+  student_profiles?: {
+    full_name: string;
+    phone_number: string;
+  }
+}
+
 const DriverRides = () => {
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [pendingRequests, setPendingRequests] = useState<RideRequest[]>([]);
-  const [activeRide, setActiveRide] = useState<RideRequest | null>(null);
+  const [pendingRequests, setPendingRequests] = useState<ExtendedRideRequest[]>([]);
+  const [activeRide, setActiveRide] = useState<ExtendedRideRequest | null>(null);
   const { toast } = useToast();
 
   // Initialize driver location tracking
   useDriverLocation();
 
-  // Get current location
+  // Set driver's initial location
   useEffect(() => {
-    const watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        setCurrentLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        });
-      },
-      (error) => {
-        console.error('Error getting location:', error);
-        toast({
-          title: 'Location Error',
-          description: 'Failed to get your current location',
-          variant: 'destructive'
-        });
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 5000,
-        maximumAge: 0
-      }
-    );
-
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, [toast]);
+    setCurrentLocation({
+      lat: 6.894000,
+      lng: 3.718700
+    });
+  }, []);
 
   // Subscribe to new ride requests
   useEffect(() => {
     const fetchPendingRequests = async () => {
       const { data, error } = await supabase
         .from('ride_requests')
-        .select('*')
+        .select(`
+          *,
+          student_profiles:student_id (
+            full_name,
+            phone_number
+          )
+        `)
         .in('status', ['requested', 'finding_driver']);
 
       if (error) {
@@ -76,7 +71,7 @@ const DriverRides = () => {
           schema: 'public',
           table: 'ride_requests'
         },
-        (payload) => {
+        () => {
           fetchPendingRequests();
         }
       )
@@ -89,8 +84,12 @@ const DriverRides = () => {
 
   const handleAcceptRequest = async (requestId: number) => {
     try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error('Not authenticated');
+
       const { error } = await supabase.rpc('handle_driver_response', {
         request_id: requestId,
+        driver_id: user.id,
         accepted: true
       });
 
@@ -112,8 +111,12 @@ const DriverRides = () => {
 
   const handleDeclineRequest = async (requestId: number) => {
     try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error('Not authenticated');
+
       const { error } = await supabase.rpc('handle_driver_response', {
         request_id: requestId,
+        driver_id: user.id,
         accepted: false
       });
 
@@ -134,7 +137,7 @@ const DriverRides = () => {
   };
 
   // Convert ride locations to CampusLocation type
-  const getRideLocations = (ride: RideRequest | null): { pickup?: CampusLocation; dropoff?: CampusLocation } => {
+  const getRideLocations = (ride: ExtendedRideRequest | null): { pickup?: CampusLocation; dropoff?: CampusLocation } => {
     if (!ride) return {};
 
     return {
@@ -205,7 +208,10 @@ const DriverRides = () => {
                       {pendingRequests.map((request) => (
                         <RideRequestCard
                           key={request.id}
-                          request={request}
+                          request={{
+                            ...request,
+                            notes: `Student: ${request.student_profiles?.full_name}\nPhone: ${request.student_profiles?.phone_number}\n${request.notes || ''}`
+                          }}
                           onAccept={handleAcceptRequest}
                           onDecline={handleDeclineRequest}
                         />
@@ -227,7 +233,10 @@ const DriverRides = () => {
                     {activeRide ? (
                       <div className="space-y-4">
                         <RideRequestCard
-                          request={activeRide}
+                          request={{
+                            ...activeRide,
+                            notes: `Student: ${activeRide.student_profiles?.full_name}\nPhone: ${activeRide.student_profiles?.phone_number}\n${activeRide.notes || ''}`
+                          }}
                           onAccept={() => {}}
                           onDecline={() => {}}
                         />
