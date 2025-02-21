@@ -87,13 +87,23 @@ const DriverRides = () => {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('Not authenticated');
 
-      const { error } = await supabase.rpc('handle_driver_response', {
-        request_id: requestId,
-        driver_id: user.id,
-        accepted: true
-      });
+      // First update the ride request status
+      const { error: updateError } = await supabase
+        .from('ride_requests')
+        .update({
+          status: 'driver_assigned',
+          driver_id: user.id
+        })
+        .eq('id', requestId);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // Find the accepted request and set it as active
+      const acceptedRequest = pendingRequests.find(req => req.id === requestId);
+      if (acceptedRequest) {
+        setActiveRide(acceptedRequest);
+        setPendingRequests(prev => prev.filter(req => req.id !== requestId));
+      }
 
       toast({
         title: 'Success',
@@ -114,13 +124,18 @@ const DriverRides = () => {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('Not authenticated');
 
-      const { error } = await supabase.rpc('handle_driver_response', {
-        request_id: requestId,
-        driver_id: user.id,
-        accepted: false
-      });
+      // Update the ride request status
+      const { error: updateError } = await supabase
+        .from('ride_requests')
+        .update({
+          status: 'finding_driver'
+        })
+        .eq('id', requestId);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // Remove from pending requests
+      setPendingRequests(prev => prev.filter(req => req.id !== requestId));
 
       toast({
         title: 'Success',
@@ -136,38 +151,56 @@ const DriverRides = () => {
     }
   };
 
-  // Convert ride locations to CampusLocation type
-  const getRideLocations = (ride: ExtendedRideRequest | null): { pickup?: CampusLocation; dropoff?: CampusLocation } => {
-    if (!ride) return {};
+  // Convert all ride locations to CampusLocation type
+  const getAllLocations = () => {
+    const locations: { [key: string]: CampusLocation } = {};
+    
+    // Add all pending request pickup locations
+    pendingRequests.forEach((request) => {
+      if (request.pickup_location) {
+        const [lat, lng] = request.pickup_location.split(',').map(parseFloat);
+        locations[`pickup-${request.id}`] = {
+          id: `pickup-${request.id}`,
+          name: `${request.student_profiles?.full_name || 'Student'}'s Pickup: ${request.pickup_address}`,
+          coordinates: { lat, lng },
+          locationType: 'pickup_point',
+          isActive: true,
+          isVerified: true,
+          createdAt: request.created_at,
+          updatedAt: request.updated_at
+        };
+      }
+    });
 
-    return {
-      pickup: {
-        id: `pickup-${ride.id}`,
-        name: ride.pickup_address,
-        coordinates: {
-          lat: parseFloat(ride.pickup_location.split(',')[0]),
-          lng: parseFloat(ride.pickup_location.split(',')[1])
-        },
+    // Add active ride locations if exists
+    if (activeRide) {
+      const [pickupLat, pickupLng] = activeRide.pickup_location.split(',').map(parseFloat);
+      const [dropoffLat, dropoffLng] = activeRide.dropoff_location.split(',').map(parseFloat);
+
+      locations[`active-pickup`] = {
+        id: 'active-pickup',
+        name: `Active Ride Pickup: ${activeRide.pickup_address}`,
+        coordinates: { lat: pickupLat, lng: pickupLng },
         locationType: 'pickup_point',
         isActive: true,
         isVerified: true,
-        createdAt: ride.created_at,
-        updatedAt: ride.updated_at
-      },
-      dropoff: {
-        id: `dropoff-${ride.id}`,
-        name: ride.dropoff_address,
-        coordinates: {
-          lat: parseFloat(ride.dropoff_location.split(',')[0]),
-          lng: parseFloat(ride.dropoff_location.split(',')[1])
-        },
+        createdAt: activeRide.created_at,
+        updatedAt: activeRide.updated_at
+      };
+
+      locations[`active-dropoff`] = {
+        id: 'active-dropoff',
+        name: `Active Ride Dropoff: ${activeRide.dropoff_address}`,
+        coordinates: { lat: dropoffLat, lng: dropoffLng },
         locationType: 'dropoff_point',
         isActive: true,
         isVerified: true,
-        createdAt: ride.created_at,
-        updatedAt: ride.updated_at
-      }
-    };
+        createdAt: activeRide.created_at,
+        updatedAt: activeRide.updated_at
+      };
+    }
+
+    return locations;
   };
 
   return (
@@ -192,7 +225,7 @@ const DriverRides = () => {
                       <MapboxLocationManager
                         mode="driver"
                         currentLocation={currentLocation || undefined}
-                        selectedLocations={getRideLocations(activeRide)}
+                        locations={getAllLocations()}
                         showRoutePath={!!activeRide}
                       />
                     </div>
