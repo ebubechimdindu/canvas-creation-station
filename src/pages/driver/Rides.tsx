@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import DriverSidebar from '@/components/driver/DriverSidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -143,52 +144,82 @@ const DriverRides = () => {
     }
   };
 
+  const extractCoordinates = (location: string | null): { lat: number; lng: number } | null => {
+    if (!location) return null;
+    
+    try {
+      // Handle PostGIS point format: "POINT(longitude latitude)"
+      const match = location.match(/POINT\(([-\d.]+) ([-\d.]+)\)/);
+      if (match) {
+        return {
+          lat: parseFloat(match[2]), // Latitude is second in PostGIS
+          lng: parseFloat(match[1])  // Longitude is first in PostGIS
+        };
+      }
+      
+      // Fallback to comma-separated format
+      const [lat, lng] = location.split(',').map(parseFloat);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        return { lat, lng };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error parsing location:', error);
+      return null;
+    }
+  };
+
   const getSelectedLocations = () => {
     let locations: { pickup?: CampusLocation; dropoff?: CampusLocation } = {};
 
     if (activeRide) {
-      const [pickupLat, pickupLng] = activeRide.pickup_location.split(',').map(parseFloat);
-      const [dropoffLat, dropoffLng] = activeRide.dropoff_location.split(',').map(parseFloat);
+      const pickupCoords = extractCoordinates(activeRide.pickup_location);
+      const dropoffCoords = extractCoordinates(activeRide.dropoff_location);
 
-      locations = {
-        pickup: {
-          id: 'active-pickup',
-          name: `${activeRide.student_profiles?.full_name}'s Pickup: ${activeRide.pickup_address}`,
-          coordinates: { lat: pickupLat, lng: pickupLng },
-          locationType: 'pickup_point',
-          isActive: true,
-          isVerified: true,
-          createdAt: activeRide.created_at,
-          updatedAt: activeRide.updated_at
-        },
-        dropoff: {
-          id: 'active-dropoff',
-          name: `${activeRide.student_profiles?.full_name}'s Dropoff: ${activeRide.dropoff_address}`,
-          coordinates: { lat: dropoffLat, lng: dropoffLng },
-          locationType: 'dropoff_point',
-          isActive: true,
-          isVerified: true,
-          createdAt: activeRide.created_at,
-          updatedAt: activeRide.updated_at
-        }
-      };
+      if (pickupCoords && dropoffCoords) {
+        locations = {
+          pickup: {
+            id: 'active-pickup',
+            name: `${activeRide.student_profiles?.full_name}'s Pickup: ${activeRide.pickup_address}`,
+            coordinates: pickupCoords,
+            locationType: 'pickup_point',
+            isActive: true,
+            isVerified: true,
+            createdAt: activeRide.created_at,
+            updatedAt: activeRide.updated_at
+          },
+          dropoff: {
+            id: 'active-dropoff',
+            name: `${activeRide.student_profiles?.full_name}'s Dropoff: ${activeRide.dropoff_address}`,
+            coordinates: dropoffCoords,
+            locationType: 'dropoff_point',
+            isActive: true,
+            isVerified: true,
+            createdAt: activeRide.created_at,
+            updatedAt: activeRide.updated_at
+          }
+        };
+      }
     } 
     else if (pendingRequests.length > 0) {
       const request = pendingRequests[0];
-      const [lat, lng] = request.pickup_location.split(',').map(parseFloat);
+      const pickupCoords = extractCoordinates(request.pickup_location);
       
-      locations = {
-        pickup: {
-          id: `pickup-${request.id}`,
-          name: `${request.student_profiles?.full_name}'s Pickup: ${request.pickup_address}`,
-          coordinates: { lat, lng },
-          locationType: 'pickup_point',
-          isActive: true,
-          isVerified: true,
-          createdAt: request.created_at,
-          updatedAt: request.updated_at
-        }
-      };
+      if (pickupCoords) {
+        locations = {
+          pickup: {
+            id: `pickup-${request.id}`,
+            name: `${request.student_profiles?.full_name}'s Pickup: ${request.pickup_address}`,
+            coordinates: pickupCoords,
+            locationType: 'pickup_point',
+            isActive: true,
+            isVerified: true,
+            createdAt: request.created_at,
+            updatedAt: request.updated_at
+          }
+        };
+      }
     }
 
     return locations;
