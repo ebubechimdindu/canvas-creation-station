@@ -48,6 +48,23 @@ interface RecentActivity {
   student_name: string;
 }
 
+interface ActivityQueryResult {
+  id: number;
+  created_at: string;
+  status: string;
+  pickup_address: string;
+  dropoff_address: string;
+  student_profiles: {
+    full_name: string;
+  } | null;
+  ride_ratings: {
+    rating: number;
+  }[] | null;
+  driver_earnings: {
+    amount: number;
+  }[] | null;
+}
+
 const DriverDashboard = () => {
   const { toast } = useToast();
   const dispatch = useAppDispatch();
@@ -88,7 +105,6 @@ const DriverDashboard = () => {
 
         console.log('Stats data:', statsData);
 
-        // Update the query to match the actual schema
         const { data: activityData, error: activityError } = await supabase
           .from('ride_requests')
           .select(`
@@ -116,8 +132,7 @@ const DriverDashboard = () => {
           throw activityError;
         }
 
-        // Transform the data to match the expected format
-        const formattedActivity = activityData?.map(activity => ({
+        const formattedActivity = (activityData as ActivityQueryResult[] | null)?.map(activity => ({
           id: activity.id,
           created_at: activity.created_at,
           status: activity.status,
