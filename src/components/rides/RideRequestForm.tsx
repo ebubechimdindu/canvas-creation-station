@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -23,7 +22,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { MapPin } from "lucide-react";
 
 interface RideRequestFormProps {
-  onSubmit: (e: React.FormEvent) => Promise<void>;
+  onSubmit: (formData: {
+    pickup: CampusLocation;
+    dropoff: CampusLocation;
+    notes?: string;
+    specialRequirements?: string;
+  }) => Promise<void>;
   onCancel: () => void;
   availableDrivers?: Driver[];
   locations: CampusLocation[];
@@ -53,10 +57,11 @@ export function RideRequestForm({
   const { currentLocation, error: locationError, isLoading: locationLoading, updateLocation, isWithinCampus } = useStudentLocation(mapboxToken);
   const { toast } = useToast();
 
-  // Debug logs to track state changes
   React.useEffect(() => {
-    console.log('Pickup Location:', selectedPickupLocation);
-    console.log('Dropoff Location:', selectedDropoffLocation);
+    console.log('Selected Locations:', {
+      pickup: selectedPickupLocation,
+      dropoff: selectedDropoffLocation
+    });
   }, [selectedPickupLocation, selectedDropoffLocation]);
 
   const handleCurrentLocation = async () => {
@@ -102,28 +107,16 @@ export function RideRequestForm({
 
           setSelectedPickupLocation(newPickupLocation);
           setUseCurrentLocation(true);
-
-          toast({
-            title: "Location Updated",
-            description: "Your current location has been set as the pickup point",
-          });
         }
       } catch (error) {
         console.error('Error getting location:', error);
         toast({
           title: 'Error',
-          description: 'Failed to get your current location. Please select manually from the map.',
+          description: 'Failed to get your current location. Please select manually.',
           variant: 'destructive',
         });
         setUseCurrentLocation(false);
       }
-    } else {
-      toast({
-        title: 'Error',
-        description: 'Geolocation is not supported by your browser',
-        variant: 'destructive',
-      });
-      setUseCurrentLocation(false);
     }
   };
 
@@ -133,7 +126,7 @@ export function RideRequestForm({
     if (!isWithinCampus(location.coordinates.lat, location.coordinates.lng)) {
       toast({
         title: "Invalid Location",
-        description: `The selected ${type} location is outside campus boundaries. Please select a location within campus.`,
+        description: `The selected ${type} location is outside campus boundaries.`,
         variant: "destructive",
       });
       return;
@@ -145,40 +138,48 @@ export function RideRequestForm({
     } else {
       setSelectedDropoffLocation(location);
     }
-
-    // Provide immediate feedback on location selection
-    toast({
-      title: "Location Selected",
-      description: `${type === 'pickup' ? 'Pickup' : 'Dropoff'} location set to ${location.name}`,
-    });
   };
 
-  const isValidRequest = React.useCallback(() => {
+  const isValidRequest = () => {
     if (!selectedPickupLocation || !selectedDropoffLocation) {
-      console.log('Missing locations:', { pickup: !!selectedPickupLocation, dropoff: !!selectedDropoffLocation });
+      console.log('Missing locations:', { 
+        pickup: selectedPickupLocation, 
+        dropoff: selectedDropoffLocation 
+      });
       return false;
     }
     
-    const pickupValid = isWithinCampus(selectedPickupLocation.coordinates.lat, selectedPickupLocation.coordinates.lng);
-    const dropoffValid = isWithinCampus(selectedDropoffLocation.coordinates.lat, selectedDropoffLocation.coordinates.lng);
+    const pickupValid = isWithinCampus(
+      selectedPickupLocation.coordinates.lat,
+      selectedPickupLocation.coordinates.lng
+    );
+    const dropoffValid = isWithinCampus(
+      selectedDropoffLocation.coordinates.lat,
+      selectedDropoffLocation.coordinates.lng
+    );
     
     console.log('Location validation:', { pickupValid, dropoffValid });
     return pickupValid && dropoffValid;
-  }, [selectedPickupLocation, selectedDropoffLocation, isWithinCampus]);
+  };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!isValidRequest()) {
+    if (!isValidRequest() || !selectedPickupLocation || !selectedDropoffLocation) {
       toast({
         title: "Invalid Locations",
-        description: "Please ensure both pickup and dropoff locations are within campus boundaries",
+        description: "Please ensure both pickup and dropoff locations are selected and within campus boundaries",
         variant: "destructive",
       });
       return;
     }
 
-    await onSubmit(e);
+    await onSubmit({
+      pickup: selectedPickupLocation,
+      dropoff: selectedDropoffLocation,
+      notes: rideRequest.notes,
+      specialRequirements: rideRequest.specialRequirements
+    });
   };
 
   return (

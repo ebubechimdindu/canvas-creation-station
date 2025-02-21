@@ -106,15 +106,24 @@ const StudentRides: React.FC = () => {
     };
   }, [activeRide?.id, dispatch, toast]);
 
-  const handleRideRequest = async (formData: any) => {
+  const handleRideRequest = async (formData: {
+    pickup: CampusLocation;
+    dropoff: CampusLocation;
+    notes?: string;
+    specialRequirements?: string;
+  }) => {
     try {
       await createRideRequest(formData);
       setIsRequestOpen(false);
+      toast({
+        title: "Success",
+        description: "Your ride request has been submitted",
+      });
     } catch (error) {
       console.error('Error creating ride request:', error);
       toast({
         title: "Error",
-        description: "Failed to create ride request. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to create ride request",
         variant: "destructive"
       });
     }
