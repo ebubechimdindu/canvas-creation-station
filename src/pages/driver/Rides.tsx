@@ -144,7 +144,24 @@ const DriverRides = () => {
   };
 
   const getSelectedLocations = () => {
-    let locations: { pickup?: CampusLocation, dropoff?: CampusLocation } = {};
+    let locations: { pickup?: CampusLocation; dropoff?: CampusLocation } = {};
+
+    pendingRequests.forEach((request, index) => {
+      const [lat, lng] = request.pickup_location.split(',').map(parseFloat);
+      
+      if (index === 0) {
+        locations.pickup = {
+          id: `pickup-${request.id}`,
+          name: `${request.student_profiles?.full_name}'s Pickup: ${request.pickup_address}`,
+          coordinates: { lat, lng },
+          locationType: 'pickup_point',
+          isActive: true,
+          isVerified: true,
+          createdAt: request.created_at,
+          updatedAt: request.updated_at
+        };
+      }
+    });
 
     if (activeRide) {
       const [pickupLat, pickupLng] = activeRide.pickup_location.split(',').map(parseFloat);
@@ -172,38 +189,10 @@ const DriverRides = () => {
           updatedAt: activeRide.updated_at
         }
       };
-    } 
-    else if (pendingRequests.length > 0) {
-      const request = pendingRequests[0];
-      const [lat, lng] = request.pickup_location.split(',').map(parseFloat);
-      
-      locations = {
-        pickup: {
-          id: `pickup-${request.id}`,
-          name: `${request.student_profiles?.full_name}'s Pickup: ${request.pickup_address}`,
-          coordinates: { lat, lng },
-          locationType: 'pickup_point',
-          isActive: true,
-          isVerified: true,
-          createdAt: request.created_at,
-          updatedAt: request.updated_at
-        }
-      };
     }
 
     return locations;
   };
-
-  const getPendingLocations = () => 
-    pendingRequests.map(request => {
-      const [lat, lng] = request.pickup_location.split(',').map(parseFloat);
-      return {
-        lat,
-        lng,
-        studentName: request.student_profiles?.full_name || 'Student',
-        address: request.pickup_address
-      };
-    });
 
   return (
     <SidebarProvider>
@@ -229,7 +218,7 @@ const DriverRides = () => {
                         currentLocation={currentLocation || undefined}
                         selectedLocations={getSelectedLocations()}
                         showRoutePath={!!activeRide}
-                        nearbyRequests={getPendingLocations()}
+                        showNearbyRequests={true}
                       />
                     </div>
                   </CardContent>
