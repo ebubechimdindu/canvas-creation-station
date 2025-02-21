@@ -1,94 +1,69 @@
 
-import React from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin, Clock, DollarSign } from "lucide-react";
+import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { MapPin, Clock, User } from 'lucide-react';
+import type { RideRequest } from '@/types';
 
 interface RideRequestCardProps {
-  id: number;
-  pickupAddress: string;
-  dropoffAddress: string;
-  estimatedEarnings: number;
-  estimatedDistance: number;
-  estimatedDuration: number;
-  onAccept: (id: number) => void;
-  onReject: (id: number) => void;
+  request: RideRequest;
+  onAccept: (requestId: number) => void;
+  onDecline: (requestId: number) => void;
 }
 
-const RideRequestCard = ({
-  id,
-  pickupAddress,
-  dropoffAddress,
-  estimatedEarnings,
-  estimatedDistance,
-  estimatedDuration,
+export const RideRequestCard: React.FC<RideRequestCardProps> = ({
+  request,
   onAccept,
-  onReject,
-}: RideRequestCardProps) => {
+  onDecline
+}) => {
   return (
-    <Card className="w-full animate-fade-in">
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span>New Ride Request</span>
-          <span className="text-sm font-normal text-muted-foreground">
-            <Clock className="inline-block w-4 h-4 mr-1" />
-            Just now
-          </span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <div className="flex items-start gap-2">
-            <MapPin className="w-4 h-4 mt-1 text-green-500" />
-            <div>
-              <p className="text-sm font-medium">Pickup</p>
-              <p className="text-sm text-muted-foreground">{pickupAddress}</p>
+    <Card className="w-full hover:shadow-lg transition-shadow duration-200">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline">{request.status}</Badge>
+              <span className="text-sm text-muted-foreground">
+                {new Date(request.created_at).toLocaleTimeString()}
+              </span>
             </div>
-          </div>
-          <div className="flex items-start gap-2">
-            <MapPin className="w-4 h-4 mt-1 text-red-500" />
-            <div>
-              <p className="text-sm font-medium">Dropoff</p>
-              <p className="text-sm text-muted-foreground">{dropoffAddress}</p>
+            
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-green-500" />
+                <span className="text-sm">{request.pickup_address}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-red-500" />
+                <span className="text-sm">{request.dropoff_address}</span>
+              </div>
             </div>
+
+            {request.notes && (
+              <div className="text-sm text-muted-foreground">
+                Note: {request.notes}
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">Distance</p>
-            <p className="text-lg font-medium">{(estimatedDistance / 1000).toFixed(1)} km</p>
-          </div>
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">Duration</p>
-            <p className="text-lg font-medium">{Math.round(estimatedDuration / 60)} min</p>
-          </div>
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">Earnings</p>
-            <p className="text-lg font-medium flex items-center justify-center">
-              <DollarSign className="w-4 h-4" />
-              {estimatedEarnings.toFixed(2)}
-            </p>
-          </div>
+        <div className="mt-4 flex items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onDecline(request.id)}
+          >
+            Decline
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => onAccept(request.id)}
+          >
+            Accept
+          </Button>
         </div>
       </CardContent>
-      <CardFooter className="flex gap-2">
-        <Button 
-          variant="outline" 
-          className="flex-1"
-          onClick={() => onReject(id)}
-        >
-          Reject
-        </Button>
-        <Button 
-          className="flex-1"
-          onClick={() => onAccept(id)}
-        >
-          Accept
-        </Button>
-      </CardFooter>
     </Card>
   );
 };
-
-export default RideRequestCard;

@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useMap } from '@/components/map/MapProvider';
@@ -13,38 +13,36 @@ interface MapboxLocationManagerProps {
   showRoutePath?: boolean;
   mode?: 'student' | 'driver';
   nearbyDrivers?: Array<{ lat: number; lng: number }>;
+  currentLocation?: { lat: number; lng: number };
 }
 
 const MapboxLocationManager = ({
   selectedLocations,
   showRoutePath = false,
   mode = 'student',
-  nearbyDrivers = []
+  nearbyDrivers = [],
+  currentLocation
 }: MapboxLocationManagerProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  const { mapboxToken } = useMap();
   const markerRefs = useRef<{
     pickup: mapboxgl.Marker | null;
     dropoff: mapboxgl.Marker | null;
     drivers: mapboxgl.Marker[];
+    current: mapboxgl.Marker | null;
   }>({
     pickup: null,
     dropoff: null,
-    drivers: []
+    drivers: [],
+    current: null
   });
+  const { mapboxToken } = useMap();
 
   const CAMPUS_CENTER = [3.7242, 6.8923] as [number, number];
   const CAMPUS_BOUNDS = [
     [3.7192, 6.8873], // Southwest coordinates
     [3.7292, 6.8973]  // Northeast coordinates
   ] as [[number, number], [number, number]];
-
-  const MARKER_COLORS = {
-    pickup: '#3B82F6', // Blue
-    dropoff: '#EF4444', // Red
-    driver: '#10B981'  // Green
-  };
 
   useEffect(() => {
     if (!mapContainer.current || map.current || !mapboxToken) return;
@@ -56,8 +54,6 @@ const MapboxLocationManager = ({
       zoom: 16,
       minZoom: 15,
       maxZoom: 19,
-      pitchWithRotate: true,
-      pitch: 45,
       maxBounds: CAMPUS_BOUNDS
     });
 
@@ -70,6 +66,7 @@ const MapboxLocationManager = ({
     };
   }, [mapboxToken]);
 
+  // Handle selected locations (pickup/dropoff)
   useEffect(() => {
     if (!map.current || !selectedLocations) return;
 
@@ -85,13 +82,13 @@ const MapboxLocationManager = ({
 
     // Add new markers
     if (selectedLocations.pickup) {
-      markerRefs.current.pickup = new mapboxgl.Marker({ color: MARKER_COLORS.pickup })
+      markerRefs.current.pickup = new mapboxgl.Marker({ color: '#3B82F6' })
         .setLngLat([selectedLocations.pickup.coordinates.lng, selectedLocations.pickup.coordinates.lat])
         .addTo(map.current);
     }
 
     if (selectedLocations.dropoff) {
-      markerRefs.current.dropoff = new mapboxgl.Marker({ color: MARKER_COLORS.dropoff })
+      markerRefs.current.dropoff = new mapboxgl.Marker({ color: '#EF4444' })
         .setLngLat([selectedLocations.dropoff.coordinates.lng, selectedLocations.dropoff.coordinates.lat])
         .addTo(map.current);
     }
@@ -104,7 +101,7 @@ const MapboxLocationManager = ({
 
       map.current.fitBounds(bounds, {
         padding: 50,
-        maxZoom: 19
+        maxZoom: 18
       });
 
       if (showRoutePath) {
@@ -116,6 +113,7 @@ const MapboxLocationManager = ({
     }
   }, [selectedLocations, showRoutePath]);
 
+  // Handle nearby drivers
   useEffect(() => {
     if (!map.current) return;
 
@@ -125,12 +123,40 @@ const MapboxLocationManager = ({
 
     // Add new driver markers
     nearbyDrivers.forEach(driver => {
-      const marker = new mapboxgl.Marker({ color: MARKER_COLORS.driver })
+      const el = document.createElement('div');
+      el.className = 'w-8 h-8 rounded-full bg-green-500 border-2 border-white shadow-lg flex items-center justify-center';
+      el.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor"><path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/><path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z"/></svg>';
+
+      const marker = new mapboxgl.Marker({ element: el })
         .setLngLat([driver.lng, driver.lat])
         .addTo(map.current!);
+      
       markerRefs.current.drivers.push(marker);
     });
   }, [nearbyDrivers]);
+
+  // Handle current location (for driver mode)
+  useEffect(() => {
+    if (!map.current || !currentLocation) return;
+
+    if (markerRefs.current.current) {
+      markerRefs.current.current.remove();
+    }
+
+    const el = document.createElement('div');
+    el.className = 'w-8 h-8 rounded-full bg-blue-500 border-2 border-white shadow-lg flex items-center justify-center';
+    el.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>';
+
+    markerRefs.current.current = new mapboxgl.Marker({ element: el })
+      .setLngLat([currentLocation.lng, currentLocation.lat])
+      .addTo(map.current);
+
+    map.current.flyTo({
+      center: [currentLocation.lng, currentLocation.lat],
+      zoom: 17,
+      speed: 1
+    });
+  }, [currentLocation]);
 
   const drawRoute = async (pickup: [number, number], dropoff: [number, number]) => {
     if (!map.current || !mapboxToken) return;

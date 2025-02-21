@@ -1,41 +1,16 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
 import { useAppSelector } from '@/hooks/redux';
+import { useToast } from '@/hooks/use-toast';
 
 export const useDriverLocation = () => {
   const { driverStatus } = useAppSelector((state) => state.rides);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     let watchId: number;
-
-    const ensureDriverProfile = async (userId: string) => {
-      const { data: profile } = await supabase
-        .from('driver_profiles')
-        .select('id')
-        .eq('id', userId)
-        .single();
-
-      if (!profile) {
-        // Profile doesn't exist, create a temporary one
-        const { error: createError } = await supabase
-          .from('driver_profiles')
-          .insert({
-            id: userId,
-            full_name: 'Temporary Driver', // Temporary name
-            driver_license_number: 'PENDING', // Temporary license
-            phone_number: 'PENDING', // Temporary phone
-            status: 'pending_verification'
-          });
-
-        if (createError) {
-          console.error('Error creating driver profile:', createError);
-          throw new Error('Failed to create driver profile');
-        }
-      }
-    };
 
     const updateLocation = async (position: GeolocationPosition) => {
       try {
@@ -45,20 +20,15 @@ export const useDriverLocation = () => {
           throw new Error('Failed to get user');
         }
 
-        // Ensure driver profile exists before updating location
-        await ensureDriverProfile(user.id);
-
-        const { latitude, longitude } = position.coords;
-        const { heading, speed } = position.coords;
-
         const { error: upsertError } = await supabase
           .from('driver_locations')
           .upsert({
-            location: `POINT(${longitude} ${latitude})`,
-            heading,
-            speed,
-            is_online: driverStatus !== 'offline',
             driver_id: user.id,
+            location: `POINT(${position.coords.longitude} ${position.coords.latitude})`,
+            heading: position.coords.heading || 0,
+            speed: position.coords.speed || 0,
+            is_online: driverStatus !== 'offline',
+            is_active: true,
             updated_at: new Date().toISOString()
           }, {
             onConflict: 'driver_id'
@@ -120,7 +90,7 @@ export const useDriverLocation = () => {
         navigator.geolocation.clearWatch(watchId);
       }
     };
-  }, [driverStatus]);
+  }, [driverStatus, toast]);
 
   return { error };
 };
