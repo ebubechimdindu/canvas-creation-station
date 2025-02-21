@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useAppSelector, useAppDispatch } from "@/hooks/redux";
 import { setActiveRide, addToHistory, updateRideStatus } from "@/features/rides/ridesSlice";
@@ -8,10 +7,10 @@ import RideDetailsModal from "@/components/rides/RideDetailsModal";
 import { useCampusLocations } from "@/hooks/use-campus-locations";
 import { useRideRequests } from "@/hooks/use-ride-requests";
 import { Button } from "@/components/ui/button";
-import { Calendar, Car, Search, Download } from "lucide-react";
+import { Calendar, Car, Search, Download, Star } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { MapProvider } from "@/components/map/MapProvider";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -19,7 +18,8 @@ import { RideRequestForm } from "@/components/rides/RideRequestForm";
 import { ActiveRideRequest } from "@/components/rides/ActiveRideRequest";
 import { RideHistoryTable } from "@/components/rides/RideHistoryTable";
 import { supabase } from "@/lib/supabase";
-import type { RideRequest, RideStatus } from "@/types";
+import { Badge } from "@/components/ui/badge";
+import type { RideRequest, RideStatus, Driver } from "@/types";
 import type { CampusLocation } from "@/types/locations";
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import {
@@ -31,11 +31,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-
-type PostgresChangePayload = RealtimePostgresChangesPayload<{
-  old: RideRequest;
-  new: RideRequest;
-}>;
 
 const StudentRides: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -60,6 +55,8 @@ const StudentRides: React.FC = () => {
     cancelRideRequest,
     rideHistory,
     isLoadingHistory,
+    nearbyDrivers,
+    activeRequest,
   } = useRideRequests();
 
   useEffect(() => {
@@ -205,91 +202,93 @@ const StudentRides: React.FC = () => {
             <div className="space-y-6 max-w-7xl mx-auto">
               <div className="flex justify-between items-center">
                 <h1 className="text-3xl font-bold">Your Rides</h1>
-                <Dialog open={isRequestOpen} onOpenChange={setIsRequestOpen}>
-                  <DialogTrigger asChild>
-                    <Button size="lg" className="gap-2">
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button size="lg" className="gap-2 hover:scale-105 transition-transform duration-200">
                       <Car className="h-5 w-5" />
                       Request a Ride
                     </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[90vw] md:max-w-[800px] h-[90vh] md:h-auto">
-                    <DialogHeader>
-                      <DialogTitle>Request a Ride</DialogTitle>
-                    </DialogHeader>
-                    <RideRequestForm
-                      onSubmit={handleRideRequest}
-                      onCancel={() => setIsRequestOpen(false)}
-                      locations={locations}
-                      locationsLoading={locationsLoading}
-                    />
-                  </DialogContent>
-                </Dialog>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-[90vw] sm:w-[540px] p-0 bg-white">
+                    <SheetHeader className="p-6 pb-0">
+                      <SheetTitle>Request a Ride</SheetTitle>
+                    </SheetHeader>
+                    <div className="overflow-y-auto h-full pb-20">
+                      <RideRequestForm
+                        onSubmit={handleRideRequest}
+                        onCancel={() => setIsRequestOpen(false)}
+                        locations={locations}
+                        locationsLoading={locationsLoading}
+                      />
+                    </div>
+                  </SheetContent>
+                </Sheet>
               </div>
 
-              <div className="grid gap-6">
-                {activeRide && (
-                  <ActiveRideRequest
-                    status={activeRide.status}
-                    pickup={activeRide.pickup_address}
-                    dropoff={activeRide.dropoff_address}
-                    driver={activeRide.driver}
-                    onCancel={handleCancelRequest}
-                  />
-                )}
+              {activeRide && (
+                <ActiveRideRequest
+                  status={activeRide.status}
+                  pickup={activeRide.pickup_address}
+                  dropoff={activeRide.dropoff_address}
+                  driver={activeRide.driver}
+                  onCancel={handleCancelRequest}
+                />
+              )}
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Ride History</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex flex-col md:flex-row gap-4">
-                        <div className="flex-1">
-                          <Input
-                            placeholder="Search rides..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full"
-                          />
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Ride History</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex flex-col md:flex-row gap-4">
+                          <div className="flex-1">
+                            <Input
+                              placeholder="Search rides..."
+                              value={searchTerm}
+                              onChange={(e) => setSearchTerm(e.target.value)}
+                              className="w-full"
+                            />
+                          </div>
+                          <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <SelectTrigger className="w-[180px]">
+                              <SelectValue placeholder="Filter by status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Status</SelectItem>
+                              <SelectItem value="completed">Completed</SelectItem>
+                              <SelectItem value="cancelled">Cancelled</SelectItem>
+                              <SelectItem value="in_progress">In Progress</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button variant="outline" onClick={handleExportHistory}>
+                            <Download className="h-4 w-4 mr-2" />
+                            Export
+                          </Button>
                         </div>
-                        <Select value={statusFilter} onValueChange={setStatusFilter}>
-                          <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Filter by status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Status</SelectItem>
-                            <SelectItem value="completed">Completed</SelectItem>
-                            <SelectItem value="cancelled">Cancelled</SelectItem>
-                            <SelectItem value="in_progress">In Progress</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button variant="outline" onClick={handleExportHistory}>
-                          <Download className="h-4 w-4 mr-2" />
-                          Export
-                        </Button>
-                      </div>
 
-                      <RideHistoryTable
-                        rides={filteredRides}
-                        onRideSelect={(ride) => {
-                          setSelectedRideDetails(ride);
-                          setIsDetailsModalOpen(true);
-                        }}
-                        onRateRide={handleRating}
-                        isRatingOpen={isRatingOpen}
-                        setIsRatingOpen={setIsRatingOpen}
-                        rating={rating}
-                        setRating={setRating}
-                        ratingHover={ratingHover}
-                        setRatingHover={setRatingHover}
-                        review={review}
-                        setReview={setReview}
-                        selectedRide={selectedRide}
-                        setSelectedRide={setSelectedRide}
-                      />
+                        <RideHistoryTable
+                          rides={filteredRides}
+                          onRideSelect={(ride) => {
+                            setSelectedRideDetails(ride);
+                            setIsDetailsModalOpen(true);
+                          }}
+                          onRateRide={handleRating}
+                          isRatingOpen={isRatingOpen}
+                          setIsRatingOpen={setIsRatingOpen}
+                          rating={rating}
+                          setRating={setRating}
+                          ratingHover={ratingHover}
+                          setRatingHover={setRatingHover}
+                          review={review}
+                          setReview={setReview}
+                          selectedRide={selectedRide}
+                          setSelectedRide={setSelectedRide}
+                        />
 
-                      <div className="mt-4 flex justify-center">
-                        <nav>
+                        <div className="mt-4 flex justify-center">
                           <Pagination>
                             <PaginationContent>
                               <PaginationItem>
@@ -306,11 +305,50 @@ const StudentRides: React.FC = () => {
                               </PaginationItem>
                             </PaginationContent>
                           </Pagination>
-                        </nav>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="lg:col-span-1">
+                  <Card className="animate-fade-in hover:shadow-lg transition-shadow duration-300">
+                    <CardHeader>
+                      <CardTitle>Available Drivers</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {nearbyDrivers?.map((driver) => (
+                          <div
+                            key={driver.id}
+                            className="flex items-center space-x-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-all duration-300"
+                          >
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold">
+                              {driver.full_name?.charAt(0)}
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-medium">{driver.full_name}</p>
+                              <div className="flex items-center text-sm text-gray-500">
+                                <Star className="h-4 w-4 text-yellow-400 mr-1" />
+                                <span>{driver.average_rating?.toFixed(1)}</span>
+                                <span className="mx-2">•</span>
+                                <span>{Math.round(driver.distance_meters / 1000)}km away</span>
+                              </div>
+                            </div>
+                            <Button
+                              size="sm"
+                              onClick={() => setIsRequestOpen(true)}
+                              disabled={activeRequest !== null}
+                              className="hover:scale-105 transition-transform duration-200"
+                            >
+                              Request
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
             </div>
           </main>
