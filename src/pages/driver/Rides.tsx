@@ -35,57 +35,54 @@ const DriverRides = () => {
     });
   }, []);
 
+  const fetchPendingRequests = async () => {
+    const { data, error } = await supabase
+      .from('ride_requests')
+      .select(`
+        *,
+        student_profiles:student_id (
+          full_name,
+          phone_number
+        )
+      `)
+      .in('status', ['requested', 'finding_driver']);
+
+    if (error) {
+      console.error('Error fetching requests:', error);
+      return;
+    }
+
+    setPendingRequests(data || []);
+  };
+
+  const fetchActiveRide = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('ride_requests')
+      .select(`
+        *,
+        student_profiles:student_id (
+          full_name,
+          phone_number
+        )
+      `)
+      .eq('driver_id', user.id)
+      .in('status', ['driver_assigned', 'en_route_to_pickup', 'arrived_at_pickup', 'in_progress'])
+      .limit(1)
+      .maybeSingle();
+
+    if (error && !error.message.includes('contains 0 rows')) {
+      console.error('Error fetching active ride:', error);
+      return;
+    }
+
+    setActiveRide(data || null);
+  };
+
   useEffect(() => {
-    const fetchPendingRequests = async () => {
-      const { data, error } = await supabase
-        .from('ride_requests')
-        .select(`
-          *,
-          student_profiles:student_id (
-            full_name,
-            phone_number
-          )
-        `)
-        .in('status', ['requested', 'finding_driver']);
-
-      if (error) {
-        console.error('Error fetching requests:', error);
-        return;
-      }
-
-      setPendingRequests(data || []);
-    };
-
     fetchPendingRequests();
-
-    // Also fetch active ride if exists
-    const fetchActiveRide = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('ride_requests')
-        .select(`
-          *,
-          student_profiles:student_id (
-            full_name,
-            phone_number
-          )
-        `)
-        .eq('driver_id', user.id)
-        .in('status', ['driver_assigned', 'en_route_to_pickup', 'arrived_at_pickup', 'in_progress'])
-        .single();
-
-      if (error) {
-        console.error('Error fetching active ride:', error);
-        return;
-      }
-
-      if (data) {
-        setActiveRide(data);
-      }
-    };
-
     fetchActiveRide();
 
     const channel = supabase
@@ -124,11 +121,23 @@ const DriverRides = () => {
 
       if (updateError) throw updateError;
 
-      const acceptedRequest = pendingRequests.find(req => req.id === requestId);
-      if (acceptedRequest) {
-        setActiveRide(acceptedRequest);
-        setPendingRequests(prev => prev.filter(req => req.id !== requestId));
-      }
+      // Immediately fetch the updated ride details
+      const { data: updatedRide, error: fetchError } = await supabase
+        .from('ride_requests')
+        .select(`
+          *,
+          student_profiles:student_id (
+            full_name,
+            phone_number
+          )
+        `)
+        .eq('id', requestId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      setActiveRide(updatedRide);
+      setPendingRequests(prev => prev.filter(req => req.id !== requestId));
 
       toast({
         title: 'Success',
@@ -218,16 +227,10 @@ const DriverRides = () => {
   const getSelectedLocations = () => {
     let locations: { pickup?: CampusLocation; dropoff?: CampusLocation } = {};
 
+    // If there's an active ride, show both pickup and dropoff
     if (activeRide) {
-      console.log('Active ride locations:', {
-        pickup: activeRide.pickup_location,
-        dropoff: activeRide.dropoff_location
-      });
-
       const pickupCoords = extractCoordinates(activeRide.pickup_location);
       const dropoffCoords = extractCoordinates(activeRide.dropoff_location);
-
-      console.log('Extracted coordinates:', { pickupCoords, dropoffCoords });
 
       if (pickupCoords && dropoffCoords) {
         locations = {
@@ -254,7 +257,9 @@ const DriverRides = () => {
         };
       }
     } 
+    // If no active ride, show pickup locations for all pending requests
     else if (pendingRequests.length > 0) {
+      // Show first pending request's pickup location
       const request = pendingRequests[0];
       const pickupCoords = extractCoordinates(request.pickup_location);
       
