@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import RideDetailsModal from "@/components/rides/RideDetailsModal";
 import { useCampusLocations } from "@/hooks/use-campus-locations";
 import { useRideRequests } from "@/hooks/use-ride-requests";
+import { useLocationUpdates } from "@/hooks/use-location-updates";
 import { Button } from "@/components/ui/button";
 import { Calendar, Car, Search, Download, Star } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -55,9 +56,9 @@ const StudentRides: React.FC = () => {
     cancelRideRequest,
     rideHistory,
     isLoadingHistory,
-    nearbyDrivers,
-    activeRequest,
   } = useRideRequests();
+
+  const { nearbyDrivers, error: locationError } = useLocationUpdates('all-drivers');
 
   useEffect(() => {
     if (!activeRide?.id) return;
@@ -324,21 +325,21 @@ const StudentRides: React.FC = () => {
                             className="flex items-center space-x-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-all duration-300"
                           >
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold">
-                              {driver.full_name?.charAt(0)}
+                              {driver.name.charAt(0)}
                             </div>
                             <div className="flex-1">
-                              <p className="font-medium">{driver.full_name}</p>
+                              <p className="font-medium">{driver.name}</p>
                               <div className="flex items-center text-sm text-gray-500">
                                 <Star className="h-4 w-4 text-yellow-400 mr-1" />
-                                <span>{driver.average_rating?.toFixed(1)}</span>
+                                <span>{driver.rating.toFixed(1)}</span>
                                 <span className="mx-2">•</span>
-                                <span>{Math.round(driver.distance_meters / 1000)}km away</span>
+                                <span>{Math.round(driver.distance)}km away</span>
                               </div>
                             </div>
                             <Button
                               size="sm"
                               onClick={() => setIsRequestOpen(true)}
-                              disabled={activeRequest !== null}
+                              disabled={!!activeRide}
                               className="hover:scale-105 transition-transform duration-200"
                             >
                               Request
