@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import DriverSidebar from "@/components/driver/DriverSidebar";
@@ -56,7 +57,7 @@ interface ActivityQueryResult {
   dropoff_address: string;
   student_profiles: {
     full_name: string;
-  } | null;
+  }[] | null;
   ride_ratings: {
     rating: number;
   }[] | null;
@@ -132,13 +133,13 @@ const DriverDashboard = () => {
           throw activityError;
         }
 
-        const formattedActivity = (activityData as ActivityQueryResult[] | null)?.map(activity => ({
+        const formattedActivity = (activityData as unknown as ActivityQueryResult[])?.map(activity => ({
           id: activity.id,
           created_at: activity.created_at,
           status: activity.status,
           pickup_address: activity.pickup_address,
           dropoff_address: activity.dropoff_address,
-          student_name: activity.student_profiles?.full_name || 'Unknown Student',
+          student_name: activity.student_profiles?.[0]?.full_name || 'Unknown Student',
           rating: activity.ride_ratings?.[0]?.rating || null,
           earnings: activity.driver_earnings?.[0]?.amount || 0
         })) || [];
