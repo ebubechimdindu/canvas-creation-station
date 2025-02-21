@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import DriverSidebar from '@/components/driver/DriverSidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,10 +26,8 @@ const DriverRides = () => {
   const [activeRide, setActiveRide] = useState<ExtendedRideRequest | null>(null);
   const { toast } = useToast();
 
-  // Initialize driver location tracking
   useDriverLocation();
 
-  // Set driver's initial location
   useEffect(() => {
     setCurrentLocation({
       lat: 6.894000,
@@ -38,7 +35,6 @@ const DriverRides = () => {
     });
   }, []);
 
-  // Subscribe to new ride requests
   useEffect(() => {
     const fetchPendingRequests = async () => {
       const { data, error } = await supabase
@@ -87,7 +83,6 @@ const DriverRides = () => {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('Not authenticated');
 
-      // First update the ride request status
       const { error: updateError } = await supabase
         .from('ride_requests')
         .update({
@@ -98,7 +93,6 @@ const DriverRides = () => {
 
       if (updateError) throw updateError;
 
-      // Find the accepted request and set it as active
       const acceptedRequest = pendingRequests.find(req => req.id === requestId);
       if (acceptedRequest) {
         setActiveRide(acceptedRequest);
@@ -124,7 +118,6 @@ const DriverRides = () => {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('Not authenticated');
 
-      // Update the ride request status
       const { error: updateError } = await supabase
         .from('ride_requests')
         .update({
@@ -134,7 +127,6 @@ const DriverRides = () => {
 
       if (updateError) throw updateError;
 
-      // Remove from pending requests
       setPendingRequests(prev => prev.filter(req => req.id !== requestId));
 
       toast({
@@ -151,57 +143,67 @@ const DriverRides = () => {
     }
   };
 
-  // Convert all ride locations to CampusLocation type
-  const getAllLocations = () => {
-    const locations: { [key: string]: CampusLocation } = {};
-    
-    // Add all pending request pickup locations
-    pendingRequests.forEach((request) => {
-      if (request.pickup_location) {
-        const [lat, lng] = request.pickup_location.split(',').map(parseFloat);
-        locations[`pickup-${request.id}`] = {
+  const getSelectedLocations = () => {
+    let locations: { pickup?: CampusLocation, dropoff?: CampusLocation } = {};
+
+    if (activeRide) {
+      const [pickupLat, pickupLng] = activeRide.pickup_location.split(',').map(parseFloat);
+      const [dropoffLat, dropoffLng] = activeRide.dropoff_location.split(',').map(parseFloat);
+
+      locations = {
+        pickup: {
+          id: 'active-pickup',
+          name: `${activeRide.student_profiles?.full_name}'s Pickup: ${activeRide.pickup_address}`,
+          coordinates: { lat: pickupLat, lng: pickupLng },
+          locationType: 'pickup_point',
+          isActive: true,
+          isVerified: true,
+          createdAt: activeRide.created_at,
+          updatedAt: activeRide.updated_at
+        },
+        dropoff: {
+          id: 'active-dropoff',
+          name: `${activeRide.student_profiles?.full_name}'s Dropoff: ${activeRide.dropoff_address}`,
+          coordinates: { lat: dropoffLat, lng: dropoffLng },
+          locationType: 'dropoff_point',
+          isActive: true,
+          isVerified: true,
+          createdAt: activeRide.created_at,
+          updatedAt: activeRide.updated_at
+        }
+      };
+    } 
+    else if (pendingRequests.length > 0) {
+      const request = pendingRequests[0];
+      const [lat, lng] = request.pickup_location.split(',').map(parseFloat);
+      
+      locations = {
+        pickup: {
           id: `pickup-${request.id}`,
-          name: `${request.student_profiles?.full_name || 'Student'}'s Pickup: ${request.pickup_address}`,
+          name: `${request.student_profiles?.full_name}'s Pickup: ${request.pickup_address}`,
           coordinates: { lat, lng },
           locationType: 'pickup_point',
           isActive: true,
           isVerified: true,
           createdAt: request.created_at,
           updatedAt: request.updated_at
-        };
-      }
-    });
-
-    // Add active ride locations if exists
-    if (activeRide) {
-      const [pickupLat, pickupLng] = activeRide.pickup_location.split(',').map(parseFloat);
-      const [dropoffLat, dropoffLng] = activeRide.dropoff_location.split(',').map(parseFloat);
-
-      locations[`active-pickup`] = {
-        id: 'active-pickup',
-        name: `Active Ride Pickup: ${activeRide.pickup_address}`,
-        coordinates: { lat: pickupLat, lng: pickupLng },
-        locationType: 'pickup_point',
-        isActive: true,
-        isVerified: true,
-        createdAt: activeRide.created_at,
-        updatedAt: activeRide.updated_at
-      };
-
-      locations[`active-dropoff`] = {
-        id: 'active-dropoff',
-        name: `Active Ride Dropoff: ${activeRide.dropoff_address}`,
-        coordinates: { lat: dropoffLat, lng: dropoffLng },
-        locationType: 'dropoff_point',
-        isActive: true,
-        isVerified: true,
-        createdAt: activeRide.created_at,
-        updatedAt: activeRide.updated_at
+        }
       };
     }
 
     return locations;
   };
+
+  const getPendingLocations = () => 
+    pendingRequests.map(request => {
+      const [lat, lng] = request.pickup_location.split(',').map(parseFloat);
+      return {
+        lat,
+        lng,
+        studentName: request.student_profiles?.full_name || 'Student',
+        address: request.pickup_address
+      };
+    });
 
   return (
     <SidebarProvider>
@@ -225,8 +227,9 @@ const DriverRides = () => {
                       <MapboxLocationManager
                         mode="driver"
                         currentLocation={currentLocation || undefined}
-                        locations={getAllLocations()}
+                        selectedLocations={getSelectedLocations()}
                         showRoutePath={!!activeRide}
+                        nearbyRequests={getPendingLocations()}
                       />
                     </div>
                   </CardContent>
