@@ -38,7 +38,21 @@ export const useDriverMatching = ({
         throw error;
       }
 
-      return data || [];
+      // Transform the database response to match our Driver type
+      return (data || []).map((driver: any): Driver => ({
+        id: driver.driver_id,
+        name: driver.full_name,
+        phoneNumber: driver.phone_number,
+        profilePictureUrl: driver.profile_picture_url,
+        status: driver.status as 'available' | 'busy' | 'offline',
+        rating: driver.rating,
+        distance: driver.distance,
+        currentLocation: driver.current_location ? {
+          lat: driver.current_location.coordinates[1],
+          lng: driver.current_location.coordinates[0]
+        } : undefined,
+        lastUpdated: driver.last_updated
+      }));
     },
     enabled: !!pickupLocation,
     refetchInterval: 10000, // Refetch every 10 seconds

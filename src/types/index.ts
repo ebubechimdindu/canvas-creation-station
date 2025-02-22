@@ -9,22 +9,16 @@ export interface User {
 export interface Driver {
   id: string;
   name: string;
+  phoneNumber: string;
+  profilePictureUrl: string | null;
+  status: 'available' | 'busy' | 'offline';
   rating: number;
   distance: number;
-  status: 'available' | 'busy' | 'offline';
-  phoneNumber: string;
-  accountDetails: {
-    bankName: string;
-    accountNumber: string;
-    accountName: string;
-  };
   currentLocation?: {
     lat: number;
     lng: number;
-    heading: number;
-    speed: number;
-    timestamp: string;
   };
+  lastUpdated: string;
 }
 
 export const RIDE_STATUS_UI = {

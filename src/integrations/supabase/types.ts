@@ -1202,6 +1202,24 @@ export type Database = {
         }
         Returns: boolean
       }
+      find_nearby_drivers: {
+        Args: {
+          pickup_point: unknown
+          max_distance_meters?: number
+          max_results?: number
+        }
+        Returns: {
+          driver_id: string
+          full_name: string
+          phone_number: string
+          profile_picture_url: string
+          status: string
+          distance: number
+          current_location: unknown
+          last_updated: string
+          rating: number
+        }[]
+      }
       find_nearest_driver: {
         Args: {
           request_id: number

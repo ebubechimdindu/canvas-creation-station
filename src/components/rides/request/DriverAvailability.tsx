@@ -34,7 +34,11 @@ export function DriverAvailability({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-10 w-10">
-                    <AvatarFallback>{driver.name.charAt(0)}</AvatarFallback>
+                    {driver.profilePictureUrl ? (
+                      <AvatarImage src={driver.profilePictureUrl} alt={driver.name} />
+                    ) : (
+                      <AvatarFallback>{driver.name.charAt(0)}</AvatarFallback>
+                    )}
                   </Avatar>
                   <div>
                     <h4 className="font-medium">{driver.name}</h4>
