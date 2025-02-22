@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import DriverSidebar from '@/components/driver/DriverSidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -121,7 +120,6 @@ const DriverRides = () => {
 
       if (updateError) throw updateError;
 
-      // Immediately fetch the updated ride details
       const { data: updatedRide, error: fetchError } = await supabase
         .from('ride_requests')
         .select(`
@@ -183,11 +181,51 @@ const DriverRides = () => {
     }
   };
 
+  const updateRideStatus = async (rideId: number, status: RideStatus) => {
+    try {
+      const { error: updateError } = await supabase
+        .from('ride_requests')
+        .update({ status })
+        .eq('id', rideId);
+
+      if (updateError) throw updateError;
+
+      await fetchActiveRide();
+
+      toast({
+        title: 'Status Updated',
+        description: `Ride status changed to ${status}`
+      });
+    } catch (error) {
+      console.error('Error updating ride status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update ride status',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleStartNavigation = async (rideId: number) => {
+    await updateRideStatus(rideId, 'en_route_to_pickup');
+  };
+
+  const handleArriveAtPickup = async (rideId: number) => {
+    await updateRideStatus(rideId, 'arrived_at_pickup');
+  };
+
+  const handleStartRide = async (rideId: number) => {
+    await updateRideStatus(rideId, 'in_progress');
+  };
+
+  const handleCompleteRide = async (rideId: number) => {
+    await updateRideStatus(rideId, 'completed');
+  };
+
   const extractCoordinates = (location: string | null | unknown): { lat: number; lng: number } | null => {
     if (!location) return null;
     
     try {
-      // If location is already an object with coordinates
       if (typeof location === 'object' && location !== null) {
         const coords = location as any;
         if ('coordinates' in coords) {
@@ -198,18 +236,15 @@ const DriverRides = () => {
         }
       }
 
-      // If location is a string
       if (typeof location === 'string') {
-        // Handle PostGIS point format: "POINT(longitude latitude)"
         const pointMatch = location.match(/POINT\(([-\d.]+) ([-\d.]+)\)/);
         if (pointMatch) {
           return {
-            lat: parseFloat(pointMatch[2]), // Latitude is second in PostGIS
-            lng: parseFloat(pointMatch[1])  // Longitude is first in PostGIS
+            lat: parseFloat(pointMatch[2]),
+            lng: parseFloat(pointMatch[1])
           };
         }
 
-        // Try comma-separated format
         const [lat, lng] = location.split(',').map(parseFloat);
         if (!isNaN(lat) && !isNaN(lng)) {
           return { lat, lng };
@@ -226,15 +261,16 @@ const DriverRides = () => {
 
   const getSelectedLocations = () => {
     let locations: { pickup?: CampusLocation; dropoff?: CampusLocation } = {};
-
-    // If there's an active ride, show both pickup and dropoff
+    
     if (activeRide) {
       const pickupCoords = extractCoordinates(activeRide.pickup_location);
       const dropoffCoords = extractCoordinates(activeRide.dropoff_location);
 
-      if (pickupCoords && dropoffCoords) {
-        locations = {
-          pickup: {
+      if (activeRide.status === 'driver_assigned' || 
+          activeRide.status === 'en_route_to_pickup' || 
+          activeRide.status === 'arrived_at_pickup') {
+        if (pickupCoords) {
+          locations.pickup = {
             id: 'active-pickup',
             name: `${activeRide.student_profiles?.full_name}'s Pickup: ${activeRide.pickup_address}`,
             coordinates: pickupCoords,
@@ -243,8 +279,12 @@ const DriverRides = () => {
             isVerified: true,
             createdAt: activeRide.created_at,
             updatedAt: activeRide.updated_at
-          },
-          dropoff: {
+          };
+        }
+      }
+      else if (activeRide.status === 'in_progress') {
+        if (dropoffCoords) {
+          locations.dropoff = {
             id: 'active-dropoff',
             name: `${activeRide.student_profiles?.full_name}'s Dropoff: ${activeRide.dropoff_address}`,
             coordinates: dropoffCoords,
@@ -253,28 +293,24 @@ const DriverRides = () => {
             isVerified: true,
             createdAt: activeRide.created_at,
             updatedAt: activeRide.updated_at
-          }
-        };
+          };
+        }
       }
     } 
-    // If no active ride, show pickup locations for all pending requests
     else if (pendingRequests.length > 0) {
-      // Show first pending request's pickup location
       const request = pendingRequests[0];
       const pickupCoords = extractCoordinates(request.pickup_location);
       
       if (pickupCoords) {
-        locations = {
-          pickup: {
-            id: `pickup-${request.id}`,
-            name: `${request.student_profiles?.full_name}'s Pickup: ${request.pickup_address}`,
-            coordinates: pickupCoords,
-            locationType: 'pickup_point',
-            isActive: true,
-            isVerified: true,
-            createdAt: request.created_at,
-            updatedAt: request.updated_at
-          }
+        locations.pickup = {
+          id: `pickup-${request.id}`,
+          name: `${request.student_profiles?.full_name}'s Pickup: ${request.pickup_address}`,
+          coordinates: pickupCoords,
+          locationType: 'pickup_point',
+          isActive: true,
+          isVerified: true,
+          createdAt: request.created_at,
+          updatedAt: request.updated_at
         };
       }
     }
@@ -351,6 +387,10 @@ const DriverRides = () => {
                           }}
                           onAccept={() => {}}
                           onDecline={() => {}}
+                          onStartNavigation={handleStartNavigation}
+                          onArriveAtPickup={handleArriveAtPickup}
+                          onStartRide={handleStartRide}
+                          onCompleteRide={handleCompleteRide}
                         />
                       </div>
                     ) : (
