@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import DriverSidebar from '@/components/driver/DriverSidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { MapProvider } from '@/components/map/MapProvider';
 import MapboxLocationManager from '@/components/map/MapboxLocationManager';
 import { RideRequestCard } from '@/components/driver/RideRequestCard';
-import type { RideRequest } from '@/types';
+import type { RideRequest, RideStatus } from '@/types';
 import type { CampusLocation } from '@/types/locations';
 import { SidebarProvider } from '@/components/ui/sidebar';
 
