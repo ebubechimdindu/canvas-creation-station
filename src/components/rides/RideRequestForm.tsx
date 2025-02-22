@@ -10,16 +10,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Navigation2 } from "lucide-react";
+import { Loader2, Navigation2, MapPin } from "lucide-react";
 import { type CampusLocation } from "@/types/locations";
 import RideMap from "@/components/map/RideMap";
 import { type Driver } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useStudentLocation } from '@/hooks/use-student-location';
+import { useDriverMatching } from '@/hooks/use-driver-matching';
 import { useMap } from '@/components/map/MapProvider';
 import { format } from "date-fns";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { MapPin } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface RideRequestFormProps {
   onSubmit: (formData: {
@@ -56,6 +57,9 @@ export function RideRequestForm({
   const { mapboxToken } = useMap();
   const { currentLocation, error: locationError, isLoading: locationLoading, updateLocation, isWithinCampus } = useStudentLocation(mapboxToken);
   const { toast } = useToast();
+  const { nearbyDrivers, isLoading: driversLoading } = useDriverMatching({
+    pickupLocation: selectedPickupLocation?.coordinates
+  });
 
   React.useEffect(() => {
     console.log('Selected Locations:', {
@@ -308,6 +312,31 @@ export function RideRequestForm({
             setRideRequest({ ...rideRequest, notes: e.target.value })
           }
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Available Drivers Nearby</Label>
+        <div className="p-4 rounded-lg border bg-muted">
+          {driversLoading ? (
+            <div className="flex items-center justify-center py-2">
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <span>Finding nearby drivers...</span>
+            </div>
+          ) : nearbyDrivers && nearbyDrivers.length > 0 ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Badge variant="success">{nearbyDrivers.length} drivers nearby</Badge>
+                <span className="text-sm text-muted-foreground">
+                  Average pickup time: 3-5 minutes
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center text-sm text-muted-foreground">
+              No drivers available nearby. Please try again later.
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex justify-end gap-2 pt-4">
