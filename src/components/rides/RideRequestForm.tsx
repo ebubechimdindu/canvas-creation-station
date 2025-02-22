@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -177,8 +176,8 @@ export function RideRequestForm({
         onCurrentLocation={handleCurrentLocation}
         locationLoading={locationLoading}
         availableDrivers={nearbyDrivers?.map(driver => ({
-          lat: driver.lat || 0,
-          lng: driver.lng || 0
+          lat: driver.currentLocation?.lat || 0,
+          lng: driver.currentLocation?.lng || 0
         }))}
       />
 
@@ -224,7 +223,7 @@ export function RideRequestForm({
 
       <DriverAvailability
         driversLoading={driversLoading}
-        nearbyDriversCount={nearbyDrivers?.length || 0}
+        nearbyDrivers={nearbyDrivers || []}
       />
 
       <div className="flex justify-end gap-2 pt-4">
