@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useAppSelector, useAppDispatch } from "@/hooks/redux";
 import { setActiveRide, addToHistory, updateRideStatus } from "@/features/rides/ridesSlice";
@@ -114,6 +113,69 @@ const StudentRides: React.FC = () => {
       supabase.removeChannel(channel);
     };
   }, [activeRide?.id, dispatch, toast]);
+
+  const handleConfirmPickup = async () => {
+    if (!activeRide?.id) return;
+    
+    try {
+      const { error } = await supabase
+        .from('ride_requests')
+        .update({
+          status: 'in_progress',
+          started_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', activeRide.id)
+        .eq('student_id', user?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Ride Started",
+        description: "Have a safe journey!",
+      });
+    } catch (error) {
+      console.error('Error confirming pickup:', error);
+      toast({
+        title: "Error",
+        description: "Failed to confirm pickup. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleCompleteRide = async () => {
+    if (!activeRide?.id) return;
+    
+    try {
+      const { error } = await supabase
+        .from('ride_requests')
+        .update({
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', activeRide.id)
+        .eq('student_id', user?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Ride Completed",
+        description: "Thank you for riding with us! Please rate your experience.",
+      });
+
+      setIsRatingOpen(true);
+      setSelectedRide(activeRide.id);
+    } catch (error) {
+      console.error('Error completing ride:', error);
+      toast({
+        title: "Error",
+        description: "Failed to complete ride. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
 
   const handleRideRequest = async (formData: {
     pickup: CampusLocation;
@@ -246,6 +308,8 @@ const StudentRides: React.FC = () => {
                   dropoff={activeRide.dropoff_address}
                   driver={activeRide.driver}
                   onCancel={handleCancelRequest}
+                  onConfirmPickup={handleConfirmPickup}
+                  onCompleteRide={handleCompleteRide}
                 />
               )}
 
