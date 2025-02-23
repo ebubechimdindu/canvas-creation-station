@@ -1,11 +1,11 @@
-
 import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
-import { useAppSelector } from '@/hooks/redux';
-import { type CampusLocation } from '@/types/locations';
-import { type RideRequest, type DriverProfile, type RideStatus } from '@/types';
+import { useAppSelector, useAppDispatch } from '@/hooks/redux';
+import { setActiveRide, updateRideStatus, addToHistory } from '@/features/rides/ridesSlice';
+import type { CampusLocation } from '@/types/locations';
+import type { RideRequest, RideStatus } from '@/types';
 
 interface CreateRideRequestParams {
   pickup: CampusLocation;
@@ -14,19 +14,15 @@ interface CreateRideRequestParams {
   specialRequirements?: string;
 }
 
-interface PostgresChangePayload {
-  new: RideRequest;
-  old: RideRequest;
-  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
-}
-
 export const useRideRequests = () => {
   const { toast } = useToast();
+  const dispatch = useAppDispatch();
   const queryClient = useQueryClient();
-  const user = useAppSelector((state) => state.auth.user);
   const [isCreating, setIsCreating] = useState(false);
+  const user = useAppSelector((state) => state.auth.user);
+  const activeRide = useAppSelector((state) => state.rides.activeRide);
 
-  const { data: activeRide, isLoading: isLoadingActive } = useQuery({
+  const { data: fetchedActiveRide, isLoading: isLoadingActive } = useQuery({
     queryKey: ['activeRide', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
@@ -58,33 +54,49 @@ export const useRideRequests = () => {
       return data as RideRequest | null;
     },
     enabled: !!user?.id,
-    staleTime: 1000 * 60,
-    gcTime: 1000 * 60 * 60,
-    retry: false,
   });
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (fetchedActiveRide) {
+      dispatch(setActiveRide(fetchedActiveRide));
+    }
+  }, [fetchedActiveRide, dispatch]);
+
+  useEffect(() => {
+    if (!activeRide?.id) return;
 
     const channel = supabase
-      .channel(`ride_updates_${user.id}`)
+      .channel(`ride_${activeRide.id}`)
       .on(
-        'postgres_changes' as any,
+        'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'ride_requests',
-          filter: `student_id=eq.${user.id}`
+          filter: `id=eq.${activeRide.id}`
         },
-        (payload: PostgresChangePayload) => {
-          queryClient.invalidateQueries({ queryKey: ['activeRide'] });
-          queryClient.invalidateQueries({ queryKey: ['rideHistory'] });
-          
-          if (payload.new && payload.old && payload.new.status !== payload.old.status) {
-            toast({
-              title: 'Ride Update',
-              description: `Your ride status has been updated to ${payload.new.status}`,
-            });
+        async (payload: any) => {
+          if (payload.new.status !== payload.old.status) {
+            dispatch(updateRideStatus({
+              rideId: payload.new.id,
+              status: payload.new.status as RideStatus,
+              timestamp: new Date().toISOString()
+            }));
+
+            switch (payload.new.status) {
+              case 'completed':
+                dispatch(addToHistory(payload.new));
+                break;
+              case 'cancelled':
+                toast({
+                  title: "Ride Cancelled",
+                  description: "Your ride has been cancelled.",
+                  variant: "destructive"
+                });
+                break;
+            }
+
+            queryClient.invalidateQueries({ queryKey: ['activeRide'] });
           }
         }
       )
@@ -93,7 +105,7 @@ export const useRideRequests = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, queryClient, toast]);
+  }, [activeRide?.id, dispatch, queryClient, toast]);
 
   const createRideRequest = async ({ pickup, dropoff, notes, specialRequirements }: CreateRideRequestParams) => {
     if (!user?.id) {

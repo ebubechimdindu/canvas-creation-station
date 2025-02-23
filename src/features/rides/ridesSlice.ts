@@ -47,28 +47,52 @@ const ridesSlice = createSlice({
     setActiveRide: (state, action: PayloadAction<RideRequest | null>) => {
       state.activeRide = action.payload;
     },
-    updateRideStatus: (state, action: PayloadAction<{ rideId: number; status: RideStatus }>) => {
-      if (state.activeRide?.id === action.payload.rideId) {
-        state.activeRide.status = action.payload.status;
+    updateRideStatus: (state, action: PayloadAction<{ rideId: number; status: RideStatus; timestamp?: string }>) => {
+      const { rideId, status, timestamp } = action.payload;
+      if (state.activeRide?.id === rideId) {
+        state.activeRide.status = status;
+        
+        // Update timestamps based on status
+        if (timestamp) {
+          switch (status) {
+            case 'driver_assigned':
+              state.activeRide.matched_at = timestamp;
+              break;
+            case 'arrived_at_pickup':
+              // No change in matched_at
+              break;
+            case 'in_progress':
+              state.activeRide.started_at = timestamp;
+              break;
+            case 'completed':
+              state.activeRide.completed_at = timestamp;
+              break;
+            case 'cancelled':
+              state.activeRide.cancelled_at = timestamp;
+              break;
+          }
+        }
       }
       
       state.history = state.history.map(ride => 
-        ride.id === action.payload.rideId 
-          ? { ...ride, status: action.payload.status }
+        ride.id === rideId 
+          ? { 
+              ...ride, 
+              status,
+              ...(timestamp && { updated_at: timestamp })
+            }
           : ride
       );
     },
     addToHistory: (state, action: PayloadAction<RideRequest>) => {
-      state.history.unshift(action.payload);
+      // Add to beginning of history array and ensure no duplicates
+      const exists = state.history.some(ride => ride.id === action.payload.id);
+      if (!exists) {
+        state.history.unshift(action.payload);
+      }
     },
     updateDrivers: (state, action: PayloadAction<Driver[]>) => {
       state.availableDrivers = action.payload;
-    },
-    markPaymentReceived: (state, action: PayloadAction<number>) => {
-      const ride = state.history.find(ride => ride.id === action.payload);
-      if (ride) {
-        ride.status = 'completed';
-      }
     },
     setError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload;
@@ -76,6 +100,13 @@ const ridesSlice = createSlice({
     },
     updateDriverStatus: (state, action: PayloadAction<'available' | 'offline' | 'busy'>) => {
       state.driverStatus = action.payload;
+    },
+    clearActiveRide: (state) => {
+      if (state.activeRide) {
+        // Move active ride to history before clearing
+        state.history.unshift(state.activeRide);
+        state.activeRide = null;
+      }
     },
     setEarningsLoading: (state) => {
       state.earnings.status = 'loading';
@@ -102,9 +133,9 @@ export const {
   updateRideStatus,
   addToHistory, 
   updateDrivers, 
-  markPaymentReceived,
   setError,
   updateDriverStatus,
+  clearActiveRide,
   setEarningsLoading,
   setEarningsSuccess,
   setEarningsError,
