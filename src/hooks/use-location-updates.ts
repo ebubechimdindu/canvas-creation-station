@@ -51,6 +51,7 @@ export const useLocationUpdates = (mode: 'current-driver' | 'all-drivers') => {
             speed,
             is_online,
             driver_id,
+            updated_at,
             driver_profiles (
               full_name,
               profile_picture_url,
@@ -71,25 +72,17 @@ export const useLocationUpdates = (mode: 'current-driver' | 'all-drivers') => {
         // Transform the data into the expected format
         const transformedData = (data as unknown as SupabaseDriverLocation[]).map(item => ({
           id: item.driver_id,
+          name: item.driver_profiles?.full_name || 'Unknown Driver',
+          phoneNumber: item.driver_profiles?.phone_number || '',
+          profilePictureUrl: item.driver_profiles?.profile_picture_url || null,
+          status: item.is_online ? 'available' as const : 'offline' as const,
+          rating: 4.5, // Default rating
+          distance: 0, // Will be calculated later if needed
           currentLocation: {
             lat: item.location.coordinates[1],
-            lng: item.location.coordinates[0],
-            heading: item.heading || 0,
-            speed: item.speed || 0,
-            timestamp: new Date().toISOString(),
+            lng: item.location.coordinates[0]
           },
-          name: item.driver_profiles?.full_name || 'Unknown Driver',
-          rating: 0, // Default value as per Driver type
-          distance: 0, // Default value as per Driver type
-          status: item.is_online ? 'available' as const : 'offline' as const,
-          phoneNumber: item.driver_profiles?.phone_number || '', // Add the phone number here
-          accountDetails: {
-            bankName: '',
-            accountNumber: '',
-            accountName: '',
-          },
-          profilePicture: item.driver_profiles?.profile_picture_url || undefined,
-          searchRadius: item.driver_profiles?.max_search_radius_km || 5 // Default 5km if not set
+          lastUpdated: item.updated_at || new Date().toISOString()
         }));
 
         setNearbyDrivers(transformedData);
@@ -101,9 +94,9 @@ export const useLocationUpdates = (mode: 'current-driver' | 'all-drivers') => {
             setDriverLocation({
               lat: currentDriver.currentLocation.lat,
               lng: currentDriver.currentLocation.lng,
-              heading: currentDriver.currentLocation.heading,
-              speed: currentDriver.currentLocation.speed,
-              timestamp: currentDriver.currentLocation.timestamp,
+              heading: 0, // Default heading
+              speed: 0, // Default speed
+              timestamp: currentDriver.lastUpdated,
             });
           }
         }

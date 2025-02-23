@@ -29,26 +29,20 @@ export const useNearbyDrivers = ({
 
       if (error) throw error;
 
-      return data.map((driver: any) => ({
+      return (data || []).map((driver: any): Driver => ({
         id: driver.driver_id,
         name: driver.driver_name,
-        distance: driver.distance,
+        phoneNumber: driver.phone_number || '',
+        profilePictureUrl: driver.profile_picture_url || null,
+        status: driver.is_active ? 'available' : 'offline',
+        rating: driver.average_rating || 4.5,
+        distance: driver.distance || 0,
         currentLocation: {
           lat: driver.latitude,
-          lng: driver.longitude,
-          heading: driver.heading,
-          speed: driver.speed,
-          timestamp: driver.last_updated
+          lng: driver.longitude
         },
-        status: driver.is_active ? 'available' : 'offline',
-        rating: driver.average_rating || 0,
-        phoneNumber: driver.phone_number,
-        accountDetails: {
-          bankName: '',
-          accountNumber: '',
-          accountName: ''
-        }
-      } as Driver));
+        lastUpdated: driver.last_updated || new Date().toISOString()
+      }));
     },
     enabled: enabled && !!latitude && !!longitude,
     refetchInterval: 10000, // Refetch every 10 seconds
