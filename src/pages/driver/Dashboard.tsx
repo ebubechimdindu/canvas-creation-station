@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import DriverSidebar from "@/components/driver/DriverSidebar";
@@ -47,6 +46,7 @@ interface RecentActivity {
   rating: number | null;
   earnings: number;
   student_name: string;
+  student_phone_number: string;
 }
 
 interface ActivityQueryResult {
@@ -57,6 +57,7 @@ interface ActivityQueryResult {
   dropoff_address: string;
   student_profiles: {
     full_name: string;
+    phone_number: string;
   }[] | null;
   ride_ratings: {
     rating: number;
@@ -114,8 +115,9 @@ const DriverDashboard = () => {
             status,
             pickup_address,
             dropoff_address,
-            student_profiles (
-              full_name
+            student_profiles!inner (
+              full_name,
+              phone_number
             ),
             ride_ratings (
               rating
@@ -133,13 +135,13 @@ const DriverDashboard = () => {
           throw activityError;
         }
 
-        const formattedActivity = (activityData as unknown as ActivityQueryResult[])?.map(activity => ({
+        const formattedActivity = activityData?.map(activity => ({
           id: activity.id,
           created_at: activity.created_at,
           status: activity.status,
           pickup_address: activity.pickup_address,
           dropoff_address: activity.dropoff_address,
-          student_name: activity.student_profiles?.[0]?.full_name || 'Unknown Student',
+          student_name: activity.student_profiles.full_name,
           rating: activity.ride_ratings?.[0]?.rating || null,
           earnings: activity.driver_earnings?.[0]?.amount || 0
         })) || [];
