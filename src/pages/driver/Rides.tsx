@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import DriverSidebar from '@/components/driver/DriverSidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -121,7 +120,6 @@ const DriverRides = () => {
 
       if (updateError) throw updateError;
 
-      // Immediately fetch the updated ride details
       const { data: updatedRide, error: fetchError } = await supabase
         .from('ride_requests')
         .select(`
@@ -183,11 +181,55 @@ const DriverRides = () => {
     }
   };
 
+  const handleStatusUpdate = async (requestId: number, newStatus: 'arrived_at_pickup' | 'in_progress' | 'completed') => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error('Not authenticated');
+
+      const { error: updateError } = await supabase
+        .from('ride_requests')
+        .update({
+          status: newStatus,
+          updated_at: new Date().toISOString(),
+          ...(newStatus === 'completed' && { completed_at: new Date().toISOString() })
+        })
+        .eq('id', requestId)
+        .eq('driver_id', user.id);
+
+      if (updateError) throw updateError;
+
+      if (activeRide?.id === requestId) {
+        setActiveRide(prev => prev ? { ...prev, status: newStatus } : null);
+      }
+
+      const messages = {
+        arrived_at_pickup: 'You have arrived at the pickup location',
+        in_progress: 'Ride started',
+        completed: 'Ride completed'
+      };
+
+      toast({
+        title: 'Status Updated',
+        description: messages[newStatus]
+      });
+
+      if (newStatus === 'completed') {
+        fetchActiveRide();
+      }
+    } catch (error) {
+      console.error('Error updating ride status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update ride status',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const extractCoordinates = (location: string | null | unknown): { lat: number; lng: number } | null => {
     if (!location) return null;
     
     try {
-      // If location is already an object with coordinates
       if (typeof location === 'object' && location !== null) {
         const coords = location as any;
         if ('coordinates' in coords) {
@@ -198,18 +240,15 @@ const DriverRides = () => {
         }
       }
 
-      // If location is a string
       if (typeof location === 'string') {
-        // Handle PostGIS point format: "POINT(longitude latitude)"
         const pointMatch = location.match(/POINT\(([-\d.]+) ([-\d.]+)\)/);
         if (pointMatch) {
           return {
-            lat: parseFloat(pointMatch[2]), // Latitude is second in PostGIS
-            lng: parseFloat(pointMatch[1])  // Longitude is first in PostGIS
+            lat: parseFloat(pointMatch[2]),
+            lng: parseFloat(pointMatch[1])
           };
         }
 
-        // Try comma-separated format
         const [lat, lng] = location.split(',').map(parseFloat);
         if (!isNaN(lat) && !isNaN(lng)) {
           return { lat, lng };
@@ -227,7 +266,6 @@ const DriverRides = () => {
   const getSelectedLocations = () => {
     let locations: { pickup?: CampusLocation; dropoff?: CampusLocation } = {};
 
-    // If there's an active ride, show both pickup and dropoff
     if (activeRide) {
       const pickupCoords = extractCoordinates(activeRide.pickup_location);
       const dropoffCoords = extractCoordinates(activeRide.dropoff_location);
@@ -256,10 +294,7 @@ const DriverRides = () => {
           }
         };
       }
-    } 
-    // If no active ride, show pickup locations for all pending requests
-    else if (pendingRequests.length > 0) {
-      // Show first pending request's pickup location
+    } else if (pendingRequests.length > 0) {
       const request = pendingRequests[0];
       const pickupCoords = extractCoordinates(request.pickup_location);
       
@@ -349,8 +384,7 @@ const DriverRides = () => {
                             ...activeRide,
                             notes: `Student: ${activeRide.student_profiles?.full_name}\nPhone: ${activeRide.student_profiles?.phone_number}\n${activeRide.notes || ''}`
                           }}
-                          onAccept={() => {}}
-                          onDecline={() => {}}
+                          onStatusUpdate={handleStatusUpdate}
                         />
                       </div>
                     ) : (

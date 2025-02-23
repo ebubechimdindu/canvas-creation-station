@@ -3,23 +3,103 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Clock, User } from 'lucide-react';
+import { MapPin, Clock, User, Check, Navigation, Car } from 'lucide-react';
 import type { RideRequest } from '@/types';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 interface RideRequestCardProps {
   request: RideRequest;
-  onAccept: (requestId: number) => void;
-  onDecline: (requestId: number) => void;
+  onAccept?: (requestId: number) => void;
+  onDecline?: (requestId: number) => void;
+  onStatusUpdate?: (requestId: number, newStatus: 'arrived_at_pickup' | 'in_progress' | 'completed') => void;
 }
 
 export const RideRequestCard: React.FC<RideRequestCardProps> = ({
   request,
   onAccept,
-  onDecline
+  onDecline,
+  onStatusUpdate
 }) => {
   const notes = request.notes?.split('\n');
   const studentName = notes?.find(note => note.startsWith('Student:'))?.replace('Student:', '')?.trim();
   const phoneNumber = notes?.find(note => note.startsWith('Phone:'))?.replace('Phone:', '')?.trim();
+
+  const renderStatusActions = () => {
+    switch (request.status) {
+      case 'requested':
+      case 'finding_driver':
+        return (
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onDecline?.(request.id)}
+            >
+              Decline
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => onAccept?.(request.id)}
+            >
+              Accept
+            </Button>
+          </div>
+        );
+
+      case 'driver_assigned':
+        return (
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              size="sm"
+              onClick={() => onStatusUpdate?.(request.id, 'arrived_at_pickup')}
+              className="bg-blue-500 hover:bg-blue-600"
+            >
+              <Navigation className="w-4 h-4 mr-2" />
+              Arrived at Pickup
+            </Button>
+          </div>
+        );
+
+      case 'arrived_at_pickup':
+        return (
+          <div className="space-y-2">
+            <Alert>
+              <AlertTitle>Waiting for student confirmation</AlertTitle>
+              <AlertDescription>
+                The student has been notified of your arrival. Once they confirm, you can start the ride.
+              </AlertDescription>
+            </Alert>
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                onClick={() => onStatusUpdate?.(request.id, 'in_progress')}
+                className="bg-green-500 hover:bg-green-600"
+              >
+                <Car className="w-4 h-4 mr-2" />
+                Start Ride
+              </Button>
+            </div>
+          </div>
+        );
+
+      case 'in_progress':
+        return (
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              size="sm"
+              onClick={() => onStatusUpdate?.(request.id, 'completed')}
+              className="bg-green-500 hover:bg-green-600"
+            >
+              <Check className="w-4 h-4 mr-2" />
+              Complete Ride
+            </Button>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
 
   return (
     <Card className="w-full hover:shadow-lg transition-shadow duration-200">
@@ -65,20 +145,8 @@ export const RideRequestCard: React.FC<RideRequestCardProps> = ({
           </div>
         </div>
 
-        <div className="mt-4 flex items-center justify-end gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onDecline(request.id)}
-          >
-            Decline
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => onAccept(request.id)}
-          >
-            Accept
-          </Button>
+        <div className="mt-4">
+          {renderStatusActions()}
         </div>
       </CardContent>
     </Card>
