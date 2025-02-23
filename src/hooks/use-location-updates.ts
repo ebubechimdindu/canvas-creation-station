@@ -26,6 +26,7 @@ type SupabaseDriverLocation = {
   speed: number | null;
   is_online: boolean | null;
   driver_id: string;
+  updated_at: string | null;  // Added this field
   driver_profiles?: {
     full_name: string | null;
     profile_picture_url: string | null;
