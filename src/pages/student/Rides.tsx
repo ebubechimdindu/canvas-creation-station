@@ -36,6 +36,7 @@ import {
 
 const StudentRides: React.FC = () => {
   const dispatch = useAppDispatch();
+  const user = useAppSelector((state) => state.auth.user);
   const { locations = [], isLoading: locationsLoading } = useCampusLocations();
   const [selectedRide, setSelectedRide] = useState<number | null>(null);
   const [isRequestOpen, setIsRequestOpen] = useState(false);
@@ -63,13 +64,11 @@ const StudentRides: React.FC = () => {
     isLoadingHistory,
   } = useRideRequests();
 
-  // Get nearby drivers using the hook
   const { nearbyDrivers, error: locationError } = useLocationUpdates('all-drivers');
 
   useEffect(() => {
     if (!activeRide?.id) return;
 
-    // Subscribe to ride status changes
     const channel = supabase
       .channel(`ride_${activeRide.id}`)
       .on(
@@ -87,7 +86,6 @@ const StudentRides: React.FC = () => {
               status: payload.new.status
             }));
 
-            // Status update notifications
             const statusMessages: Record<RideStatus, string> = {
               driver_assigned: 'Driver has been assigned to your ride',
               en_route_to_pickup: 'Driver is on the way to pick you up',
@@ -115,7 +113,7 @@ const StudentRides: React.FC = () => {
   }, [activeRide?.id, dispatch, toast]);
 
   const handleConfirmPickup = async () => {
-    if (!activeRide?.id) return;
+    if (!activeRide?.id || !user?.id) return;
     
     try {
       const { error } = await supabase
@@ -126,7 +124,7 @@ const StudentRides: React.FC = () => {
           updated_at: new Date().toISOString()
         })
         .eq('id', activeRide.id)
-        .eq('student_id', user?.id);
+        .eq('student_id', user.id);
 
       if (error) throw error;
 
@@ -145,7 +143,7 @@ const StudentRides: React.FC = () => {
   };
 
   const handleCompleteRide = async () => {
-    if (!activeRide?.id) return;
+    if (!activeRide?.id || !user?.id) return;
     
     try {
       const { error } = await supabase
@@ -156,7 +154,7 @@ const StudentRides: React.FC = () => {
           updated_at: new Date().toISOString()
         })
         .eq('id', activeRide.id)
-        .eq('student_id', user?.id);
+        .eq('student_id', user.id);
 
       if (error) throw error;
 
