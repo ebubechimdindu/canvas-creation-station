@@ -86,10 +86,6 @@ export interface RideRequest {
   date?: string;
   pickup?: string;
   dropoff?: string;
-  student_confirmed_complete: boolean;
-  driver_confirmed_complete: boolean;
-  completion_confirmed_at: string | null;
-  last_location_update: string | null;
 }
 
 export interface DriverProfile {
