@@ -1,3 +1,4 @@
+
 export type Json =
   | string
   | number
@@ -87,6 +88,10 @@ export interface Database {
           driver_id: string | null
           created_at: string
           updated_at: string
+          student_confirmed_complete: boolean
+          driver_confirmed_complete: boolean
+          completion_confirmed_at: string | null
+          last_location_update: string | null
         }
         Insert: {
           student_id: string
@@ -100,6 +105,10 @@ export interface Database {
           driver_id?: string | null
           created_at?: string
           updated_at?: string
+          student_confirmed_complete?: boolean
+          driver_confirmed_complete?: boolean
+          completion_confirmed_at?: string | null
+          last_location_update?: string | null
         }
         Update: {
           student_id?: string
@@ -113,6 +122,10 @@ export interface Database {
           driver_id?: string | null
           created_at?: string
           updated_at?: string
+          student_confirmed_complete?: boolean
+          driver_confirmed_complete?: boolean
+          completion_confirmed_at?: string | null
+          last_location_update?: string | null
         }
       }
     }
@@ -133,3 +146,4 @@ export interface Database {
     }
   }
 }
+
