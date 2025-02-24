@@ -149,7 +149,8 @@ const StudentRides: React.FC = () => {
       const { error } = await supabase
         .from('ride_requests')
         .update({
-          student_confirmed_complete: true,
+          status: 'completed',
+          completed_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
         .eq('id', activeRide.id)
@@ -158,12 +159,14 @@ const StudentRides: React.FC = () => {
       if (error) throw error;
 
       toast({
-        title: "Completion Requested",
-        description: "Waiting for driver to confirm completion",
+        title: "Ride Completed",
+        description: "Thank you for riding with us! Please rate your experience.",
       });
 
+      setIsRatingOpen(true);
+      setSelectedRide(activeRide.id);
     } catch (error) {
-      console.error('Error marking ride complete:', error);
+      console.error('Error completing ride:', error);
       toast({
         title: "Error",
         description: "Failed to complete ride. Please try again.",
@@ -263,10 +266,6 @@ const StudentRides: React.FC = () => {
   if (isLoadingActive || isLoadingHistory) {
     return <div>Loading...</div>;
   }
-
-  const visibleDrivers = activeRide?.driver_id 
-    ? nearbyDrivers.filter(driver => driver.id === activeRide.driver_id)
-    : [];
 
   return (
     <SidebarProvider>
@@ -405,15 +404,13 @@ const StudentRides: React.FC = () => {
                 </div>
 
                 <div className="lg:col-span-1">
-                  <Card>
+                  <Card className="animate-fade-in hover:shadow-lg transition-shadow duration-300">
                     <CardHeader>
-                      <CardTitle>
-                        {activeRide?.driver_id ? 'Assigned Driver' : 'Available Drivers'}
-                      </CardTitle>
+                      <CardTitle>Available Drivers</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {visibleDrivers.map((driver) => (
+                        {nearbyDrivers?.map((driver) => (
                           <div
                             key={driver.id}
                             className="flex items-center space-x-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-all duration-300"
@@ -440,11 +437,6 @@ const StudentRides: React.FC = () => {
                             </Button>
                           </div>
                         ))}
-                        {visibleDrivers.length === 0 && (
-                          <p className="text-center text-muted-foreground">
-                            {activeRide?.driver_id ? 'Driver location unavailable' : 'No drivers available'}
-                          </p>
-                        )}
                       </div>
                     </CardContent>
                   </Card>

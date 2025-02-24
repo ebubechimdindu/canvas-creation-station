@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -7,70 +7,273 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { MapPin, User, Phone, Clock } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import RideMap from "../map/RideMap";
+import { RideTimeline } from "./RideTimeline";
+import { RideStatusBadge } from "./RideStatusBadge";
+import { MapPin, Calendar, Clock, User, MessageSquare, Upload, Phone, CreditCard } from "lucide-react";
+import { Ride } from "@/types";
 import { format } from "date-fns";
-import type { RideRequest } from "@/types";
+import { useCampusLocations } from "@/hooks/use-campus-locations";
+import { useAppSelector } from "@/hooks/redux";
 
 interface RideDetailsModalProps {
-  ride: RideRequest | null;
-  isOpen: boolean;
-  onClose: () => void;
+  ride: Ride | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-const RideDetailsModal: React.FC<RideDetailsModalProps> = ({
-  ride,
-  isOpen,
-  onClose,
-}) => {
+const RideDetailsModal = ({ ride, open, onOpenChange }: RideDetailsModalProps) => {
+  const [activeTab, setActiveTab] = useState("details");
+  const [distance, setDistance] = useState<number>(0);
+  const [duration, setDuration] = useState<number>(0);
+  const [note, setNote] = useState("");
+  const { locations, isLoading: isLoadingLocations } = useCampusLocations();
+  const userRole = useAppSelector(state => state.auth.user?.role);
+
+  // Group locations by type
+  const groupedLocations = locations.reduce((acc, location) => {
+    const type = location.locationType;
+    if (!acc[type]) {
+      acc[type] = [];
+    }
+    acc[type].push(location);
+    return acc;
+  }, {} as Record<string, typeof locations>);
+
   if (!ride) return null;
 
+  const handleRouteCalculated = (distance: number, duration: number) => {
+    setDistance(distance);
+    setDuration(duration);
+  };
+
+  const handleAddNote = () => {
+    if (note.trim()) {
+      // Here you would typically dispatch an action to add the note
+      setNote("");
+    }
+  };
+
+  const formatLocationType = (type: string) => {
+    return type
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  const formatPhoneNumberUrl = (phone: string) => {
+    return `tel:${phone.replace(/\D/g, '')}`;
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
-          <DialogTitle>Ride Details</DialogTitle>
+          <DialogTitle className="flex items-center justify-between">
+            <span>Ride Details #{ride.id}</span>
+            <RideStatusBadge status={ride.status} animated />
+          </DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Badge variant="outline">{ride.status}</Badge>
-            <span className="text-sm text-muted-foreground">
-              {format(new Date(ride.created_at), "MMM dd, yyyy HH:mm")}
-            </span>
-          </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-green-500" />
-              <span>{ride.pickup_address}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-red-500" />
-              <span>{ride.dropoff_address}</span>
-            </div>
-          </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden">
+          <TabsList className="mb-4">
+            <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="map">Map</TabsTrigger>
+            <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <TabsTrigger value="contact">Contact Info</TabsTrigger>
+          </TabsList>
 
-          {ride.driver && (
-            <div className="border rounded-lg p-4 space-y-2">
-              <h4 className="font-medium flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Driver Information
-              </h4>
-              <p className="text-sm">{ride.driver.full_name}</p>
-              <p className="text-sm flex items-center gap-2">
-                <Phone className="h-4 w-4" />
-                {ride.driver.phone_number}
-              </p>
-            </div>
-          )}
+          <div className="flex-1 overflow-hidden">
+            <ScrollArea className="h-[500px]">
+              <TabsContent value="details" className="space-y-6">
+                <div className="grid gap-4">
+                  <div className="space-y-2">
+                    <h3 className="font-semibold">Route Information</h3>
+                    <div className="grid gap-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">Pickup Location</span>
+                        </div>
+                        <Select defaultValue={ride.pickup}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select pickup location" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(groupedLocations).map(([type, locs]) => (
+                              <SelectGroup key={type}>
+                                <SelectLabel>{formatLocationType(type)}</SelectLabel>
+                                {locs.map((loc) => (
+                                  <SelectItem 
+                                    key={loc.id} 
+                                    value={loc.name}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <span>{loc.name}</span>
+                                    {loc.buildingCode && (
+                                      <span className="text-xs text-muted-foreground">
+                                        ({loc.buildingCode})
+                                      </span>
+                                    )}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-          <div className="border-t pt-4">
-            <Button onClick={onClose} className="w-full">Close</Button>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">Dropoff Location</span>
+                        </div>
+                        <Select defaultValue={ride.dropoff}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select dropoff location" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(groupedLocations).map(([type, locs]) => (
+                              <SelectGroup key={type}>
+                                <SelectLabel>{formatLocationType(type)}</SelectLabel>
+                                {locs.map((loc) => (
+                                  <SelectItem 
+                                    key={loc.id} 
+                                    value={loc.name}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <span>{loc.name}</span>
+                                    {loc.buildingCode && (
+                                      <span className="text-xs text-muted-foreground">
+                                        ({loc.buildingCode})
+                                      </span>
+                                    )}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="font-semibold">Time Information</h3>
+                    <div className="grid gap-2">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span>{format(new Date(ride.date), "PP")}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span>{format(new Date(ride.date), "p")}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {(distance > 0 && duration > 0) && (
+                    <div className="space-y-2">
+                      <h3 className="font-semibold">Route Details</h3>
+                      <div className="grid gap-2">
+                        <p>Estimated Distance: {distance.toFixed(1)} km</p>
+                        <p>Estimated Duration: {Math.round(duration)} minutes</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <h3 className="font-semibold">Student Information</h3>
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span>Student Name (ID: {ride.id})</span>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="map" className="h-[500px]">
+                <RideMap
+                  pickup={ride.pickup}
+                  dropoff={ride.dropoff}
+                  className="w-full h-full"
+                  onRouteCalculated={handleRouteCalculated}
+                />
+              </TabsContent>
+
+              <TabsContent value="timeline">
+                <RideTimeline ride={ride} />
+              </TabsContent>
+
+              <TabsContent value="contact" className="space-y-6">
+                {userRole === 'student' && ride.driverDetails && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">Driver Contact Information</h3>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span>{ride.driverDetails.name}</span>
+                      </div>
+                      <a 
+                        href={formatPhoneNumberUrl(ride.driverDetails.phoneNumber)}
+                        className="flex items-center gap-2 text-primary hover:underline"
+                      >
+                        <Phone className="h-4 w-4" />
+                        <span>{ride.driverDetails.phoneNumber}</span>
+                      </a>
+                    </div>
+                    <div className="space-y-2 pt-4">
+                      <h4 className="font-medium flex items-center gap-2">
+                        <CreditCard className="h-4 w-4" />
+                        Payment Details
+                      </h4>
+                      <div className="space-y-1 pl-6">
+                        <p>Bank: {ride.driverDetails.accountDetails.bankName}</p>
+                        <p>Account Name: {ride.driverDetails.accountDetails.accountName}</p>
+                        <p>Account Number: {ride.driverDetails.accountDetails.accountNumber}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {userRole === 'driver' && ride.studentDetails && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">Student Contact Information</h3>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span>{ride.studentDetails.name}</span>
+                      </div>
+                      <a 
+                        href={formatPhoneNumberUrl(ride.studentDetails.phoneNumber)}
+                        className="flex items-center gap-2 text-primary hover:underline"
+                      >
+                        <Phone className="h-4 w-4" />
+                        <span>{ride.studentDetails.phoneNumber}</span>
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+            </ScrollArea>
           </div>
-        </div>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
 };
 
 export default RideDetailsModal;
+

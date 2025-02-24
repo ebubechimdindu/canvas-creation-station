@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import DriverSidebar from "@/components/driver/DriverSidebar";
@@ -46,7 +47,6 @@ interface RecentActivity {
   rating: number | null;
   earnings: number;
   student_name: string;
-  student_phone_number: string;
 }
 
 interface ActivityQueryResult {
@@ -57,7 +57,6 @@ interface ActivityQueryResult {
   dropoff_address: string;
   student_profiles: {
     full_name: string;
-    phone_number: string;
   }[] | null;
   ride_ratings: {
     rating: number;
@@ -115,9 +114,8 @@ const DriverDashboard = () => {
             status,
             pickup_address,
             dropoff_address,
-            student_profiles!inner (
-              full_name,
-              phone_number
+            student_profiles (
+              full_name
             ),
             ride_ratings (
               rating
@@ -135,20 +133,49 @@ const DriverDashboard = () => {
           throw activityError;
         }
 
-        const formattedActivity: RecentActivity[] = activityData?.map(activity => ({
+        const formattedActivity = (activityData as unknown as ActivityQueryResult[])?.map(activity => ({
           id: activity.id,
           created_at: activity.created_at,
           status: activity.status,
           pickup_address: activity.pickup_address,
           dropoff_address: activity.dropoff_address,
-          student_name: activity.student_profiles[0]?.full_name || 'Unknown Student',
-          student_phone_number: activity.student_profiles[0]?.phone_number || 'N/A',
+          student_name: activity.student_profiles?.[0]?.full_name || 'Unknown Student',
           rating: activity.ride_ratings?.[0]?.rating || null,
           earnings: activity.driver_earnings?.[0]?.amount || 0
         })) || [];
 
         console.log('Activity data:', formattedActivity);
 
+        const { data: earningsData, error: earningsError } = await supabase
+          .from('driver_earnings')
+          .select('amount, created_at')
+          .eq('driver_id', user.id);
+
+        if (earningsError) {
+          console.error('Error fetching earnings:', earningsError);
+          throw earningsError;
+        }
+
+        console.log('Earnings data:', earningsData);
+
+        const today = new Date();
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay());
+
+        const todayEarnings = earningsData
+          ?.filter(e => new Date(e.created_at).toDateString() === today.toDateString())
+          ?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
+
+        const weekEarnings = earningsData
+          ?.filter(e => new Date(e.created_at) >= startOfWeek)
+          ?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
+
+        setStats({
+          ...statsData,
+          today_earnings: todayEarnings,
+          week_earnings: weekEarnings,
+          active_hours: statsData?.active_hours || 0
+        });
         setRecentActivity(formattedActivity);
         setIsLoading(false);
       } catch (error) {

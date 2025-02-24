@@ -12,17 +12,13 @@ interface RideRequestCardProps {
   onAccept?: (requestId: number) => void;
   onDecline?: (requestId: number) => void;
   onStatusUpdate?: (requestId: number, newStatus: 'arrived_at_pickup' | 'in_progress' | 'completed') => void;
-  onRequestComplete?: (requestId: number) => void;
-  studentConfirmedComplete?: boolean;
 }
 
 export const RideRequestCard: React.FC<RideRequestCardProps> = ({
   request,
   onAccept,
   onDecline,
-  onStatusUpdate,
-  onRequestComplete,
-  studentConfirmedComplete = false
+  onStatusUpdate
 }) => {
   const notes = request.notes?.split('\n');
   const studentName = notes?.find(note => note.startsWith('Student:'))?.replace('Student:', '')?.trim();
@@ -88,25 +84,15 @@ export const RideRequestCard: React.FC<RideRequestCardProps> = ({
 
       case 'in_progress':
         return (
-          <div className="space-y-2">
-            {studentConfirmedComplete ? (
-              <Alert>
-                <AlertTitle>Student has confirmed completion</AlertTitle>
-                <AlertDescription>
-                  Please confirm to complete the ride
-                </AlertDescription>
-              </Alert>
-            ) : null}
-            <div className="flex items-center justify-end gap-2">
-              <Button
-                size="sm"
-                onClick={() => onRequestComplete?.(request.id)}
-                className="bg-green-500 hover:bg-green-600"
-              >
-                <Check className="w-4 h-4 mr-2" />
-                Complete Ride
-              </Button>
-            </div>
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              size="sm"
+              onClick={() => onStatusUpdate?.(request.id, 'completed')}
+              className="bg-green-500 hover:bg-green-600"
+            >
+              <Check className="w-4 h-4 mr-2" />
+              Complete Ride
+            </Button>
           </div>
         );
 
