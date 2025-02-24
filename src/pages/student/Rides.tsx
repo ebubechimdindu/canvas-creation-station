@@ -8,7 +8,7 @@ import { useCampusLocations } from "@/hooks/use-campus-locations";
 import { useRideRequests } from "@/hooks/use-ride-requests";
 import { useLocationUpdates } from "@/hooks/use-location-updates";
 import { Button } from "@/components/ui/button";
-import { Calendar, Car, Search, Download, Star } from "lucide-react";
+import { Calendar, Car, Search, Download, Star, Phone, MessageSquare, AlertTriangle } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { MapProvider } from "@/components/map/MapProvider";
 import MapboxLocationManager from "@/components/map/MapboxLocationManager";
@@ -33,6 +33,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { RideStatusBadge } from "@/components/rides/RideStatusBadge";
 
 const StudentRides: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -406,38 +407,89 @@ const StudentRides: React.FC = () => {
                 <div className="lg:col-span-1">
                   <Card className="animate-fade-in hover:shadow-lg transition-shadow duration-300">
                     <CardHeader>
-                      <CardTitle>Available Drivers</CardTitle>
+                      <CardTitle>{activeRide ? "Active Ride" : "No Active Ride"}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-4">
-                        {nearbyDrivers?.map((driver) => (
-                          <div
-                            key={driver.id}
-                            className="flex items-center space-x-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-all duration-300"
-                          >
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold">
-                              {driver.name.charAt(0)}
+                      {activeRide && activeRide.driver ? (
+                        <div className="space-y-4">
+                          <div className="flex items-center space-x-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xl font-semibold">
+                              {activeRide.driver.full_name.charAt(0)}
                             </div>
                             <div className="flex-1">
-                              <p className="font-medium">{driver.name}</p>
-                              <div className="flex items-center text-sm text-gray-500">
-                                <Star className="h-4 w-4 text-yellow-400 mr-1" />
-                                <span>{driver.rating.toFixed(1)}</span>
-                                <span className="mx-2">•</span>
-                                <span>{Math.round(driver.distance)}km away</span>
+                              <p className="font-medium text-lg">{activeRide.driver.full_name}</p>
+                              <div className="flex items-center text-sm text-gray-500 space-x-4">
+                                <div className="flex items-center">
+                                  <Star className="h-4 w-4 text-yellow-400 mr-1 fill-yellow-400" />
+                                  <span>4.5</span>
+                                </div>
+                                <span>•</span>
+                                <span>{activeRide.driver.phone_number}</span>
                               </div>
                             </div>
-                            <Button
-                              size="sm"
-                              onClick={() => setIsRequestOpen(true)}
-                              disabled={!!activeRide}
-                              className="hover:scale-105 transition-transform duration-200"
-                            >
-                              Request
-                            </Button>
                           </div>
-                        ))}
-                      </div>
+
+                          {/* Bank Account Details */}
+                          <div className="mt-4">
+                            <h3 className="font-medium mb-2">Bank Account Details</h3>
+                            <div className="space-y-2 text-sm text-gray-600">
+                              <p className="flex justify-between">
+                                <span>Account Name:</span>
+                                <span className="font-medium">{activeRide.driver?.account_holder_name || 'Not provided'}</span>
+                              </p>
+                              <p className="flex justify-between">
+                                <span>Bank Name:</span>
+                                <span className="font-medium">{activeRide.driver?.bank_name || 'Not provided'}</span>
+                              </p>
+                              <p className="flex justify-between">
+                                <span>Account Number:</span>
+                                <span className="font-medium">{activeRide.driver?.account_number || 'Not provided'}</span>
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Status and Actions */}
+                          <div className="pt-4 border-t">
+                            <div className="flex justify-between items-center">
+                              <RideStatusBadge status={activeRide.status} animated />
+                              <div className="flex space-x-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="hover:bg-primary/10 hover:text-primary"
+                                  onClick={() => window.location.href = `tel:${activeRide.driver.phone_number}`}
+                                >
+                                  <Phone className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="hover:bg-primary/10 hover:text-primary"
+                                >
+                                  <MessageSquare className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="hover:bg-destructive/10 hover:text-destructive"
+                                >
+                                  <AlertTriangle className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-6 text-gray-500">
+                          <p>No active ride at the moment</p>
+                          <Button
+                            className="mt-4"
+                            onClick={() => setIsRequestOpen(true)}
+                          >
+                            Request a Ride
+                          </Button>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </div>
