@@ -177,7 +177,11 @@ const StudentDashboard = () => {
         notes: rideRequest.notes,
         special_requirements: rideRequest.specialRequirements,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        student_confirmed_complete: false,
+        driver_confirmed_complete: false,
+        completion_confirmed_at: null,
+        last_location_update: null
       }));
 
       setActiveRequest({

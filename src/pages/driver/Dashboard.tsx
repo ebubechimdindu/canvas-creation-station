@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import DriverSidebar from "@/components/driver/DriverSidebar";
@@ -380,7 +379,11 @@ const DriverDashboard = () => {
                   pickup_location: `${currentRideRequest.pickup_location}`,
                   dropoff_location: `${currentRideRequest.dropoff_location}`,
                   student_id: '',
-                  notes: `Estimated earnings: ₦${currentRideRequest.estimated_earnings.toFixed(2)}\nEstimated distance: ${currentRideRequest.estimated_distance.toFixed(1)}km\nEstimated duration: ${Math.round(currentRideRequest.estimated_duration)}mins`
+                  notes: `Estimated earnings: ₦${currentRideRequest.estimated_earnings.toFixed(2)}\nEstimated distance: ${currentRideRequest.estimated_distance.toFixed(1)}km\nEstimated duration: ${Math.round(currentRideRequest.estimated_duration)}mins`,
+                  student_confirmed_complete: false,
+                  driver_confirmed_complete: false,
+                  completion_confirmed_at: null,
+                  last_location_update: null
                 }}
                 onAccept={handleAcceptRide}
                 onDecline={handleRejectRide}
