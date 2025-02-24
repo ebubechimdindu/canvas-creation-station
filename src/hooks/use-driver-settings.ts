@@ -168,12 +168,11 @@ export const useDriverSettings = () => {
       const { data, error } = await supabase
         .from('driver_bank_accounts')
         .select('*')
-        .eq('driver_id', user.id)
-        .returns<DriverBankAccount[]>();
+        .eq('driver_id', user.id);
 
       if (error) throw error;
 
-      return data.map(account => ({
+      return (data || []).map(account => ({
         id: account.id,
         bankName: account.bank_name,
         accountNumber: account.account_number,
@@ -197,8 +196,7 @@ export const useDriverSettings = () => {
           account_number: data.accountNumber,
           account_holder_name: data.accountHolderName,
           is_primary: false,
-        })
-        .select();
+        });
 
       if (error) throw error;
     },
@@ -224,8 +222,7 @@ export const useDriverSettings = () => {
       const { error } = await supabase
         .from('driver_bank_accounts')
         .delete()
-        .eq('id', accountId)
-        .select();
+        .eq('id', accountId);
 
       if (error) throw error;
     },
