@@ -94,12 +94,6 @@ export interface DriverProfile {
   phone_number: string;
   profile_picture_url?: string;
   status: 'verified' | 'suspended';
-  current_location?: {
-    lat: number;
-    lng: number;
-  };
-  last_status_update?: string;
-  is_online?: boolean;
 }
 
 export interface RideRating {

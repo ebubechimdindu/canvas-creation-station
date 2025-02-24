@@ -14,18 +14,15 @@ interface UseDriverMatchingProps {
 export const useDriverMatching = ({ 
   rideRequestId,
   pickupLocation,
-  maxDistance = 5000
+  maxDistance = 5000 // 5km default
 }: UseDriverMatchingProps) => {
   const [matchedDriver, setMatchedDriver] = useState<Driver | null>(null);
   const { toast } = useToast();
 
-  const { data: nearbyDrivers, isLoading, error: queryError } = useQuery({
+  const { data: nearbyDrivers, isLoading } = useQuery({
     queryKey: ['nearbyDrivers', pickupLocation],
     queryFn: async () => {
       if (!pickupLocation) return [];
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No authenticated user');
 
       const { data, error } = await supabase.rpc(
         'find_nearby_drivers',
@@ -38,22 +35,17 @@ export const useDriverMatching = ({
 
       if (error) {
         console.error('Error finding nearby drivers:', error);
-        toast({
-          title: "Error",
-          description: "Failed to find nearby drivers. Please try again.",
-          variant: "destructive"
-        });
         throw error;
       }
 
-      // Transform and validate the database response
+      // Transform the database response to match our Driver type
       return (data || []).map((driver: any): Driver => ({
         id: driver.driver_id,
         name: driver.full_name,
         phoneNumber: driver.phone_number,
         profilePictureUrl: driver.profile_picture_url,
-        status: driver.status === 'verified' ? 'available' : 'offline',
-        rating: driver.rating || 4.5,
+        status: driver.status as 'available' | 'busy' | 'offline',
+        rating: driver.rating,
         distance: driver.distance,
         currentLocation: driver.current_location ? {
           lat: driver.current_location.coordinates[1],
@@ -63,14 +55,12 @@ export const useDriverMatching = ({
       }));
     },
     enabled: !!pickupLocation,
-    refetchInterval: 10000,
-    retry: 3
+    refetchInterval: 10000, // Refetch every 10 seconds
   });
 
   useEffect(() => {
     if (!rideRequestId) return;
 
-    // Subscribe to ride request updates
     const channel = supabase
       .channel(`ride_request_${rideRequestId}`)
       .on(
@@ -82,36 +72,7 @@ export const useDriverMatching = ({
           filter: `id=eq.${rideRequestId}`
         },
         (payload) => {
-          const newStatus = payload.new.status;
-          const driverId = payload.new.driver_id;
-
-          if (driverId && newStatus === 'driver_assigned') {
-            // Fetch driver details when assigned
-            supabase
-              .from('driver_profiles')
-              .select('*')
-              .eq('id', driverId)
-              .single()
-              .then(({ data, error }) => {
-                if (error) {
-                  console.error('Error fetching driver details:', error);
-                  return;
-                }
-                
-                if (data) {
-                  setMatchedDriver({
-                    id: data.id,
-                    name: data.full_name,
-                    phoneNumber: data.phone_number,
-                    profilePictureUrl: data.profile_picture_url,
-                    status: 'available',
-                    rating: 4.5,
-                    distance: 0,
-                    lastUpdated: new Date().toISOString()
-                  });
-                }
-              });
-
+          if (payload.new.driver_id && payload.new.status === 'driver_assigned') {
             toast({
               title: "Driver Found!",
               description: "A driver has been assigned to your ride.",
@@ -129,7 +90,6 @@ export const useDriverMatching = ({
   return {
     nearbyDrivers,
     matchedDriver,
-    isLoading,
-    error: queryError
+    isLoading
   };
 };

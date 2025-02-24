@@ -1,8 +1,8 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { Driver } from '@/types';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
 
 type DriverLocation = {
   lat: number;
@@ -12,11 +12,13 @@ type DriverLocation = {
   timestamp: string;
 };
 
+// Define the PostGIS point type
 type PostGISPoint = {
   type: 'Point';
-  coordinates: [number, number];
+  coordinates: [number, number]; // [longitude, latitude]
 }
 
+// Define the shape of the data we expect from Supabase
 type SupabaseDriverLocation = {
   id: number;
   location: PostGISPoint;
@@ -24,7 +26,7 @@ type SupabaseDriverLocation = {
   speed: number | null;
   is_online: boolean | null;
   driver_id: string;
-  updated_at: string | null;
+  updated_at: string | null;  // Added this field
   driver_profiles?: {
     full_name: string | null;
     profile_picture_url: string | null;
@@ -37,14 +39,10 @@ export const useLocationUpdates = (mode: 'current-driver' | 'all-drivers') => {
   const [driverLocation, setDriverLocation] = useState<DriverLocation | null>(null);
   const [nearbyDrivers, setNearbyDrivers] = useState<Driver[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
 
   useEffect(() => {
     const fetchDriverLocations = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('No authenticated user');
-
         const { data, error: fetchError } = await supabase
           .from('driver_locations')
           .select(`
@@ -59,11 +57,10 @@ export const useLocationUpdates = (mode: 'current-driver' | 'all-drivers') => {
               full_name,
               profile_picture_url,
               max_search_radius_km,
-              phone_number,
-              status
+              phone_number
             )
           `)
-          .eq(mode === 'current-driver' ? 'driver_id' : 'is_online', mode === 'current-driver' ? user.id : true);
+          .eq('is_online', true);
 
         if (fetchError) {
           console.error('Error fetching driver locations:', fetchError);
@@ -73,14 +70,15 @@ export const useLocationUpdates = (mode: 'current-driver' | 'all-drivers') => {
 
         if (!data) return;
 
+        // Transform the data into the expected format
         const transformedData = (data as unknown as SupabaseDriverLocation[]).map(item => ({
           id: item.driver_id,
           name: item.driver_profiles?.full_name || 'Unknown Driver',
           phoneNumber: item.driver_profiles?.phone_number || '',
           profilePictureUrl: item.driver_profiles?.profile_picture_url || null,
           status: item.is_online ? 'available' as const : 'offline' as const,
-          rating: 4.5,
-          distance: 0,
+          rating: 4.5, // Default rating
+          distance: 0, // Will be calculated later if needed
           currentLocation: {
             lat: item.location.coordinates[1],
             lng: item.location.coordinates[0]
@@ -90,14 +88,15 @@ export const useLocationUpdates = (mode: 'current-driver' | 'all-drivers') => {
 
         setNearbyDrivers(transformedData);
 
+        // If we're tracking a specific driver, set their location
         if (mode === 'current-driver' && transformedData.length > 0) {
           const currentDriver = transformedData[0];
           if (currentDriver?.currentLocation) {
             setDriverLocation({
               lat: currentDriver.currentLocation.lat,
               lng: currentDriver.currentLocation.lng,
-              heading: 0,
-              speed: 0,
+              heading: 0, // Default heading
+              speed: 0, // Default speed
               timestamp: currentDriver.lastUpdated,
             });
           }
@@ -113,11 +112,13 @@ export const useLocationUpdates = (mode: 'current-driver' | 'all-drivers') => {
       }
     };
 
+    // Initial fetch
     fetchDriverLocations();
 
-    const channel = supabase.channel('driver-locations')
-      .on(
-        'postgres_changes',
+    // Subscribe to changes
+    const channel = supabase
+      .channel('driver-locations')
+      .on('postgres_changes', 
         {
           event: '*',
           schema: 'public',
@@ -129,10 +130,11 @@ export const useLocationUpdates = (mode: 'current-driver' | 'all-drivers') => {
       )
       .subscribe();
 
+    // Cleanup subscription
     return () => {
       channel.unsubscribe();
     };
-  }, [mode, toast]);
+  }, [mode]);
 
   return { driverLocation, nearbyDrivers, error };
 };
