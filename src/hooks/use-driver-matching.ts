@@ -38,6 +38,11 @@ export const useDriverMatching = ({
 
       if (error) {
         console.error('Error finding nearby drivers:', error);
+        toast({
+          title: "Error",
+          description: "Failed to find nearby drivers. Please try again.",
+          variant: "destructive"
+        });
         throw error;
       }
 
@@ -59,19 +64,7 @@ export const useDriverMatching = ({
     },
     enabled: !!pickupLocation,
     refetchInterval: 10000,
-    retry: 3,
-    meta: {
-      errorMessage: "Failed to find nearby drivers. Please try again."
-    },
-    onSettled: (data, error) => {
-      if (error) {
-        toast({
-          title: "Error",
-          description: "Failed to find nearby drivers. Please try again.",
-          variant: "destructive"
-        });
-      }
-    }
+    retry: 3
   });
 
   useEffect(() => {
