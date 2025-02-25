@@ -2,7 +2,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import ErrorBoundary from './components/ErrorBoundary';
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -21,27 +21,25 @@ import DriverEarnings from "./pages/driver/Earnings";
 const App = () => {
   return (
     <ErrorBoundary>
-      <BrowserRouter>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth/student/login" element={<StudentLogin />} />
-            <Route path="/auth/student/register" element={<StudentRegister />} />
-            <Route path="/auth/driver/login" element={<DriverLogin />} />
-            <Route path="/auth/driver/register" element={<DriverRegister />} />
-            <Route path="/student/dashboard" element={<StudentDashboard />} />
-            <Route path="/student/rides" element={<StudentRides />} />
-            <Route path="/student/settings" element={<StudentSettings />} />
-            <Route path="/driver/dashboard" element={<DriverDashboard />} />
-            <Route path="/driver/rides" element={<DriverRides />} />
-            <Route path="/driver/settings" element={<DriverSettings />} />
-            <Route path="/driver/earnings" element={<DriverEarnings />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </TooltipProvider>
-      </BrowserRouter>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/auth/student/login" element={<StudentLogin />} />
+          <Route path="/auth/student/register" element={<StudentRegister />} />
+          <Route path="/auth/driver/login" element={<DriverLogin />} />
+          <Route path="/auth/driver/register" element={<DriverRegister />} />
+          <Route path="/student/dashboard" element={<StudentDashboard />} />
+          <Route path="/student/rides" element={<StudentRides />} />
+          <Route path="/student/settings" element={<StudentSettings />} />
+          <Route path="/driver/dashboard" element={<DriverDashboard />} />
+          <Route path="/driver/rides" element={<DriverRides />} />
+          <Route path="/driver/settings" element={<DriverSettings />} />
+          <Route path="/driver/earnings" element={<DriverEarnings />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </TooltipProvider>
     </ErrorBoundary>
   );
 };
