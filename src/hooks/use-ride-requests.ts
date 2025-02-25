@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -36,18 +37,7 @@ export const useRideRequests = () => {
             full_name,
             phone_number,
             profile_picture_url,
-            status,
-            driver_bank_accounts(
-              bank_name,
-              account_number,
-              account_holder_name,
-              is_primary
-            )
-          ),
-          ratings(
-            rating,
-            comment,
-            created_at
+            status
           )
         `)
         .eq('student_id', user.id)
@@ -62,40 +52,7 @@ export const useRideRequests = () => {
         .maybeSingle();
 
       if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.id,
-  });
-
-  const { data: rideHistory, isLoading: isLoadingHistory } = useQuery({
-    queryKey: ['rideHistory', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
-
-      const { data, error } = await supabase
-        .from('ride_requests')
-        .select(`
-          *,
-          driver:driver_profiles(
-            id,
-            full_name,
-            phone_number,
-            profile_picture_url,
-            status,
-            driver_bank_accounts(*)
-          ),
-          ratings(
-            rating,
-            comment,
-            created_at
-          )
-        `)
-        .eq('student_id', user.id)
-        .not('status', 'in', ['completed', 'cancelled'])
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
+      return data as RideRequest | null;
     },
     enabled: !!user?.id,
   });
@@ -158,11 +115,19 @@ export const useRideRequests = () => {
       throw new Error('User must be logged in to request a ride');
     }
 
+    // Check if there's truly an active ride by fetching the latest status
     const { data: existingRide, error: checkError } = await supabase
       .from('ride_requests')
       .select('status')
       .eq('student_id', user.id)
-      .not('status', 'in', ['completed', 'cancelled'])
+      .in('status', [
+        'requested',
+        'finding_driver',
+        'driver_assigned',
+        'en_route_to_pickup',
+        'arrived_at_pickup',
+        'in_progress'
+      ])
       .maybeSingle();
 
     if (checkError) {
@@ -174,12 +139,55 @@ export const useRideRequests = () => {
       throw new Error('You already have an active ride request');
     }
 
+    console.log('Creating ride request with locations:', { 
+      pickup: {
+        coordinates: pickup.coordinates,
+        name: pickup.name
+      }, 
+      dropoff: {
+        coordinates: dropoff.coordinates,
+        name: dropoff.name
+      }
+    });
+    
     if (!pickup?.coordinates || !dropoff?.coordinates) {
+      console.error('Invalid coordinates:', { pickup, dropoff });
       throw new Error('Invalid pickup or dropoff location coordinates');
+    }
+
+    if (!pickup.coordinates.lat || !pickup.coordinates.lng || 
+        !dropoff.coordinates.lat || !dropoff.coordinates.lng) {
+      console.error('Missing coordinate values:', {
+        pickup: pickup.coordinates,
+        dropoff: dropoff.coordinates
+      });
+      throw new Error('Missing coordinate values');
     }
 
     setIsCreating(true);
     try {
+      const { data: pickupRef, error: pickupError } = await supabase
+        .rpc('find_nearest_references', {
+          point: `POINT(${pickup.coordinates.lng} ${pickup.coordinates.lat})`,
+          max_distance: 100
+        });
+
+      if (pickupError) {
+        console.error('Error finding pickup reference:', pickupError);
+        throw pickupError;
+      }
+
+      const { data: dropoffRef, error: dropoffError } = await supabase
+        .rpc('find_nearest_references', {
+          point: `POINT(${dropoff.coordinates.lng} ${dropoff.coordinates.lat})`,
+          max_distance: 100
+        });
+
+      if (dropoffError) {
+        console.error('Error finding dropoff reference:', dropoffError);
+        throw dropoffError;
+      }
+
       const { data, error } = await supabase
         .from('ride_requests')
         .insert({
@@ -188,6 +196,8 @@ export const useRideRequests = () => {
           dropoff_location: `POINT(${dropoff.coordinates.lng} ${dropoff.coordinates.lat})`,
           pickup_address: pickup.name,
           dropoff_address: dropoff.name,
+          pickup_reference_id: pickupRef?.[0]?.id,
+          dropoff_reference_id: dropoffRef?.[0]?.id,
           notes,
           special_requirements: specialRequirements,
           status: 'requested',
@@ -197,8 +207,12 @@ export const useRideRequests = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating ride request:', error);
+        throw error;
+      }
 
+      // Invalidate the activeRide query to trigger a refetch
       queryClient.invalidateQueries({ queryKey: ['activeRide'] });
       
       toast({
@@ -250,6 +264,35 @@ export const useRideRequests = () => {
       throw error;
     }
   };
+
+  const { data: rideHistory, isLoading: isLoadingHistory } = useQuery({
+    queryKey: ['rideHistory', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+
+      const { data, error } = await supabase
+        .from('ride_requests')
+        .select(`
+          *,
+          driver:driver_profiles(
+            id,
+            full_name,
+            phone_number,
+            profile_picture_url,
+            status
+          ),
+          ratings:ride_ratings(*)
+        `)
+        .eq('student_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+    retry: false,
+  });
 
   return {
     activeRide,
