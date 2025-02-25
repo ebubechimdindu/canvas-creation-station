@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -37,7 +36,18 @@ export const useRideRequests = () => {
             full_name,
             phone_number,
             profile_picture_url,
-            status
+            status,
+            driver_bank_accounts(
+              bank_name,
+              account_number,
+              account_holder_name,
+              is_primary
+            )
+          ),
+          ratings:ride_ratings(
+            rating,
+            comment,
+            created_at
           )
         `)
         .eq('student_id', user.id)
@@ -115,7 +125,6 @@ export const useRideRequests = () => {
       throw new Error('User must be logged in to request a ride');
     }
 
-    // Check if there's truly an active ride by fetching the latest status
     const { data: existingRide, error: checkError } = await supabase
       .from('ride_requests')
       .select('status')
@@ -212,7 +221,6 @@ export const useRideRequests = () => {
         throw error;
       }
 
-      // Invalidate the activeRide query to trigger a refetch
       queryClient.invalidateQueries({ queryKey: ['activeRide'] });
       
       toast({
@@ -279,9 +287,19 @@ export const useRideRequests = () => {
             full_name,
             phone_number,
             profile_picture_url,
-            status
+            status,
+            driver_bank_accounts(
+              bank_name,
+              account_number,
+              account_holder_name,
+              is_primary
+            )
           ),
-          ratings:ride_ratings(*)
+          ratings:ride_ratings(
+            rating,
+            comment,
+            created_at
+          )
         `)
         .eq('student_id', user.id)
         .order('created_at', { ascending: false })
