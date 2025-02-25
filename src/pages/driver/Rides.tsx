@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import DriverSidebar from '@/components/driver/DriverSidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,31 +25,14 @@ const DriverRides = () => {
   const [activeRide, setActiveRide] = useState<ExtendedRideRequest | null>(null);
   const { toast } = useToast();
 
-  // Use the driver location hook
-  const { error: locationError } = useDriverLocation();
-  
-  // Listen for geolocation updates
-  useEffect(() => {
-    const watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        setCurrentLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        });
-      },
-      (error) => {
-        console.error('Error getting location:', error);
-        toast({
-          title: 'Location Error',
-          description: 'Unable to get your current location. Please enable location services.',
-          variant: 'destructive'
-        });
-      },
-      { enableHighAccuracy: true }
-    );
+  useDriverLocation();
 
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, [toast]);
+  useEffect(() => {
+    setCurrentLocation({
+      lat: 6.894000,
+      lng: 3.718700
+    });
+  }, []);
 
   const fetchPendingRequests = async () => {
     const { data, error } = await supabase
@@ -232,7 +214,6 @@ const DriverRides = () => {
       });
 
       if (newStatus === 'completed') {
-        setActiveRide(null);
         fetchActiveRide();
       }
     } catch (error) {

@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, User, Check, Navigation, Car } from 'lucide-react';
+import { MapPin, Clock, User, Check, Navigation, Car } from 'lucide-react';
 import type { RideRequest } from '@/types';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
@@ -23,29 +23,6 @@ export const RideRequestCard: React.FC<RideRequestCardProps> = ({
   const notes = request.notes?.split('\n');
   const studentName = notes?.find(note => note.startsWith('Student:'))?.replace('Student:', '')?.trim();
   const phoneNumber = notes?.find(note => note.startsWith('Phone:'))?.replace('Phone:', '')?.trim();
-
-  const renderStatusBadge = (status: string) => {
-    let variant: "default" | "secondary" | "destructive" | "outline" = "outline";
-    
-    switch (status) {
-      case 'driver_assigned':
-        variant = "secondary";
-        break;
-      case 'in_progress':
-        variant = "default";
-        break;
-      case 'completed':
-        variant = "outline";
-        break;
-      case 'cancelled':
-        variant = "destructive";
-        break;
-    }
-
-    return (
-      <Badge variant={variant}>{status.replace(/_/g, ' ')}</Badge>
-    );
-  };
 
   const renderStatusActions = () => {
     switch (request.status) {
@@ -130,7 +107,7 @@ export const RideRequestCard: React.FC<RideRequestCardProps> = ({
         <div className="flex items-start justify-between">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              {renderStatusBadge(request.status)}
+              <Badge variant="outline">{request.status}</Badge>
               <span className="text-sm text-muted-foreground">
                 {new Date(request.created_at).toLocaleTimeString()}
               </span>

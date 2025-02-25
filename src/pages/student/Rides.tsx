@@ -34,6 +34,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { RideStatusBadge } from "@/components/rides/RideStatusBadge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const StudentRides: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -413,15 +414,18 @@ const StudentRides: React.FC = () => {
                       {activeRide && activeRide.driver ? (
                         <div className="space-y-4">
                           <div className="flex items-center space-x-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xl font-semibold">
-                              {activeRide.driver.full_name.charAt(0)}
-                            </div>
+                            <Avatar className="h-16 w-16">
+                              <AvatarImage src={activeRide.driver.profile_picture_url || undefined} alt={activeRide.driver.full_name} />
+                              <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-white">
+                                {activeRide.driver.full_name.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
                             <div className="flex-1">
                               <p className="font-medium text-lg">{activeRide.driver.full_name}</p>
                               <div className="flex items-center text-sm text-gray-500 space-x-4">
                                 <div className="flex items-center">
                                   <Star className="h-4 w-4 text-yellow-400 mr-1 fill-yellow-400" />
-                                  <span>4.5</span>
+                                  <span>{activeRide.ratings?.[0]?.rating || "No rating"}</span>
                                 </div>
                                 <span>•</span>
                                 <span>{activeRide.driver.phone_number}</span>
@@ -429,26 +433,32 @@ const StudentRides: React.FC = () => {
                             </div>
                           </div>
 
-                          {/* Bank Account Details */}
-                          <div className="mt-4">
-                            <h3 className="font-medium mb-2">Bank Account Details</h3>
-                            <div className="space-y-2 text-sm text-gray-600">
-                              <p className="flex justify-between">
-                                <span>Account Name:</span>
-                                <span className="font-medium">{activeRide.driver?.account_holder_name || 'Not provided'}</span>
-                              </p>
-                              <p className="flex justify-between">
-                                <span>Bank Name:</span>
-                                <span className="font-medium">{activeRide.driver?.bank_name || 'Not provided'}</span>
-                              </p>
-                              <p className="flex justify-between">
-                                <span>Account Number:</span>
-                                <span className="font-medium">{activeRide.driver?.account_number || 'Not provided'}</span>
-                              </p>
+                          {activeRide.driver.driver_bank_accounts?.length > 0 && (
+                            <div className="mt-4">
+                              <h3 className="font-medium mb-2">Bank Account Details</h3>
+                              <div className="space-y-2 text-sm text-gray-600">
+                                {activeRide.driver.driver_bank_accounts
+                                  .filter(account => account.is_primary)
+                                  .map(account => (
+                                    <div key={account.account_number} className="space-y-2">
+                                      <p className="flex justify-between">
+                                        <span>Account Name:</span>
+                                        <span className="font-medium">{account.account_holder_name}</span>
+                                      </p>
+                                      <p className="flex justify-between">
+                                        <span>Bank Name:</span>
+                                        <span className="font-medium">{account.bank_name}</span>
+                                      </p>
+                                      <p className="flex justify-between">
+                                        <span>Account Number:</span>
+                                        <span className="font-medium">{account.account_number}</span>
+                                      </p>
+                                    </div>
+                                  ))}
+                              </div>
                             </div>
-                          </div>
+                          )}
 
-                          {/* Status and Actions */}
                           <div className="pt-4 border-t">
                             <div className="flex justify-between items-center">
                               <RideStatusBadge status={activeRide.status} animated />
