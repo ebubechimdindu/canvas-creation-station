@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -59,6 +60,8 @@ export const useRideRequests = () => {
   useEffect(() => {
     if (fetchedActiveRide) {
       dispatch(setActiveRide(fetchedActiveRide));
+    } else {
+      dispatch(setActiveRide(null));
     }
   }, [fetchedActiveRide, dispatch]);
 
@@ -112,7 +115,27 @@ export const useRideRequests = () => {
       throw new Error('User must be logged in to request a ride');
     }
 
-    if (activeRide) {
+    // Check if there's truly an active ride by fetching the latest status
+    const { data: existingRide, error: checkError } = await supabase
+      .from('ride_requests')
+      .select('status')
+      .eq('student_id', user.id)
+      .in('status', [
+        'requested',
+        'finding_driver',
+        'driver_assigned',
+        'en_route_to_pickup',
+        'arrived_at_pickup',
+        'in_progress'
+      ])
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('Error checking active rides:', checkError);
+      throw new Error('Failed to check active rides');
+    }
+
+    if (existingRide) {
       throw new Error('You already have an active ride request');
     }
 
@@ -189,6 +212,7 @@ export const useRideRequests = () => {
         throw error;
       }
 
+      // Invalidate the activeRide query to trigger a refetch
       queryClient.invalidateQueries({ queryKey: ['activeRide'] });
       
       toast({
