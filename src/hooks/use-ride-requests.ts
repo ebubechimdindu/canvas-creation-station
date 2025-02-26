@@ -55,7 +55,6 @@ export const useRideRequests = () => {
       
       if (!data) return null;
 
-      // If there's a driver, get their ratings
       if (data.driver?.id) {
         const { data: ratings, error: ratingsError } = await supabase
           .from('ride_ratings')
@@ -135,12 +134,54 @@ export const useRideRequests = () => {
     };
   }, [activeRide?.id, dispatch, queryClient, toast]);
 
+  const cancelRideRequest = async (rideId: number) => {
+    if (!user?.id) {
+      throw new Error('User must be logged in to cancel a ride');
+    }
+
+    try {
+      const { error } = await supabase
+        .from('ride_requests')
+        .update({
+          status: 'cancelled',
+          cancelled_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', rideId)
+        .eq('student_id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ['activeRide'] });
+      queryClient.invalidateQueries({ queryKey: ['rideHistory'] });
+
+      toast({
+        title: "Ride Cancelled",
+        description: "Your ride request has been cancelled.",
+      });
+
+      dispatch(updateRideStatus({
+        rideId,
+        status: 'cancelled',
+        timestamp: new Date().toISOString()
+      }));
+    } catch (error) {
+      console.error('Error cancelling ride:', error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel ride. Please try again.",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
   const createRideRequest = async ({ pickup, dropoff, notes, specialRequirements }: CreateRideRequestParams) => {
     if (!user?.id) {
       throw new Error('User must be logged in to request a ride');
     }
 
-    // Check only for truly active rides
     const { data: existingRide, error: checkError } = await supabase
       .from('ride_requests')
       .select('status')
@@ -237,7 +278,6 @@ export const useRideRequests = () => {
         throw error;
       }
 
-      // Invalidate the activeRide query to trigger a refetch
       queryClient.invalidateQueries({ queryKey: ['activeRide'] });
       
       toast({
@@ -281,7 +321,6 @@ export const useRideRequests = () => {
         description: "Thank you for your feedback!",
       });
 
-      // Refresh the ride history to show the new rating
       queryClient.invalidateQueries({ queryKey: ['rideHistory'] });
     } catch (error) {
       console.error('Error submitting rating:', error);
@@ -327,6 +366,7 @@ export const useRideRequests = () => {
     isLoadingActive,
     isCreating,
     createRideRequest,
+    cancelRideRequest,
     handleRating,
     rideHistory,
     isLoadingHistory,
