@@ -37,7 +37,18 @@ export const useRideRequests = () => {
             full_name,
             phone_number,
             profile_picture_url,
-            status
+            status,
+            driver_bank_accounts(
+              bank_name,
+              account_number,
+              account_holder_name,
+              is_primary
+            )
+          ),
+          driver_ratings:ride_ratings(
+            rating,
+            comment,
+            created_at
           )
         `)
         .eq('student_id', user.id)
@@ -52,6 +63,25 @@ export const useRideRequests = () => {
         .maybeSingle();
 
       if (error) throw error;
+      
+      if (data?.driver) {
+        // Calculate average rating if there are ratings
+        const ratings = data.driver_ratings || [];
+        const avgRating = ratings.length > 0
+          ? ratings.reduce((acc, curr) => acc + curr.rating, 0) / ratings.length
+          : null;
+        
+        return {
+          ...data,
+          driver: {
+            ...data.driver,
+            average_rating: avgRating,
+            // Get primary bank account if exists
+            account_details: data.driver.driver_bank_accounts?.find(acc => acc.is_primary) || null
+          }
+        };
+      }
+      
       return data as RideRequest | null;
     },
     enabled: !!user?.id,
@@ -91,6 +121,7 @@ export const useRideRequests = () => {
                 dispatch(addToHistory(payload.new));
                 break;
               case 'cancelled':
+                dispatch(addToHistory(payload.new));
                 toast({
                   title: "Ride Cancelled",
                   description: "Your ride has been cancelled.",
