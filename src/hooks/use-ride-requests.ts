@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -32,23 +31,13 @@ export const useRideRequests = () => {
         .from('ride_requests')
         .select(`
           *,
-          driver:driver_profiles(
+          driver:driver_profiles!ride_requests_driver_id_fkey(
             id,
             full_name,
             phone_number,
             profile_picture_url,
             status,
-            driver_bank_accounts(
-              bank_name,
-              account_number,
-              account_holder_name,
-              is_primary
-            )
-          ),
-          driver_ratings:ride_ratings(
-            rating,
-            comment,
-            created_at
+            driver_bank_accounts(*)
           )
         `)
         .eq('student_id', user.id)
@@ -64,25 +53,32 @@ export const useRideRequests = () => {
 
       if (error) throw error;
       
-      if (data?.driver) {
-        // Calculate average rating if there are ratings
-        const ratings = data.driver_ratings || [];
-        const avgRating = ratings.length > 0
-          ? ratings.reduce((acc, curr) => acc + curr.rating, 0) / ratings.length
-          : null;
-        
-        return {
-          ...data,
-          driver: {
-            ...data.driver,
-            average_rating: avgRating,
-            // Get primary bank account if exists
-            account_details: data.driver.driver_bank_accounts?.find(acc => acc.is_primary) || null
-          }
-        };
+      if (!data) return null;
+
+      // If there's a driver, get their ratings
+      if (data.driver?.id) {
+        const { data: ratings, error: ratingsError } = await supabase
+          .from('ride_ratings')
+          .select('rating')
+          .eq('driver_id', data.driver.id);
+
+        if (!ratingsError && ratings) {
+          const avgRating = ratings.length > 0
+            ? ratings.reduce((acc, curr) => acc + curr.rating, 0) / ratings.length
+            : null;
+
+          return {
+            ...data,
+            driver: {
+              ...data.driver,
+              average_rating: avgRating,
+              account_details: data.driver.driver_bank_accounts?.[0] || null
+            }
+          };
+        }
       }
       
-      return data as RideRequest | null;
+      return data;
     },
     enabled: !!user?.id,
   });
@@ -90,8 +86,6 @@ export const useRideRequests = () => {
   useEffect(() => {
     if (fetchedActiveRide) {
       dispatch(setActiveRide(fetchedActiveRide));
-    } else {
-      dispatch(setActiveRide(null));
     }
   }, [fetchedActiveRide, dispatch]);
 
@@ -146,7 +140,7 @@ export const useRideRequests = () => {
       throw new Error('User must be logged in to request a ride');
     }
 
-    // Check if there's truly an active ride by fetching the latest status
+    // Check only for truly active rides
     const { data: existingRide, error: checkError } = await supabase
       .from('ride_requests')
       .select('status')
@@ -265,32 +259,36 @@ export const useRideRequests = () => {
     }
   };
 
-  const cancelRideRequest = async (rideId: number) => {
+  const handleRating = async (rideId: number, rating: number, review: string) => {
+    if (!user?.id) {
+      throw new Error('User must be logged in to submit rating');
+    }
+
     try {
       const { error } = await supabase
-        .from('ride_requests')
-        .update({
-          status: 'cancelled',
-          cancelled_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', rideId)
-        .eq('student_id', user?.id);
+        .from('ride_ratings')
+        .insert({
+          ride_id: rideId,
+          rating: rating,
+          comment: review,
+          rated_by: user.id
+        });
 
       if (error) throw error;
 
-      queryClient.invalidateQueries({ queryKey: ['activeRide'] });
-      
       toast({
-        title: "Ride Cancelled",
-        description: "Your ride request has been cancelled.",
+        title: "Rating Submitted",
+        description: "Thank you for your feedback!",
       });
+
+      // Refresh the ride history to show the new rating
+      queryClient.invalidateQueries({ queryKey: ['rideHistory'] });
     } catch (error) {
-      console.error('Error cancelling ride:', error);
+      console.error('Error submitting rating:', error);
       toast({
         title: "Error",
-        description: "Failed to cancel ride. Please try again.",
-        variant: "destructive",
+        description: "Failed to submit rating. Please try again.",
+        variant: "destructive"
       });
       throw error;
     }
@@ -322,7 +320,6 @@ export const useRideRequests = () => {
       return data;
     },
     enabled: !!user?.id,
-    retry: false,
   });
 
   return {
@@ -330,7 +327,7 @@ export const useRideRequests = () => {
     isLoadingActive,
     isCreating,
     createRideRequest,
-    cancelRideRequest,
+    handleRating,
     rideHistory,
     isLoadingHistory,
   };
