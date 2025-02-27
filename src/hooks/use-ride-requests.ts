@@ -23,10 +23,13 @@ export const useRideRequests = () => {
   const user = useAppSelector((state) => state.auth.user);
   const activeRide = useAppSelector((state) => state.rides.activeRide);
 
+  // Active ride query
   const { data: fetchedActiveRide, isLoading: isLoadingActive } = useQuery({
     queryKey: ['activeRide', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
+
+      console.log('Fetching active ride for user:', user.id);
 
       const { data, error } = await supabase
         .from('ride_requests')
@@ -57,9 +60,17 @@ export const useRideRequests = () => {
         ])
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching active ride:', error);
+        throw error;
+      }
       
-      if (!data) return null;
+      if (!data) {
+        console.log('No active ride found');
+        return null;
+      }
+
+      console.log('Found active ride:', data);
 
       if (data.driver?.id) {
         const { data: ratings, error: ratingsError } = await supabase
@@ -67,12 +78,16 @@ export const useRideRequests = () => {
           .select('rating')
           .eq('driver_id', data.driver.id);
 
+        if (ratingsError) {
+          console.error('Error fetching driver ratings:', ratingsError);
+        }
+
         if (!ratingsError && ratings) {
           const avgRating = ratings.length > 0
             ? (ratings.reduce((acc, curr) => acc + curr.rating, 0) / ratings.length).toFixed(1)
             : '0.0';
 
-          return {
+          const enhancedData = {
             ...data,
             driver: {
               ...data.driver,
@@ -80,6 +95,9 @@ export const useRideRequests = () => {
               account_details: data.driver.driver_bank_accounts?.[0] || null
             }
           };
+          
+          console.log('Enhanced ride data with ratings:', enhancedData);
+          return enhancedData;
         }
       }
       
@@ -88,14 +106,55 @@ export const useRideRequests = () => {
     enabled: !!user?.id,
   });
 
+  // Effect to update Redux store with active ride
   useEffect(() => {
     if (fetchedActiveRide) {
+      console.log('Updating Redux store with active ride:', fetchedActiveRide);
       dispatch(setActiveRide(fetchedActiveRide));
     }
   }, [fetchedActiveRide, dispatch]);
 
+  // Ride history query with enhanced logging
+  const { data: rideHistory, isLoading: isLoadingHistory } = useQuery({
+    queryKey: ['rideHistory', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+
+      console.log('Fetching ride history for user:', user.id);
+
+      const { data, error } = await supabase
+        .from('ride_requests')
+        .select(`
+          *,
+          driver:driver_profiles(
+            id,
+            full_name,
+            phone_number,
+            profile_picture_url,
+            status,
+            driver_bank_accounts(*)
+          ),
+          ratings:ride_ratings(*)
+        `)
+        .eq('student_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching ride history:', error);
+        throw error;
+      }
+
+      console.log('Fetched ride history:', data);
+      return data || [];
+    },
+    enabled: !!user?.id,
+  });
+
+  // Real-time updates subscription
   useEffect(() => {
     if (!activeRide?.id) return;
+
+    console.log('Setting up real-time updates for ride:', activeRide.id);
 
     const channel = supabase
       .channel(`ride_${activeRide.id}`)
@@ -108,6 +167,8 @@ export const useRideRequests = () => {
           filter: `id=eq.${activeRide.id}`
         },
         async (payload: any) => {
+          console.log('Received real-time update:', payload);
+
           if (payload.new.status !== payload.old.status) {
             dispatch(updateRideStatus({
               rideId: payload.new.id,
@@ -130,12 +191,14 @@ export const useRideRequests = () => {
             }
 
             queryClient.invalidateQueries({ queryKey: ['activeRide'] });
+            queryClient.invalidateQueries({ queryKey: ['rideHistory'] });
           }
         }
       )
       .subscribe();
 
     return () => {
+      console.log('Cleaning up real-time subscription');
       supabase.removeChannel(channel);
     };
   }, [activeRide?.id, dispatch, queryClient, toast]);
