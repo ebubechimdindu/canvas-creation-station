@@ -63,7 +63,6 @@ const StudentRides: React.FC = () => {
     cancelRideRequest,
     rideHistory,
     isLoadingHistory,
-    handleRating: handleRatingHook,
   } = useRideRequests();
 
   const { nearbyDrivers, error: locationError } = useLocationUpdates('all-drivers');
@@ -206,7 +205,21 @@ const StudentRides: React.FC = () => {
 
   const handleRating = async (rideId: number) => {
     try {
-      await handleRatingHook(rideId, rating, review);
+      const { error } = await supabase
+        .from('ride_ratings')
+        .insert({
+          ride_id: rideId,
+          rating,
+          comment: review,
+          rated_by: activeRide?.student_id
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Rating Submitted",
+        description: "Thank you for your feedback!",
+      });
       setIsRatingOpen(false);
       setRating(0);
       setReview("");

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -22,30 +23,21 @@ export const useRideRequests = () => {
   const user = useAppSelector((state) => state.auth.user);
   const activeRide = useAppSelector((state) => state.rides.activeRide);
 
-  // Active ride query
   const { data: fetchedActiveRide, isLoading: isLoadingActive } = useQuery({
     queryKey: ['activeRide', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
 
-      console.log('Fetching active ride for user:', user.id);
-
       const { data, error } = await supabase
         .from('ride_requests')
         .select(`
           *,
-          driver:driver_profiles!ride_requests_driver_id_fkey(
+          driver:driver_profiles(
             id,
             full_name,
             phone_number,
             profile_picture_url,
-            status,
-            driver_bank_accounts (
-              id,
-              bank_name,
-              account_number,
-              account_holder_name
-            )
+            status
           )
         `)
         .eq('student_id', user.id)
@@ -59,101 +51,22 @@ export const useRideRequests = () => {
         ])
         .maybeSingle();
 
-      if (error) {
-        console.error('Error fetching active ride:', error);
-        throw error;
-      }
-      
-      if (!data) {
-        console.log('No active ride found');
-        return null;
-      }
-
-      console.log('Found active ride:', data);
-
-      if (data.driver?.id) {
-        const { data: ratings, error: ratingsError } = await supabase
-          .from('ride_ratings')
-          .select('rating')
-          .eq('driver_id', data.driver.id);
-
-        if (ratingsError) {
-          console.error('Error fetching driver ratings:', ratingsError);
-        }
-
-        if (!ratingsError && ratings) {
-          const avgRating = ratings.length > 0
-            ? (ratings.reduce((acc, curr) => acc + curr.rating, 0) / ratings.length).toFixed(1)
-            : '0.0';
-
-          const enhancedData = {
-            ...data,
-            driver: {
-              ...data.driver,
-              average_rating: avgRating,
-              account_details: data.driver.driver_bank_accounts?.[0] || null
-            }
-          };
-          
-          console.log('Enhanced ride data with ratings:', enhancedData);
-          return enhancedData;
-        }
-      }
-      
-      return data;
+      if (error) throw error;
+      return data as RideRequest | null;
     },
     enabled: !!user?.id,
   });
 
-  // Effect to update Redux store with active ride
   useEffect(() => {
     if (fetchedActiveRide) {
-      console.log('Updating Redux store with active ride:', fetchedActiveRide);
       dispatch(setActiveRide(fetchedActiveRide));
+    } else {
+      dispatch(setActiveRide(null));
     }
   }, [fetchedActiveRide, dispatch]);
 
-  // Ride history query with enhanced logging
-  const { data: rideHistory, isLoading: isLoadingHistory } = useQuery({
-    queryKey: ['rideHistory', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
-
-      console.log('Fetching ride history for user:', user.id);
-
-      const { data, error } = await supabase
-        .from('ride_requests')
-        .select(`
-          *,
-          driver:driver_profiles(
-            id,
-            full_name,
-            phone_number,
-            profile_picture_url,
-            status,
-            driver_bank_accounts(*)
-          ),
-          ratings:ride_ratings(*)
-        `)
-        .eq('student_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching ride history:', error);
-        throw error;
-      }
-
-      console.log('Fetched ride history:', data);
-      return data || [];
-    },
-    enabled: !!user?.id,
-  });
-
-  // Real-time updates subscription
   useEffect(() => {
     if (!activeRide?.id) return;
-
-    console.log('Setting up real-time updates for ride:', activeRide.id);
 
     const channel = supabase
       .channel(`ride_${activeRide.id}`)
@@ -166,8 +79,6 @@ export const useRideRequests = () => {
           filter: `id=eq.${activeRide.id}`
         },
         async (payload: any) => {
-          console.log('Received real-time update:', payload);
-
           if (payload.new.status !== payload.old.status) {
             dispatch(updateRideStatus({
               rideId: payload.new.id,
@@ -180,7 +91,6 @@ export const useRideRequests = () => {
                 dispatch(addToHistory(payload.new));
                 break;
               case 'cancelled':
-                dispatch(addToHistory(payload.new));
                 toast({
                   title: "Ride Cancelled",
                   description: "Your ride has been cancelled.",
@@ -190,67 +100,22 @@ export const useRideRequests = () => {
             }
 
             queryClient.invalidateQueries({ queryKey: ['activeRide'] });
-            queryClient.invalidateQueries({ queryKey: ['rideHistory'] });
           }
         }
       )
       .subscribe();
 
     return () => {
-      console.log('Cleaning up real-time subscription');
       supabase.removeChannel(channel);
     };
   }, [activeRide?.id, dispatch, queryClient, toast]);
-
-  const cancelRideRequest = async (rideId: number) => {
-    if (!user?.id) {
-      throw new Error('User must be logged in to cancel a ride');
-    }
-
-    try {
-      const { error } = await supabase
-        .from('ride_requests')
-        .update({
-          status: 'cancelled',
-          cancelled_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', rideId)
-        .eq('student_id', user.id)
-        .single();
-
-      if (error) throw error;
-
-      queryClient.invalidateQueries({ queryKey: ['activeRide'] });
-      queryClient.invalidateQueries({ queryKey: ['rideHistory'] });
-
-      toast({
-        title: "Ride Cancelled",
-        description: "Your ride request has been cancelled.",
-      });
-
-      dispatch(updateRideStatus({
-        rideId,
-        status: 'cancelled',
-        timestamp: new Date().toISOString()
-      }));
-    } catch (error) {
-      console.error('Error cancelling ride:', error);
-      toast({
-        title: "Error",
-        description: "Failed to cancel ride. Please try again.",
-        variant: "destructive"
-      });
-      throw error;
-    }
-  };
 
   const createRideRequest = async ({ pickup, dropoff, notes, specialRequirements }: CreateRideRequestParams) => {
     if (!user?.id) {
       throw new Error('User must be logged in to request a ride');
     }
 
-    // Only check for actual active rides, excluding completed and cancelled
+    // Check if there's truly an active ride by fetching the latest status
     const { data: existingRide, error: checkError } = await supabase
       .from('ride_requests')
       .select('status')
@@ -347,6 +212,7 @@ export const useRideRequests = () => {
         throw error;
       }
 
+      // Invalidate the activeRide query to trigger a refetch
       queryClient.invalidateQueries({ queryKey: ['activeRide'] });
       
       toast({
@@ -368,40 +234,65 @@ export const useRideRequests = () => {
     }
   };
 
-  const handleRating = async (rideId: number, rating: number, review: string) => {
-    if (!user?.id) {
-      throw new Error('User must be logged in to submit rating');
-    }
-
+  const cancelRideRequest = async (rideId: number) => {
     try {
       const { error } = await supabase
-        .from('ride_ratings')
-        .insert({
-          ride_id: rideId,
-          driver_id: activeRide?.driver?.id,
-          rating: rating,
-          comment: review,
-          rated_by: user.id
-        });
+        .from('ride_requests')
+        .update({
+          status: 'cancelled',
+          cancelled_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', rideId)
+        .eq('student_id', user?.id);
 
       if (error) throw error;
 
+      queryClient.invalidateQueries({ queryKey: ['activeRide'] });
+      
       toast({
-        title: "Rating Submitted",
-        description: "Thank you for your feedback!",
+        title: "Ride Cancelled",
+        description: "Your ride request has been cancelled.",
       });
-
-      queryClient.invalidateQueries({ queryKey: ['rideHistory'] });
     } catch (error) {
-      console.error('Error submitting rating:', error);
+      console.error('Error cancelling ride:', error);
       toast({
         title: "Error",
-        description: "Failed to submit rating. Please try again.",
-        variant: "destructive"
+        description: "Failed to cancel ride. Please try again.",
+        variant: "destructive",
       });
       throw error;
     }
   };
+
+  const { data: rideHistory, isLoading: isLoadingHistory } = useQuery({
+    queryKey: ['rideHistory', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+
+      const { data, error } = await supabase
+        .from('ride_requests')
+        .select(`
+          *,
+          driver:driver_profiles(
+            id,
+            full_name,
+            phone_number,
+            profile_picture_url,
+            status
+          ),
+          ratings:ride_ratings(*)
+        `)
+        .eq('student_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+    retry: false,
+  });
 
   return {
     activeRide,
@@ -409,7 +300,6 @@ export const useRideRequests = () => {
     isCreating,
     createRideRequest,
     cancelRideRequest,
-    handleRating,
     rideHistory,
     isLoadingHistory,
   };
