@@ -29,6 +29,7 @@ export const RideRequestCard: React.FC<RideRequestCardProps> = ({
     
     switch (status) {
       case 'driver_assigned':
+      case 'en_route_to_pickup':
         variant = "secondary";
         break;
       case 'in_progress':
@@ -70,6 +71,7 @@ export const RideRequestCard: React.FC<RideRequestCardProps> = ({
         );
 
       case 'driver_assigned':
+      case 'en_route_to_pickup':
         return (
           <div className="flex items-center justify-end gap-2">
             <Button
