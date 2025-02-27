@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -37,7 +38,12 @@ export const useRideRequests = () => {
             phone_number,
             profile_picture_url,
             status,
-            driver_bank_accounts(*)
+            driver_bank_accounts (
+              id,
+              bank_name,
+              account_number,
+              account_holder_name
+            )
           )
         `)
         .eq('student_id', user.id)
@@ -63,8 +69,8 @@ export const useRideRequests = () => {
 
         if (!ratingsError && ratings) {
           const avgRating = ratings.length > 0
-            ? ratings.reduce((acc, curr) => acc + curr.rating, 0) / ratings.length
-            : null;
+            ? (ratings.reduce((acc, curr) => acc + curr.rating, 0) / ratings.length).toFixed(1)
+            : '0.0';
 
           return {
             ...data,
@@ -182,6 +188,7 @@ export const useRideRequests = () => {
       throw new Error('User must be logged in to request a ride');
     }
 
+    // Only check for actual active rides, excluding completed and cancelled
     const { data: existingRide, error: checkError } = await supabase
       .from('ride_requests')
       .select('status')
@@ -309,6 +316,7 @@ export const useRideRequests = () => {
         .from('ride_ratings')
         .insert({
           ride_id: rideId,
+          driver_id: activeRide?.driver?.id,
           rating: rating,
           comment: review,
           rated_by: user.id
@@ -347,7 +355,8 @@ export const useRideRequests = () => {
             full_name,
             phone_number,
             profile_picture_url,
-            status
+            status,
+            driver_bank_accounts(*)
           ),
           ratings:ride_ratings(*)
         `)
