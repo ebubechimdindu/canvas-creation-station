@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -403,35 +402,6 @@ export const useRideRequests = () => {
       throw error;
     }
   };
-
-  const { data: rideHistory, isLoading: isLoadingHistory } = useQuery({
-    queryKey: ['rideHistory', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
-
-      const { data, error } = await supabase
-        .from('ride_requests')
-        .select(`
-          *,
-          driver:driver_profiles(
-            id,
-            full_name,
-            phone_number,
-            profile_picture_url,
-            status,
-            driver_bank_accounts(*)
-          ),
-          ratings:ride_ratings(*)
-        `)
-        .eq('student_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.id,
-  });
 
   return {
     activeRide,
