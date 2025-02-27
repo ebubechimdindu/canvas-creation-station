@@ -55,9 +55,9 @@ interface ActivityQueryResult {
   status: string;
   pickup_address: string;
   dropoff_address: string;
-  student_profiles: {
+  student_profile: {
     full_name: string;
-  }[] | null;
+  };
   ride_ratings: {
     rating: number;
   }[] | null;
@@ -114,7 +114,7 @@ const DriverDashboard = () => {
             status,
             pickup_address,
             dropoff_address,
-            student_profiles (
+            student_profile:student_profiles!ride_requests_student_id_fkey(
               full_name
             ),
             ride_ratings (
@@ -139,7 +139,7 @@ const DriverDashboard = () => {
           status: activity.status,
           pickup_address: activity.pickup_address,
           dropoff_address: activity.dropoff_address,
-          student_name: activity.student_profiles?.[0]?.full_name || 'Unknown Student',
+          student_name: activity.student_profile?.full_name || 'Unknown Student',
           rating: activity.ride_ratings?.[0]?.rating || null,
           earnings: activity.driver_earnings?.[0]?.amount || 0
         })) || [];
