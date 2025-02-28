@@ -128,17 +128,40 @@ const DriverRides = () => {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('Not authenticated');
 
+      // Fetch the current status of the ride first
+      const { data: currentRide, error: fetchError } = await supabase
+        .from('ride_requests')
+        .select('status')
+        .eq('id', requestId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Only proceed if the ride is still in a status that can be accepted
+      if (!['requested', 'finding_driver'].includes(currentRide.status)) {
+        toast({
+          title: 'Ride Unavailable',
+          description: 'This ride has already been assigned to another driver.',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Update the ride with the driver's ID and change status
       const { error: updateError } = await supabase
         .from('ride_requests')
         .update({
           status: 'driver_assigned',
-          driver_id: user.id
+          driver_id: user.id,
+          matched_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
         .eq('id', requestId);
 
       if (updateError) throw updateError;
 
-      const { data: updatedRide, error: fetchError } = await supabase
+      // Fetch the updated ride details
+      const { data: updatedRide, error: fetchUpdatedError } = await supabase
         .from('ride_requests')
         .select(`
           *,
@@ -150,7 +173,12 @@ const DriverRides = () => {
         .eq('id', requestId)
         .single();
 
-      if (fetchError) throw fetchError;
+      if (fetchUpdatedError) throw fetchUpdatedError;
+
+      // Verify the status was updated correctly
+      if (updatedRide.status !== 'driver_assigned') {
+        console.warn('Ride status was not updated to driver_assigned, current status:', updatedRide.status);
+      }
 
       setActiveRide(updatedRide);
       setPendingRequests(prev => prev.filter(req => req.id !== requestId));
@@ -159,11 +187,15 @@ const DriverRides = () => {
         title: 'Success',
         description: 'Ride request accepted'
       });
+      
+      // Refresh the data immediately to ensure UI is in sync
+      fetchPendingRequests();
+      fetchActiveRide();
     } catch (error) {
       console.error('Error accepting request:', error);
       toast({
         title: 'Error',
-        description: 'Failed to accept request',
+        description: 'Failed to accept request. Please try again.',
         variant: 'destructive'
       });
     }
@@ -177,7 +209,8 @@ const DriverRides = () => {
       const { error: updateError } = await supabase
         .from('ride_requests')
         .update({
-          status: 'finding_driver'
+          status: 'finding_driver',
+          updated_at: new Date().toISOString()
         })
         .eq('id', requestId);
 
