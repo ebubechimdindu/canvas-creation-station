@@ -20,11 +20,16 @@ export const useDriverLocation = () => {
           throw new Error('Failed to get user');
         }
 
+        // Add slight randomization to locations to avoid all drivers at exact same spot
+        // This is a small random offset (±0.0005 degrees, roughly 50 meters)
+        const randomLat = position.coords.latitude + (Math.random() - 0.5) * 0.001;
+        const randomLng = position.coords.longitude + (Math.random() - 0.5) * 0.001;
+
         const { error: upsertError } = await supabase
           .from('driver_locations')
           .upsert({
             driver_id: user.id,
-            location: `POINT(${position.coords.longitude} ${position.coords.latitude})`,
+            location: `POINT(${randomLng} ${randomLat})`,
             heading: position.coords.heading || 0,
             speed: position.coords.speed || 0,
             is_online: driverStatus !== 'offline',

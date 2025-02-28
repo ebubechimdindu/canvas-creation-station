@@ -60,13 +60,18 @@ export const useStudentLocation = (mapboxToken?: string): UseStudentLocationRetu
         throw new Error('Failed to get user');
       }
 
-      const address = await getAddressFromCoordinates(lat, lng);
-      const withinCampus = isWithinCampus(lat, lng);
+      // Add slight randomization to avoid all users stacking at same locations
+      // This small random offset (±0.0005 degrees, roughly 50 meters)
+      const randomLat = lat + (Math.random() - 0.5) * 0.001;
+      const randomLng = lng + (Math.random() - 0.5) * 0.001;
+
+      const address = await getAddressFromCoordinates(randomLat, randomLng);
+      const withinCampus = isWithinCampus(randomLat, randomLng);
 
       const { error: upsertError } = await supabase
         .from('student_locations')
         .upsert({
-          location: `POINT(${lng} ${lat})`,
+          location: `POINT(${randomLng} ${randomLat})`,
           student_id: user.id,
           is_current_location: true,
           updated_at: new Date().toISOString()
@@ -80,8 +85,8 @@ export const useStudentLocation = (mapboxToken?: string): UseStudentLocationRetu
       }
 
       setCurrentLocation({
-        lat,
-        lng,
+        lat: randomLat,
+        lng: randomLng,
         address,
         timestamp: Date.now(),
         isWithinCampus: withinCampus

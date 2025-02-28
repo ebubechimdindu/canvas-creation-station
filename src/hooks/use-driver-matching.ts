@@ -39,7 +39,8 @@ export const useDriverMatching = ({
       }
 
       // Transform the database response to match our Driver type
-      return (data || []).map((driver: any): Driver => ({
+      // Ensure we get a random selection when multiple drivers are available
+      const drivers = (data || []).map((driver: any): Driver => ({
         id: driver.driver_id,
         name: driver.full_name,
         phoneNumber: driver.phone_number,
@@ -53,6 +54,9 @@ export const useDriverMatching = ({
         } : undefined,
         lastUpdated: driver.last_updated
       }));
+      
+      // Shuffle array to ensure different drivers get selected when they have same distance
+      return drivers.sort(() => Math.random() - 0.5);
     },
     enabled: !!pickupLocation,
     refetchInterval: 10000, // Refetch every 10 seconds
@@ -77,6 +81,8 @@ export const useDriverMatching = ({
               title: "Driver Found!",
               description: "A driver has been assigned to your ride.",
             });
+            // Get driver details to update matched driver state
+            fetchAssignedDriverDetails(payload.new.driver_id);
           }
         }
       )
@@ -86,6 +92,57 @@ export const useDriverMatching = ({
       supabase.removeChannel(channel);
     };
   }, [rideRequestId, toast]);
+
+  // Add function to fetch driver details when a driver is assigned
+  const fetchAssignedDriverDetails = async (driverId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('driver_profiles')
+        .select('*')
+        .eq('id', driverId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching driver details:', error);
+        return;
+      }
+
+      // Get driver's current location
+      const { data: locationData, error: locationError } = await supabase
+        .from('driver_locations')
+        .select('*')
+        .eq('driver_id', driverId)
+        .single();
+
+      if (locationError) {
+        console.error('Error fetching driver location:', locationError);
+      }
+
+      const currentLocation = locationData?.location
+        ? {
+            lat: locationData.location.coordinates[1],
+            lng: locationData.location.coordinates[0]
+          }
+        : undefined;
+
+      // Create driver object based on fetched data
+      const driver: Driver = {
+        id: data.id,
+        name: data.full_name,
+        phoneNumber: data.phone_number,
+        profilePictureUrl: data.profile_picture_url,
+        status: data.status as 'available' | 'busy' | 'offline',
+        rating: 4.5, // Default rating if not available
+        distance: 0, // Distance will be calculated separately
+        currentLocation,
+        lastUpdated: locationData?.updated_at || new Date().toISOString()
+      };
+
+      setMatchedDriver(driver);
+    } catch (e) {
+      console.error('Error in fetchAssignedDriverDetails:', e);
+    }
+  };
 
   return {
     nearbyDrivers,
