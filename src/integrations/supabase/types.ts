@@ -51,6 +51,61 @@ export type Database = {
         }
         Relationships: []
       }
+      driver_bank_accounts: {
+        Row: {
+          account_holder_name: string
+          account_number: string
+          bank_name: string
+          created_at: string | null
+          driver_id: string | null
+          id: string
+          is_primary: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_holder_name: string
+          account_number: string
+          bank_name: string
+          created_at?: string | null
+          driver_id?: string | null
+          id?: string
+          is_primary?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_holder_name?: string
+          account_number?: string
+          bank_name?: string
+          created_at?: string | null
+          driver_id?: string | null
+          id?: string
+          is_primary?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_bank_accounts_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_dashboard_stats"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "driver_bank_accounts_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_bank_accounts_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_stats_detailed"
+            referencedColumns: ["driver_id"]
+          },
+        ]
+      }
       driver_earnings: {
         Row: {
           amount: number
@@ -285,6 +340,7 @@ export type Database = {
         Row: {
           comment: string | null
           created_at: string
+          driver_id: string | null
           id: number
           rated_by: string
           rating: number
@@ -293,6 +349,7 @@ export type Database = {
         Insert: {
           comment?: string | null
           created_at?: string
+          driver_id?: string | null
           id?: number
           rated_by: string
           rating: number
@@ -301,6 +358,7 @@ export type Database = {
         Update: {
           comment?: string | null
           created_at?: string
+          driver_id?: string | null
           id?: number
           rated_by?: string
           rating?: number
@@ -334,6 +392,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "student_recent_activity"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ride_ratings_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_dashboard_stats"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "ride_ratings_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ride_ratings_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_stats_detailed"
+            referencedColumns: ["driver_id"]
           },
         ]
       }
@@ -1963,6 +2042,13 @@ export type Database = {
       postgis_wagyu_version: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      set_primary_bank_account: {
+        Args: {
+          p_account_id: string
+          p_driver_id: string
+        }
+        Returns: undefined
       }
       spheroid_in: {
         Args: {
@@ -3942,6 +4028,16 @@ export type Database = {
         | "timeout"
     }
     CompositeTypes: {
+      bank_account_type: {
+        id: string | null
+        driver_id: string | null
+        bank_name: string | null
+        account_number: string | null
+        account_holder_name: string | null
+        is_primary: boolean | null
+        created_at: string | null
+        updated_at: string | null
+      }
       geometry_dump: {
         path: number[] | null
         geom: unknown | null
