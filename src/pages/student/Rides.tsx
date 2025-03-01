@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -28,7 +29,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -79,7 +80,28 @@ const Rides = () => {
       rating: 5,
       review: "",
     },
-  })
+  });
+
+  // Define mapRideStatusToUI before it's used in the query
+  const mapRideStatusToUI = (status: RideStatus): RideStatusUI => {
+    switch (status) {
+      case 'completed':
+        return 'Completed';
+      case 'requested':
+      case 'finding_driver':
+      case 'driver_assigned':
+        return 'Upcoming';
+      case 'en_route_to_pickup':
+      case 'arrived_at_pickup':
+      case 'in_progress':
+        return 'In Progress';
+      case 'cancelled':
+      case 'timeout':
+        return 'Cancelled';
+      default:
+        return 'Upcoming';
+    }
+  };
 
   const { data: rides, isLoading, error } = useQuery({
     queryKey: ['studentRides'],
@@ -88,7 +110,7 @@ const Rides = () => {
       if (!user) throw new Error('Not authenticated');
 
       let query = supabase
-        .from<"ride_requests", "public">('ride_requests')
+        .from('ride_requests')
         .select(`*, ratings (*)`)
         .eq('student_id', user.id)
         .order('created_at', { ascending: false });
@@ -117,26 +139,6 @@ const Rides = () => {
 
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {error.message}</div>;
-
-  const mapRideStatusToUI = (status: RideStatus): RideStatusUI => {
-    switch (status) {
-      case 'completed':
-        return 'Completed';
-      case 'requested':
-      case 'finding_driver':
-      case 'driver_assigned':
-        return 'Upcoming';
-      case 'en_route_to_pickup':
-      case 'arrived_at_pickup':
-      case 'in_progress':
-        return 'In Progress';
-      case 'cancelled':
-      case 'timeout':
-        return 'Cancelled';
-      default:
-        return 'Upcoming';
-    }
-  };
 
   const handleRating = async (rideId: number, rating: number, review: string) => {
     try {
