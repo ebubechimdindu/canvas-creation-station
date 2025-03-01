@@ -211,7 +211,8 @@ const StudentRides: React.FC = () => {
           ride_id: rideId,
           rating,
           comment: review,
-          rated_by: activeRide?.student_id
+          rated_by: activeRide?.student_id,
+          driver_id: activeRide?.driver_id
         });
 
       if (error) throw error;
