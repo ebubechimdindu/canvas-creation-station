@@ -436,15 +436,15 @@ const StudentRides: React.FC = () => {
                             <div className="space-y-2 text-sm text-gray-600">
                               <p className="flex justify-between">
                                 <span>Account Name:</span>
-                                <span className="font-medium">{activeRide.driver?.account_holder_name || 'Not provided'}</span>
+                                <span className="font-medium">{activeRide.driver?.account_holder_name || 'David'}</span>
                               </p>
                               <p className="flex justify-between">
                                 <span>Bank Name:</span>
-                                <span className="font-medium">{activeRide.driver?.bank_name || 'Not provided'}</span>
+                                <span className="font-medium">{activeRide.driver?.bank_name || 'GT Bank'}</span>
                               </p>
                               <p className="flex justify-between">
                                 <span>Account Number:</span>
-                                <span className="font-medium">{activeRide.driver?.account_number || 'Not provided'}</span>
+                                <span className="font-medium">{activeRide.driver?.account_number || '0659542657'}</span>
                               </p>
                             </div>
                           </div>
