@@ -67,26 +67,6 @@ const ratingSchema = z.object({
   review: z.string().optional(),
 })
 
-const mapRideStatusToUI = (status: RideStatus): RideStatusUI => {
-  switch (status) {
-    case 'completed':
-      return 'Completed';
-    case 'requested':
-    case 'finding_driver':
-    case 'driver_assigned':
-      return 'Upcoming';
-    case 'en_route_to_pickup':
-    case 'arrived_at_pickup':
-    case 'in_progress':
-      return 'In Progress';
-    case 'cancelled':
-    case 'timeout':
-      return 'Cancelled';
-    default:
-      return 'Upcoming';
-  }
-};
-
 const Rides = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -102,16 +82,36 @@ const Rides = () => {
     },
   });
 
-  // First, fetch the ride requests
-  const { data: rides, isLoading: ridesLoading, error: ridesError } = useQuery({
-    queryKey: ['studentRides', date],
+  // Define mapRideStatusToUI before it's used in the query
+  const mapRideStatusToUI = (status: RideStatus): RideStatusUI => {
+    switch (status) {
+      case 'completed':
+        return 'Completed';
+      case 'requested':
+      case 'finding_driver':
+      case 'driver_assigned':
+        return 'Upcoming';
+      case 'en_route_to_pickup':
+      case 'arrived_at_pickup':
+      case 'in_progress':
+        return 'In Progress';
+      case 'cancelled':
+      case 'timeout':
+        return 'Cancelled';
+      default:
+        return 'Upcoming';
+    }
+  };
+
+  const { data: rides, isLoading, error } = useQuery({
+    queryKey: ['studentRides'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
       let query = supabase
         .from('ride_requests')
-        .select('*')
+        .select(`*, ratings (*)`)
         .eq('student_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -124,61 +124,18 @@ const Rides = () => {
 
       if (error) throw error;
 
-      // Transform the ride data to include statusUI
-      return (data || []).map(ride => ({
+      return data?.map(ride => ({
         ...ride,
         statusUI: mapRideStatusToUI(ride.status as RideStatus)
       })) as StudentRide[];
     },
   });
 
-  // Then, fetch the ratings for each ride
-  const { data: rideRatings, isLoading: ratingsLoading } = useQuery({
-    queryKey: ['rideRatings'],
-    queryFn: async () => {
-      if (!rides || rides.length === 0) return {};
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const rideIds = rides.map(ride => ride.id);
-      
-      const { data, error } = await supabase
-        .from('ride_ratings')
-        .select('*')
-        .eq('rated_by', user.id)
-        .in('ride_id', rideIds);
-
-      if (error) throw error;
-
-      // Create a map of ride_id to ratings array
-      const ratingsMap: Record<number, RideRating[]> = {};
-      data?.forEach(rating => {
-        if (!ratingsMap[rating.ride_id]) {
-          ratingsMap[rating.ride_id] = [];
-        }
-        ratingsMap[rating.ride_id].push(rating as RideRating);
-      });
-
-      return ratingsMap;
-    },
-    enabled: rides !== undefined && rides.length > 0,
-  });
-
-  // Combine rides with their ratings
-  const ridesWithRatings = rides?.map(ride => ({
-    ...ride,
-    ratings: rideRatings?.[ride.id] || []
-  }));
-
   useEffect(() => {
-    if (ridesWithRatings && ridesWithRatings.length > 0) {
-      setActiveRide(ridesWithRatings[0]);
+    if (rides && rides.length > 0) {
+      setActiveRide(rides[0]);
     }
-  }, [ridesWithRatings]);
-
-  const isLoading = ridesLoading || ratingsLoading;
-  const error = ridesError;
+  }, [rides]);
 
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {error.message}</div>;
@@ -205,7 +162,6 @@ const Rides = () => {
       
       // Refresh ride data to update UI
       queryClient.invalidateQueries({ queryKey: ['studentRides'] });
-      queryClient.invalidateQueries({ queryKey: ['rideRatings'] });
 
     } catch (error) {
       console.error("Error submitting rating: ", error);
@@ -257,8 +213,8 @@ const Rides = () => {
         </PopoverContent>
       </Popover>
 
-      <Accordion type="single" collapsible className="w-full mt-4">
-        {ridesWithRatings?.map(ride => (
+      <Accordion type="single" collapsible className="w-full">
+        {rides?.map(ride => (
           <AccordionItem key={ride.id} value={String(ride.id)}>
             <AccordionTrigger onClick={() => setActiveRide(ride)}>
               {ride.pickup_address} to {ride.dropoff_address} - {ride.statusUI}
@@ -274,7 +230,7 @@ const Rides = () => {
                   {ride.special_requirements && <p><strong>Special Requirements:</strong> {ride.special_requirements}</p>}
                 </div>
                 <div>
-                  {ride.ratings.length === 0 && ride.status === 'completed' && (
+                  {ride.ratings && ride.ratings.length === 0 && ride.status === 'completed' && (
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button variant="outline">Rate Ride</Button>
@@ -336,7 +292,7 @@ const Rides = () => {
                       </DialogContent>
                     </Dialog>
                   )}
-                  {ride.ratings.length > 0 && (
+                  {ride.ratings && ride.ratings.length > 0 && (
                     <div>
                       <p><strong>Your Rating:</strong> {ride.ratings[0].rating}</p>
                       {ride.ratings[0].comment && <p><strong>Your Review:</strong> {ride.ratings[0].comment}</p>}
