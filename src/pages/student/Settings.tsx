@@ -1,3 +1,5 @@
+
+import { useState, useEffect } from "react";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,29 +13,80 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   User, 
-  Bell, 
-  Moon,
-  Languages, 
   MapPin,
   Camera,
   Trash2,
-  Loader2
+  Loader2,
+  LogOut,
+  Moon
 } from "lucide-react";
 import { useStudentSettings } from "@/hooks/use-student-settings";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
 
 export default function StudentSettings() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const { 
     settings, 
     isLoading, 
     updateSettings, 
     updateProfileImage 
   } = useStudentSettings();
+
+  // Local state for form fields
+  const [formValues, setFormValues] = useState({
+    name: '',
+    phone: '',
+    defaultLocations: {
+      home: '',
+      school: ''
+    },
+    theme: 'system' as 'light' | 'dark' | 'system'
+  });
+
+  // Initialize form values when settings are loaded
+  useEffect(() => {
+    if (settings) {
+      setFormValues({
+        name: settings.name || '',
+        phone: settings.phone || '',
+        defaultLocations: {
+          home: settings.defaultLocations?.home || '',
+          school: settings.defaultLocations?.school || ''
+        },
+        theme: settings.theme || 'system'
+      });
+    }
+  }, [settings]);
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormValues(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleLocationChange = (field: 'home' | 'school', value: string) => {
+    setFormValues(prev => ({
+      ...prev,
+      defaultLocations: {
+        ...prev.defaultLocations,
+        [field]: value
+      }
+    }));
+  };
+
+  const handleThemeChange = (value: 'light' | 'dark' | 'system') => {
+    setFormValues(prev => ({
+      ...prev,
+      theme: value
+    }));
+  };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -52,14 +105,42 @@ export default function StudentSettings() {
   };
 
   const handleRemoveImage = () => {
-    updateSettings.mutate({
-      ...settings,
-      profileImage: undefined,
-    });
+    if (settings) {
+      updateSettings.mutate({
+        ...settings,
+        profileImage: undefined,
+      });
+    }
   };
 
   const handleSaveSettings = () => {
-    updateSettings.mutate(settings);
+    if (settings) {
+      updateSettings.mutate({
+        ...settings,
+        name: formValues.name,
+        phone: formValues.phone,
+        defaultLocations: formValues.defaultLocations,
+        theme: formValues.theme,
+      });
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out of your account",
+      });
+      navigate('/auth/student/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast({
+        title: "Logout failed",
+        description: "There was an error logging you out. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (isLoading) {
@@ -154,11 +235,8 @@ export default function StudentSettings() {
                       <Label htmlFor="name">Full Name</Label>
                       <Input 
                         id="name" 
-                        value={settings?.name || ''}
-                        onChange={(e) => updateSettings.mutate({
-                          ...settings,
-                          name: e.target.value,
-                        })}
+                        value={formValues.name}
+                        onChange={(e) => handleInputChange('name', e.target.value)}
                         placeholder="Your full name" 
                       />
                     </div>
@@ -176,11 +254,8 @@ export default function StudentSettings() {
                       <Label htmlFor="phone">Phone Number</Label>
                       <Input 
                         id="phone" 
-                        value={settings?.phone || ''}
-                        onChange={(e) => updateSettings.mutate({
-                          ...settings,
-                          phone: e.target.value,
-                        })}
+                        value={formValues.phone}
+                        onChange={(e) => handleInputChange('phone', e.target.value)}
                         placeholder="Your phone number" 
                       />
                     </div>
@@ -210,16 +285,8 @@ export default function StudentSettings() {
                     <Input
                       id="homeLocation"
                       placeholder="Enter your home address"
-                      value={settings?.defaultLocations?.home || ""}
-                      onChange={(e) =>
-                        updateSettings.mutate({
-                          ...settings,
-                          defaultLocations: {
-                            ...settings?.defaultLocations,
-                            home: e.target.value,
-                          },
-                        })
-                      }
+                      value={formValues.defaultLocations.home}
+                      onChange={(e) => handleLocationChange('home', e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
@@ -227,81 +294,9 @@ export default function StudentSettings() {
                     <Input
                       id="schoolLocation"
                       placeholder="Enter your school address"
-                      value={settings?.defaultLocations?.school || ""}
-                      onChange={(e) =>
-                        updateSettings.mutate({
-                          ...settings,
-                          defaultLocations: {
-                            ...settings?.defaultLocations,
-                            school: e.target.value,
-                          },
-                        })
-                      }
+                      value={formValues.defaultLocations.school}
+                      onChange={(e) => handleLocationChange('school', e.target.value)}
                     />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Bell className="h-5 w-5" />
-                    Notifications
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label>Email Notifications</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Receive ride updates via email
-                        </p>
-                      </div>
-                      <Switch
-                        checked={settings?.notifications?.email}
-                        onCheckedChange={(checked) =>
-                          updateSettings.mutate({
-                            ...settings,
-                            notifications: { ...settings?.notifications, email: checked },
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label>Push Notifications</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Receive push notifications on your device
-                        </p>
-                      </div>
-                      <Switch
-                        checked={settings?.notifications?.push}
-                        onCheckedChange={(checked) =>
-                          updateSettings.mutate({
-                            ...settings,
-                            notifications: { ...settings?.notifications, push: checked },
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label>SMS Notifications</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Receive ride updates via SMS
-                        </p>
-                      </div>
-                      <Switch
-                        checked={settings?.notifications?.sms}
-                        onCheckedChange={(checked) =>
-                          updateSettings.mutate({
-                            ...settings,
-                            notifications: { ...settings?.notifications, sms: checked },
-                          })
-                        }
-                      />
-                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -318,10 +313,8 @@ export default function StudentSettings() {
                     <div className="flex items-center space-x-2">
                       <Label>Theme</Label>
                       <Select
-                        value={settings?.theme}
-                        onValueChange={(value: 'light' | 'dark' | 'system') =>
-                          updateSettings.mutate({ ...settings, theme: value })
-                        }
+                        value={formValues.theme}
+                        onValueChange={(value: 'light' | 'dark' | 'system') => handleThemeChange(value)}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select theme" />
@@ -340,28 +333,21 @@ export default function StudentSettings() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Languages className="h-5 w-5" />
-                    Language
+                    <LogOut className="h-5 w-5" />
+                    Account
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <Select
-                      value={settings?.language}
-                      onValueChange={(value: 'en' | 'ig' | 'yo' | 'ha') =>
-                        updateSettings.mutate({ ...settings, language: value })
-                      }
+                    <p className="text-sm text-muted-foreground">
+                      Sign out of your account on this device
+                    </p>
+                    <Button 
+                      variant="destructive"
+                      onClick={handleLogout}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select language" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="en">English</SelectItem>
-                        <SelectItem value="ig">Igbo</SelectItem>
-                        <SelectItem value="yo">Yoruba</SelectItem>
-                        <SelectItem value="ha">Hausa</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      Log Out
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

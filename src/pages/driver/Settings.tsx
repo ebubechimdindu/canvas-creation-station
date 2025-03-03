@@ -1,3 +1,4 @@
+
 import { useForm } from "react-hook-form";
 import { useDriverSettings, type DriverSettings, type BankAccount } from "@/hooks/use-driver-settings";
 import DriverSidebar from "@/components/driver/DriverSidebar";
@@ -8,7 +9,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { UserCircle, Trash2, Star } from "lucide-react";
+import { UserCircle, Trash2, Star, LogOut } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 type FormValues = {
   name: string;
@@ -33,6 +37,9 @@ const DriverSettings = () => {
     deleteBankAccount,
     setPrimaryAccount,
   } = useDriverSettings();
+  
+  const navigate = useNavigate();
+  const { toast } = useToast();
   
   const form = useForm<FormValues>({
     defaultValues: {
@@ -67,6 +74,24 @@ const DriverSettings = () => {
         bankForm.reset();
       },
     });
+  };
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out of your account",
+      });
+      navigate('/auth/driver/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast({
+        title: "Logout failed",
+        description: "There was an error logging you out. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (isLoading) {
@@ -168,10 +193,10 @@ const DriverSettings = () => {
                   <div className="mt-4">
                     <Label>Account Status</Label>
                     <div className="mt-1">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium capitalize
-                        {settings?.status === 'verified' ? 'bg-green-100 text-green-800' : 
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium capitalize
+                        ${settings?.status === 'verified' ? 'bg-green-100 text-green-800' : 
                          settings?.status === 'suspended' ? 'bg-red-100 text-red-800' : 
-                         'bg-yellow-100 text-yellow-800'}">
+                         'bg-yellow-100 text-yellow-800'}`}>
                         {settings?.status?.replace('_', ' ')}
                       </span>
                     </div>
@@ -291,6 +316,28 @@ const DriverSettings = () => {
                   </form>
                 </Form>
               )}
+            </CardContent>
+          </Card>
+
+          <Card className="mt-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <LogOut className="h-5 w-5" />
+                Account
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Sign out of your account on this device
+                </p>
+                <Button 
+                  variant="destructive"
+                  onClick={handleLogout}
+                >
+                  Log Out
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
