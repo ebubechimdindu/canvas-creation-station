@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
-import { MapPin, Calendar, Clock, Activity, Car, X, Star } from "lucide-react";
+import { MapPin, Calendar, Clock, Activity, Car, X, Star, Phone } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -46,7 +46,8 @@ import { useStudentLocation } from '@/hooks/use-student-location';
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { RideStatus, DriverProfile } from "@/types";
+import RideDetailsModal from "@/components/rides/RideDetailsModal";
+import type { RideStatus, DriverProfile, Ride } from "@/types";
 
 interface RideLocation {
   lat: number;
@@ -91,6 +92,8 @@ const StudentDashboard = () => {
     estimatedWait: string;
     nearbyDrivers: number;
   } | null>(null);
+  const [selectedRide, setSelectedRide] = useState<any | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const { toast } = useToast();
   const dispatch = useAppDispatch();
   const { mapboxToken } = useMap();
@@ -231,6 +234,29 @@ const StudentDashboard = () => {
         variant: "destructive"
       });
     }
+  };
+
+  const handleViewRideDetails = (ride: any) => {
+    const formattedRide: Ride = {
+      id: ride.id,
+      student_id: ride.student_id || "",
+      driver_id: ride.driver_id || "",
+      date: ride.created_at,
+      pickup: ride.pickup_address,
+      dropoff: ride.dropoff_address,
+      driver: ride.driver_name || "Not assigned",
+      status: ride.status,
+      rating: ride.rating || 0,
+      payment: {
+        method: 'cash',
+        status: 'pending',
+        amount: 0
+      },
+      notes: ride.notes || ""
+    };
+    
+    setSelectedRide(formattedRide);
+    setIsDetailsModalOpen(true);
   };
 
   const { stats, recentActivity, nearbyDrivers, isLoading } = useStudentDashboard();
@@ -513,6 +539,7 @@ const StudentDashboard = () => {
                           <Button 
                             variant="outline" 
                             size="sm"
+                            onClick={() => handleViewRideDetails(ride)}
                             className="hover:scale-105 transition-transform duration-200"
                           >
                             View Details
@@ -546,14 +573,13 @@ const StudentDashboard = () => {
                               <span>{Math.round(driver.distance_meters / 1000)}km away</span>
                             </div>
                           </div>
-                          <Button
-                            size="sm"
-                            onClick={() => setIsRequestOpen(true)}
-                            disabled={activeRequest !== null}
-                            className="hover:scale-105 transition-transform duration-200"
+                          <a
+                            href={`tel:${driver.phone_number || '+'}`}
+                            className="inline-flex items-center justify-center rounded-full w-9 h-9 bg-primary/10 text-primary hover:bg-primary/20 transition-colors duration-200"
+                            title="Call driver"
                           >
-                            Request
-                          </Button>
+                            <Phone className="h-4 w-4" />
+                          </a>
                         </div>
                       ))}
                     </div>
@@ -562,6 +588,12 @@ const StudentDashboard = () => {
               </div>
             </div>
           </main>
+
+          <RideDetailsModal
+            ride={selectedRide}
+            open={isDetailsModalOpen}
+            onOpenChange={setIsDetailsModalOpen}
+          />
         </div>
       </MapProvider>
     </SidebarProvider>

@@ -2,9 +2,8 @@
 import React from "react";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Loader2, MapPin, Star } from "lucide-react";
+import { Loader2, MapPin, Star, Phone } from "lucide-react";
 import type { Driver } from "@/types";
 
 interface DriverAvailabilityProps {
@@ -54,16 +53,13 @@ export function DriverAvailability({
                     </div>
                   </div>
                 </div>
-                {onSelectDriver && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="hover:bg-primary/10 hover:text-primary transition-colors"
-                    onClick={() => onSelectDriver(driver)}
-                  >
-                    Select
-                  </Button>
-                )}
+                <a
+                  href={`tel:${driver.phoneNumber || '+'}`}
+                  className="inline-flex items-center justify-center rounded-full w-9 h-9 bg-primary/10 text-primary hover:bg-primary/20 transition-colors duration-200"
+                  title="Call driver"
+                >
+                  <Phone className="h-4 w-4" />
+                </a>
               </div>
             </Card>
           ))}

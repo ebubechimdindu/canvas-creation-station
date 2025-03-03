@@ -23,6 +23,9 @@ interface RecentActivity {
   rating: number;
   cancelled_at: string | null;
   completed_at: string | null;
+  student_id?: string;
+  driver_id?: string;
+  notes?: string;
 }
 
 interface NearbyDriver {
@@ -32,6 +35,7 @@ interface NearbyDriver {
   distance_meters: number;
   last_location_update: string;
   last_known_location: { lat: number; lng: number } | null;
+  phone_number: string;
 }
 
 interface DriverStatsDetailed {
@@ -145,7 +149,8 @@ export const useStudentDashboard = () => {
           average_rating: driver.average_rating || 0,
           distance_meters: 0,
           last_location_update: new Date().toISOString(),
-          last_known_location: driver.last_known_location
+          last_known_location: driver.last_known_location,
+          phone_number: driver.phone_number
         }));
       } catch (err) {
         console.error('Exception fetching nearby drivers:', err);
