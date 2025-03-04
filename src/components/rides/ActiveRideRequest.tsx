@@ -26,6 +26,8 @@ export function ActiveRideRequest({
   onConfirmPickup,
   onCompleteRide
 }: ActiveRideRequestProps) {
+  console.log('ActiveRideRequest driver:', driver);
+  
   const renderStatusContent = () => {
     switch (status) {
       case 'requested':

@@ -58,25 +58,32 @@ export const useRideRequests = () => {
         ])
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching active ride:', error);
+        throw error;
+      }
       
       // Filter bank accounts to only include primary account
       if (data && data.driver_bank_accounts) {
         data.driver_bank_accounts = data.driver_bank_accounts.filter((account: any) => account.is_primary);
       }
       
+      console.log('Fetched active ride:', data);
       return data as RideRequest | null;
     },
     enabled: !!user?.id,
+    refetchInterval: 5000, // Refetch every 5 seconds to ensure data is fresh
   });
 
   useEffect(() => {
     if (fetchedActiveRide) {
+      console.log('Setting active ride in Redux:', fetchedActiveRide);
       dispatch(setActiveRide(fetchedActiveRide));
-    } else {
+    } else if (fetchedActiveRide === null && activeRide !== null) {
+      console.log('Clearing active ride in Redux');
       dispatch(setActiveRide(null));
     }
-  }, [fetchedActiveRide, dispatch]);
+  }, [fetchedActiveRide, dispatch, activeRide]);
 
   useEffect(() => {
     if (!activeRide?.id) return;
@@ -307,7 +314,12 @@ export const useRideRequests = () => {
         .order('created_at', { ascending: false })
         .limit(10);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching ride history:', error);
+        throw error;
+      }
+      
+      console.log('Fetched ride history:', data);
       
       // Filter each ride's bank accounts to only include primary accounts
       if (data) {
@@ -318,7 +330,7 @@ export const useRideRequests = () => {
         });
       }
       
-      return data;
+      return data || [];
     },
     enabled: !!user?.id,
     retry: false,
@@ -330,7 +342,7 @@ export const useRideRequests = () => {
     isCreating,
     createRideRequest,
     cancelRideRequest,
-    rideHistory,
+    rideHistory: rideHistory || [],
     isLoadingHistory,
   };
 };

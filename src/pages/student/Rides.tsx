@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useAppSelector, useAppDispatch } from "@/hooks/redux";
 import { setActiveRide, addToHistory, updateRideStatus } from "@/features/rides/ridesSlice";
@@ -23,7 +22,7 @@ import { RideHistoryTable } from "@/components/rides/RideHistoryTable";
 import { supabase } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
 import type { RideRequest, RideStatus, Driver, Ride, RIDE_STATUS_UI, RideStatusUI } from "@/types";
-import { mapRideStatusToUI } from "@/types"; // Add this import
+import { mapRideStatusToUI } from "@/types"; 
 import type { CampusLocation } from "@/types/locations";
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import {
@@ -68,55 +67,15 @@ const StudentRides: React.FC = () => {
   } = useRideRequests();
 
   const { nearbyDrivers, error: locationError } = useLocationUpdates('all-drivers');
-
-  useEffect(() => {
-    if (!activeRide?.id) return;
-
-    const channel = supabase
-      .channel(`ride_${activeRide.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'ride_requests',
-          filter: `id=eq.${activeRide.id}`
-        },
-        (payload: any) => {
-          if (payload.new.status !== payload.old.status) {
-            dispatch(updateRideStatus({
-              rideId: payload.new.id,
-              status: payload.new.status
-            }));
-
-            const statusMessages: Record<RideStatus, string> = {
-              driver_assigned: 'Driver has been assigned to your ride',
-              en_route_to_pickup: 'Driver is on the way to pick you up',
-              arrived_at_pickup: 'Driver has arrived at pickup location',
-              in_progress: 'Your ride has started',
-              completed: 'Your ride has been completed',
-              cancelled: 'Your ride has been cancelled',
-              requested: 'Ride requested',
-              finding_driver: 'Finding a driver',
-              timeout: 'Request timed out'
-            };
-
-            toast({
-              title: 'Ride Update',
-              description: statusMessages[payload.new.status as RideStatus] || 'Status updated',
-            });
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [activeRide?.id, dispatch, toast]);
+  
+  console.log('Active ride in component:', activeRide);
+  console.log('Ride history in component:', rideHistory);
 
   const handleConfirmPickup = async () => {
-    if (!activeRide?.id || !user?.id) return;
+    if (!activeRide?.id || !user?.id) {
+      console.error('Cannot confirm pickup: No active ride or user');
+      return;
+    }
     
     try {
       const { error } = await supabase
@@ -259,6 +218,7 @@ const StudentRides: React.FC = () => {
   };
 
   const convertToRideFormat = (request: RideRequest): Ride => {
+    console.log('Converting to ride format:', request);
     const primaryBankAccount = request.driver_bank_accounts?.find(account => account.is_primary);
     
     return {
@@ -292,6 +252,7 @@ const StudentRides: React.FC = () => {
   };
 
   const handleViewRideDetails = (ride: RideRequest) => {
+    console.log('Viewing ride details:', ride);
     setSelectedRideDetails(ride);
     setIsDetailsModalOpen(true);
   };
@@ -306,7 +267,9 @@ const StudentRides: React.FC = () => {
   }) || [];
 
   if (isLoadingActive || isLoadingHistory) {
-    return <div>Loading...</div>;
+    return <div className="flex justify-center items-center min-h-screen">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+    </div>;
   }
 
   return (
