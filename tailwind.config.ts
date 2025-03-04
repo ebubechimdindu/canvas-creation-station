@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -12,12 +13,23 @@ export default {
 	theme: {
 		container: {
 			center: true,
-			padding: '2rem',
+			padding: {
+				DEFAULT: '1rem',
+				sm: '1.5rem',
+				md: '2rem',
+			},
 			screens: {
+				'sm': '640px',
+				'md': '768px',
+				'lg': '1024px',
+				'xl': '1280px',
 				'2xl': '1400px'
 			}
 		},
 		extend: {
+			screens: {
+				'xs': '380px',
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
@@ -84,11 +96,47 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'mobile-slide-in': {
+					'0%': {
+						transform: 'translateX(-100%)'
+					},
+					'100%': {
+						transform: 'translateX(0)'
+					}
+				},
+				'mobile-slide-out': {
+					'0%': {
+						transform: 'translateX(0)'
+					},
+					'100%': {
+						transform: 'translateX(-100%)'
+					}
+				},
+				'tap-animation': {
+					'0%': {
+						transform: 'scale(1)'
+					},
+					'50%': {
+						transform: 'scale(0.95)'
+					},
+					'100%': {
+						transform: 'scale(1)'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'mobile-slide-in': 'mobile-slide-in 0.3s ease-out',
+				'mobile-slide-out': 'mobile-slide-out 0.3s ease-out',
+				'tap': 'tap-animation 0.15s ease-out'
+			},
+			spacing: {
+				'safe-top': 'env(safe-area-inset-top, 0px)',
+				'safe-bottom': 'env(safe-area-inset-bottom, 0px)',
+				'safe-left': 'env(safe-area-inset-left, 0px)',
+				'safe-right': 'env(safe-area-inset-right, 0px)',
 			}
 		}
 	},

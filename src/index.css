@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -73,11 +74,43 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    -webkit-tap-highlight-color: transparent;
   }
 
   canvas {
     image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
+  }
+  
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  /* Fix mobile touch inputs */
+  input, button, select, textarea, a {
+    @apply touch-manipulation;
+  }
+  
+  /* Improve mobile modals */
+  @media (max-width: 640px) {
+    .rdp {
+      --rdp-cell-size: 40px !important;
+      margin: 0 auto !important;
+    }
+    
+    [data-radix-popper-content-wrapper] {
+      left: 0 !important;
+      right: 0 !important;
+      max-width: calc(100vw - 20px) !important;
+      margin: 0 auto !important;
+    }
   }
 }
 
@@ -85,6 +118,14 @@
   .animate-fade-in {
     animation: fadeIn 0.8s ease-out forwards;
     opacity: 0;
+  }
+  
+  .mobile-safe-area-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  
+  .mobile-safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
 
@@ -102,4 +143,26 @@
 /* Smooth transitions */
 .transition-all {
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Mobile specific improvements */
+@media (max-width: 640px) {
+  /* Make buttons more tappable on mobile */
+  button, a {
+    min-height: 44px;
+  }
+  
+  /* Improve form controls on mobile */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+  
+  /* Fix layouts */
+  .mobile-full {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex-basis: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
 }
