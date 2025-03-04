@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAppSelector, useAppDispatch } from '@/hooks/redux';
 import { setActiveRide, updateRideStatus, addToHistory } from '@/features/rides/ridesSlice';
 import type { CampusLocation } from '@/types/locations';
-import type { RideRequest, RideStatus } from '@/types';
+import type { RideRequest, RideStatus, BankAccount } from '@/types';
 
 interface CreateRideRequestParams {
   pickup: CampusLocation;
@@ -38,6 +38,13 @@ export const useRideRequests = () => {
             phone_number,
             profile_picture_url,
             status
+          ),
+          driver_bank_accounts(
+            id,
+            bank_name,
+            account_number,
+            account_holder_name,
+            is_primary
           )
         `)
         .eq('student_id', user.id)
@@ -52,6 +59,12 @@ export const useRideRequests = () => {
         .maybeSingle();
 
       if (error) throw error;
+      
+      // Filter bank accounts to only include primary account
+      if (data && data.driver_bank_accounts) {
+        data.driver_bank_accounts = data.driver_bank_accounts.filter((account: any) => account.is_primary);
+      }
+      
       return data as RideRequest | null;
     },
     enabled: !!user?.id,
@@ -281,6 +294,13 @@ export const useRideRequests = () => {
             profile_picture_url,
             status
           ),
+          driver_bank_accounts(
+            id,
+            bank_name,
+            account_number,
+            account_holder_name,
+            is_primary
+          ),
           ratings:ride_ratings(*)
         `)
         .eq('student_id', user.id)
@@ -288,6 +308,16 @@ export const useRideRequests = () => {
         .limit(10);
 
       if (error) throw error;
+      
+      // Filter each ride's bank accounts to only include primary accounts
+      if (data) {
+        data.forEach(ride => {
+          if (ride.driver_bank_accounts) {
+            ride.driver_bank_accounts = ride.driver_bank_accounts.filter((account: BankAccount) => account.is_primary);
+          }
+        });
+      }
+      
       return data;
     },
     enabled: !!user?.id,

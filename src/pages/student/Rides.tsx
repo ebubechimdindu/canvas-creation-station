@@ -21,7 +21,7 @@ import { ActiveRideRequest } from "@/components/rides/ActiveRideRequest";
 import { RideHistoryTable } from "@/components/rides/RideHistoryTable";
 import { supabase } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
-import type { RideRequest, RideStatus, Driver } from "@/types";
+import type { RideRequest, RideStatus, Driver, Ride } from "@/types";
 import type { CampusLocation } from "@/types/locations";
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import {
@@ -256,6 +256,44 @@ const StudentRides: React.FC = () => {
     });
   };
 
+  const convertToRideFormat = (request: RideRequest): Ride => {
+    const primaryBankAccount = request.driver_bank_accounts?.find(account => account.is_primary);
+    
+    return {
+      id: request.id,
+      student_id: request.student_id,
+      driver_id: request.driver_id,
+      date: request.created_at,
+      pickup: request.pickup_address,
+      dropoff: request.dropoff_address,
+      driver: request.driver?.full_name || '',
+      status: mapRideStatusToUI(request.status),
+      rating: request.ratings?.[0]?.rating,
+      payment: {
+        method: 'transfer',
+        status: 'pending',
+        amount: 0
+      },
+      notes: request.notes,
+      driverDetails: request.driver ? {
+        id: request.driver.id,
+        name: request.driver.full_name,
+        phoneNumber: request.driver.phone_number,
+        profilePictureUrl: request.driver.profile_picture_url,
+        accountDetails: {
+          bankName: primaryBankAccount?.bank_name || '',
+          accountNumber: primaryBankAccount?.account_number || '',
+          accountName: primaryBankAccount?.account_holder_name || ''
+        }
+      } : undefined
+    };
+  };
+
+  const handleViewRideDetails = (ride: RideRequest) => {
+    setSelectedRideDetails(ride);
+    setIsDetailsModalOpen(true);
+  };
+
   const filteredRides = rideHistory?.filter((ride) => {
     const matchesSearch =
       ride.pickup_address.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -365,10 +403,7 @@ const StudentRides: React.FC = () => {
 
                         <RideHistoryTable
                           rides={filteredRides}
-                          onRideSelect={(ride) => {
-                            setSelectedRideDetails(ride);
-                            setIsDetailsModalOpen(true);
-                          }}
+                          onRideSelect={handleViewRideDetails}
                           onRateRide={handleRating}
                           isRatingOpen={isRatingOpen}
                           setIsRatingOpen={setIsRatingOpen}
@@ -430,26 +465,30 @@ const StudentRides: React.FC = () => {
                             </div>
                           </div>
 
-                          {/* Bank Account Details */}
                           <div className="mt-4">
                             <h3 className="font-medium mb-2">Bank Account Details</h3>
                             <div className="space-y-2 text-sm text-gray-600">
-                              <p className="flex justify-between">
-                                <span>Account Name:</span>
-                                <span className="font-medium">{activeRide.driver?.account_holder_name || 'David'}</span>
-                              </p>
-                              <p className="flex justify-between">
-                                <span>Bank Name:</span>
-                                <span className="font-medium">{activeRide.driver?.bank_name || 'GT Bank'}</span>
-                              </p>
-                              <p className="flex justify-between">
-                                <span>Account Number:</span>
-                                <span className="font-medium">{activeRide.driver?.account_number || '0659542657'}</span>
-                              </p>
+                              {activeRide.driver_bank_accounts && activeRide.driver_bank_accounts.length > 0 ? (
+                                <>
+                                  <p className="flex justify-between">
+                                    <span>Account Name:</span>
+                                    <span className="font-medium">{activeRide.driver_bank_accounts[0].account_holder_name}</span>
+                                  </p>
+                                  <p className="flex justify-between">
+                                    <span>Bank Name:</span>
+                                    <span className="font-medium">{activeRide.driver_bank_accounts[0].bank_name}</span>
+                                  </p>
+                                  <p className="flex justify-between">
+                                    <span>Account Number:</span>
+                                    <span className="font-medium">{activeRide.driver_bank_accounts[0].account_number}</span>
+                                  </p>
+                                </>
+                              ) : (
+                                <p>No bank account information available</p>
+                              )}
                             </div>
                           </div>
 
-                          {/* Status and Actions */}
                           <div className="pt-4 border-t">
                             <div className="flex justify-between items-center">
                               <RideStatusBadge status={activeRide.status} animated />
@@ -497,6 +536,14 @@ const StudentRides: React.FC = () => {
               </div>
             </div>
           </main>
+          
+          {selectedRideDetails && (
+            <RideDetailsModal
+              ride={convertToRideFormat(selectedRideDetails)}
+              open={isDetailsModalOpen}
+              onOpenChange={setIsDetailsModalOpen}
+            />
+          )}
         </div>
       </MapProvider>
     </SidebarProvider>
