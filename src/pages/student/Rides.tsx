@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useAppSelector, useAppDispatch } from "@/hooks/redux";
 import { setActiveRide, addToHistory, updateRideStatus } from "@/features/rides/ridesSlice";
@@ -21,7 +22,8 @@ import { ActiveRideRequest } from "@/components/rides/ActiveRideRequest";
 import { RideHistoryTable } from "@/components/rides/RideHistoryTable";
 import { supabase } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
-import type { RideRequest, RideStatus, Driver, Ride } from "@/types";
+import type { RideRequest, RideStatus, Driver, Ride, RIDE_STATUS_UI, RideStatusUI } from "@/types";
+import { mapRideStatusToUI } from "@/types"; // Add this import
 import type { CampusLocation } from "@/types/locations";
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import {
