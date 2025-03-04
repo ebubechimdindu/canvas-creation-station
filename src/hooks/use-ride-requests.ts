@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAppSelector, useAppDispatch } from '@/hooks/redux';
 import { setActiveRide, updateRideStatus, addToHistory } from '@/features/rides/ridesSlice';
 import type { CampusLocation } from '@/types/locations';
-import type { RideRequest, RideStatus, BankAccount } from '@/types';
+import type { RideRequest, RideStatus } from '@/types';
 
 interface CreateRideRequestParams {
   pickup: CampusLocation;
@@ -38,13 +38,6 @@ export const useRideRequests = () => {
             phone_number,
             profile_picture_url,
             status
-          ),
-          driver_bank_accounts(
-            id,
-            bank_name,
-            account_number,
-            account_holder_name,
-            is_primary
           )
         `)
         .eq('student_id', user.id)
@@ -58,32 +51,19 @@ export const useRideRequests = () => {
         ])
         .maybeSingle();
 
-      if (error) {
-        console.error('Error fetching active ride:', error);
-        throw error;
-      }
-      
-      // Filter bank accounts to only include primary account
-      if (data && data.driver_bank_accounts) {
-        data.driver_bank_accounts = data.driver_bank_accounts.filter((account: any) => account.is_primary);
-      }
-      
-      console.log('Fetched active ride:', data);
+      if (error) throw error;
       return data as RideRequest | null;
     },
     enabled: !!user?.id,
-    refetchInterval: 5000, // Refetch every 5 seconds to ensure data is fresh
   });
 
   useEffect(() => {
     if (fetchedActiveRide) {
-      console.log('Setting active ride in Redux:', fetchedActiveRide);
       dispatch(setActiveRide(fetchedActiveRide));
-    } else if (fetchedActiveRide === null && activeRide !== null) {
-      console.log('Clearing active ride in Redux');
+    } else {
       dispatch(setActiveRide(null));
     }
-  }, [fetchedActiveRide, dispatch, activeRide]);
+  }, [fetchedActiveRide, dispatch]);
 
   useEffect(() => {
     if (!activeRide?.id) return;
@@ -301,36 +281,14 @@ export const useRideRequests = () => {
             profile_picture_url,
             status
           ),
-          driver_bank_accounts(
-            id,
-            bank_name,
-            account_number,
-            account_holder_name,
-            is_primary
-          ),
           ratings:ride_ratings(*)
         `)
         .eq('student_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10);
 
-      if (error) {
-        console.error('Error fetching ride history:', error);
-        throw error;
-      }
-      
-      console.log('Fetched ride history:', data);
-      
-      // Filter each ride's bank accounts to only include primary accounts
-      if (data) {
-        data.forEach(ride => {
-          if (ride.driver_bank_accounts) {
-            ride.driver_bank_accounts = ride.driver_bank_accounts.filter((account: BankAccount) => account.is_primary);
-          }
-        });
-      }
-      
-      return data || [];
+      if (error) throw error;
+      return data;
     },
     enabled: !!user?.id,
     retry: false,
@@ -342,7 +300,7 @@ export const useRideRequests = () => {
     isCreating,
     createRideRequest,
     cancelRideRequest,
-    rideHistory: rideHistory || [],
+    rideHistory,
     isLoadingHistory,
   };
 };

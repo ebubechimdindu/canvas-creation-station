@@ -19,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import RideMap from "../map/RideMap";
 import { RideTimeline } from "./RideTimeline";
 import { RideStatusBadge } from "./RideStatusBadge";
@@ -195,45 +194,13 @@ const RideDetailsModal = ({ ride, open, onOpenChange }: RideDetailsModalProps) =
                     </div>
                   )}
 
-                  {ride.notes && (
-                    <div className="space-y-2">
-                      <h3 className="font-semibold">Notes</h3>
-                      <p className="text-sm text-gray-600 bg-muted p-3 rounded-md">{ride.notes}</p>
-                    </div>
-                  )}
-
                   <div className="space-y-2">
                     <h3 className="font-semibold">Student Information</h3>
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-muted-foreground" />
-                      <span>Student Name (ID: {ride.student_id})</span>
+                      <span>Student Name (ID: {ride.id})</span>
                     </div>
                   </div>
-
-                  {ride.driverDetails && (
-                    <div className="space-y-2">
-                      <h3 className="font-semibold">Driver Information</h3>
-                      <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                        <Avatar className="h-10 w-10">
-                          {ride.driverDetails.profilePictureUrl ? (
-                            <AvatarImage src={ride.driverDetails.profilePictureUrl} alt={ride.driverDetails.name} />
-                          ) : (
-                            <AvatarFallback>{ride.driverDetails.name.charAt(0)}</AvatarFallback>
-                          )}
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{ride.driverDetails.name}</p>
-                          <a 
-                            href={formatPhoneNumberUrl(ride.driverDetails.phoneNumber)}
-                            className="text-sm text-muted-foreground hover:text-primary hover:underline flex items-center gap-1"
-                          >
-                            <Phone className="h-3 w-3" />
-                            {ride.driverDetails.phoneNumber}
-                          </a>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </TabsContent>
 
@@ -255,35 +222,27 @@ const RideDetailsModal = ({ ride, open, onOpenChange }: RideDetailsModalProps) =
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold">Driver Contact Information</h3>
                     <div className="space-y-2">
-                      <div className="flex items-center gap-3 mb-4">
-                        <Avatar className="h-16 w-16">
-                          {ride.driverDetails.profilePictureUrl ? (
-                            <AvatarImage src={ride.driverDetails.profilePictureUrl} alt={ride.driverDetails.name} />
-                          ) : (
-                            <AvatarFallback>{ride.driverDetails.name.charAt(0)}</AvatarFallback>
-                          )}
-                        </Avatar>
-                        <div>
-                          <h4 className="font-medium text-lg">{ride.driverDetails.name}</h4>
-                          <a 
-                            href={formatPhoneNumberUrl(ride.driverDetails.phoneNumber)}
-                            className="flex items-center gap-2 text-primary hover:underline"
-                          >
-                            <Phone className="h-4 w-4" />
-                            <span>{ride.driverDetails.phoneNumber}</span>
-                          </a>
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span>{ride.driverDetails.name}</span>
                       </div>
-                      <div className="space-y-2 pt-4 border-t">
-                        <h4 className="font-medium flex items-center gap-2">
-                          <CreditCard className="h-4 w-4" />
-                          Payment Details
-                        </h4>
-                        <div className="space-y-1 pl-6 bg-muted p-3 rounded-md">
-                          <p><span className="font-medium">Bank:</span> {ride.driverDetails.accountDetails.bankName}</p>
-                          <p><span className="font-medium">Account Name:</span> {ride.driverDetails.accountDetails.accountName}</p>
-                          <p><span className="font-medium">Account Number:</span> {ride.driverDetails.accountDetails.accountNumber}</p>
-                        </div>
+                      <a 
+                        href={formatPhoneNumberUrl(ride.driverDetails.phoneNumber)}
+                        className="flex items-center gap-2 text-primary hover:underline"
+                      >
+                        <Phone className="h-4 w-4" />
+                        <span>{ride.driverDetails.phoneNumber}</span>
+                      </a>
+                    </div>
+                    <div className="space-y-2 pt-4">
+                      <h4 className="font-medium flex items-center gap-2">
+                        <CreditCard className="h-4 w-4" />
+                        Payment Details
+                      </h4>
+                      <div className="space-y-1 pl-6">
+                        <p>Bank: {ride.driverDetails.accountDetails.bankName}</p>
+                        <p>Account Name: {ride.driverDetails.accountDetails.accountName}</p>
+                        <p>Account Number: {ride.driverDetails.accountDetails.accountNumber}</p>
                       </div>
                     </div>
                   </div>
@@ -317,3 +276,4 @@ const RideDetailsModal = ({ ride, open, onOpenChange }: RideDetailsModalProps) =
 };
 
 export default RideDetailsModal;
+

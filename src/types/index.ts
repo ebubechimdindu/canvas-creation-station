@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   email: string;
@@ -60,17 +59,6 @@ export const mapRideStatusToUI = (status: RideStatus): RideStatusUI => {
   }
 };
 
-export interface BankAccount {
-  id: string;
-  driver_id: string;
-  bank_name: string;
-  account_number: string;
-  account_holder_name: string;
-  is_primary: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface RideRequest {
   id: number;
   student_id: string;
@@ -89,7 +77,6 @@ export interface RideRequest {
   completed_at?: string;
   cancelled_at?: string;
   driver?: DriverProfile;
-  driver_bank_accounts?: BankAccount[];
   ratings?: RideRating[];
   payment?: {
     method: 'cash' | 'transfer';
@@ -155,7 +142,6 @@ export interface Ride {
     id: string;
     name: string;
     phoneNumber: string;
-    profilePictureUrl?: string;
     accountDetails: {
       bankName: string;
       accountNumber: string;
