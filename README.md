@@ -1,69 +1,64 @@
-# Welcome to your Lovable project
+# School Ride Transport System
 
-## Project info
+A real-time transportation management system designed to connect students with drivers for safe and reliable rides.
 
-**URL**: https://lovable.dev/projects/de18524f-c454-49f6-af86-7989e84bb480
+## Features
 
-## How can I edit this code?
+- Student and Driver authentication
+- Real-time ride tracking
+- Secure payment processing
+- Route optimization
+- Rating system
+- Bank account management
+- Driver earnings tracking
 
-There are several ways of editing your application.
+## Prerequisites
 
-**Use Lovable**
+- Node.js 16.x or later
+- npm 8.x or later
+- Modern web browser with JavaScript enabled
+- Supabase account for backend services
+- Mapbox API key for maps functionality
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/de18524f-c454-49f6-af86-7989e84bb480) and start prompting.
+## Getting Started
 
-Changes made via Lovable will be committed automatically to this repo.
+1. **Download the project**
+   - Visit the GitHub repository
+   - Click the green "Code" button
+   - Select "Download ZIP"
+   - Extract the ZIP file to your desired location
 
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
+2. **Open the project**
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+cd path/to/school-ride-transport-system
+```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+3. **Install dependencies**
+```sh
+npm install
+```
 
-# Step 3: Install the necessary dependencies.
-npm i
+4. **Environment Setup**
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+Create a `.env` file in the root directory and add:
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_MAPBOX_ACCESS_TOKEN=your_mapbox_token
+```
+
+5. **Start the development server**
+```sh
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The application will be available at `http://localhost:8080`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Available Scripts
 
-**Use GitHub Codespaces**
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with .
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/de18524f-c454-49f6-af86-7989e84bb480) and click on Share -> Publish.
-
-## I want to use a custom domain - is that possible?
-
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+[Rest of README content remains the same...]
