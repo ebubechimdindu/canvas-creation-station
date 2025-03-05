@@ -58,23 +58,27 @@ const DriverSidebar = () => {
   if (isMobile) {
     return (
       <>
-        {/* Mobile toggle button */}
+        {/* Mobile toggle button - improved for better visibility */}
         <Button
-          variant="ghost"
+          variant="secondary"
           size="icon"
-          className="fixed top-4 left-4 z-50 md:hidden"
+          className="fixed top-4 left-4 z-50 md:hidden h-10 w-10 shadow-md bg-white/90 backdrop-blur dark:bg-gray-900/90 border"
           onClick={toggleMobileMenu}
+          aria-label="Toggle menu"
         >
           {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </Button>
         
-        {/* Mobile menu */}
+        {/* Mobile menu with improved animations */}
         <div className={cn(
-          "fixed inset-0 z-40 bg-background/95 backdrop-blur-sm transform transition-transform duration-300",
-          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+          "fixed inset-0 z-40 bg-background/95 backdrop-blur-sm transition-all duration-300 ease-in-out",
+          isMobileMenuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-full"
         )}>
-          <div className="flex flex-col h-full p-6 pt-16">
-            <nav className="space-y-4">
+          <div className="flex flex-col h-full p-6 pt-20 animate-fade-in">
+            <div className="mb-8 flex items-center justify-center">
+              <span className="text-xl font-semibold">School Ride</span>
+            </div>
+            <nav className="space-y-6">
               {navigation.map((item) => (
                 <Link 
                   key={item.name} 
@@ -82,10 +86,9 @@ const DriverSidebar = () => {
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <Button
-                    variant="ghost"
+                    variant={location.pathname === item.href ? "secondary" : "ghost"}
                     className={cn(
-                      "w-full justify-start gap-3 text-lg py-3",
-                      location.pathname === item.href && "bg-secondary"
+                      "w-full justify-start gap-3 text-lg py-5 h-auto"
                     )}
                   >
                     <item.icon className="h-5 w-5" />
@@ -96,7 +99,7 @@ const DriverSidebar = () => {
             </nav>
             
             <div className="mt-auto">
-              <p className="text-sm text-muted-foreground text-center pb-6">
+              <p className="text-sm text-muted-foreground text-center pb-6 pt-4">
                 &copy; {new Date().getFullYear()} School Ride
               </p>
             </div>

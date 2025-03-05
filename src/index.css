@@ -165,4 +165,14 @@
     margin-left: 0 !important;
     margin-right: 0 !important;
   }
+  
+  /* Mobile tap highlights */
+  .mobile-tap-highlight {
+    @apply active:bg-primary/10 transition-colors;
+  }
+  
+  /* Mobile menu toggle button */
+  .mobile-menu-toggle {
+    @apply fixed top-4 left-4 z-50 h-10 w-10 rounded-full shadow-md bg-white/90 backdrop-blur dark:bg-gray-900/90 border flex items-center justify-center;
+  }
 }
