@@ -38,16 +38,7 @@ cd path/to/school-ride-transport-system
 npm install
 ```
 
-4. **Environment Setup**
-
-Create a `.env` file in the root directory and add:
-```env
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-VITE_MAPBOX_ACCESS_TOKEN=your_mapbox_token
-```
-
-5. **Start the development server**
+4. **Start the development server**
 ```sh
 npm run dev
 ```
@@ -60,5 +51,3 @@ The application will be available at `http://localhost:8080`
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build
 - `npm run lint` - Run ESLint
-
-[Rest of README content remains the same...]
