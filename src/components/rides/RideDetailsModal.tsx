@@ -92,7 +92,7 @@ const RideDetailsModal = ({ ride, open, onOpenChange }: RideDetailsModalProps) =
             <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="map">Map</TabsTrigger>
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
-            <TabsTrigger value="contact">Contact Info</TabsTrigger>
+            {/* <TabsTrigger value="contact">Contact Info</TabsTrigger> */}
           </TabsList>
 
           <div className="flex-1 overflow-hidden">
@@ -100,9 +100,9 @@ const RideDetailsModal = ({ ride, open, onOpenChange }: RideDetailsModalProps) =
               <TabsContent value="details" className="space-y-6">
                 <div className="grid gap-4">
                   <div className="space-y-2">
-                    <h3 className="font-semibold">Route Information</h3>
+                    {/* <h3 className="font-semibold">Route Information</h3> */}
                     <div className="grid gap-4">
-                      <div className="space-y-2">
+                      {/* <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <MapPin className="h-4 w-4 text-muted-foreground" />
                           <span className="font-medium">Pickup Location</span>
@@ -133,8 +133,8 @@ const RideDetailsModal = ({ ride, open, onOpenChange }: RideDetailsModalProps) =
                             ))}
                           </SelectContent>
                         </Select>
-                      </div>
-
+                      </div> */}
+                      {/* 
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -166,7 +166,7 @@ const RideDetailsModal = ({ ride, open, onOpenChange }: RideDetailsModalProps) =
                             ))}
                           </SelectContent>
                         </Select>
-                      </div>
+                      </div> */}
                     </div>
                   </div>
 
@@ -226,7 +226,7 @@ const RideDetailsModal = ({ ride, open, onOpenChange }: RideDetailsModalProps) =
                         <User className="h-4 w-4 text-muted-foreground" />
                         <span>{ride.driverDetails.name}</span>
                       </div>
-                      <a 
+                      <a
                         href={formatPhoneNumberUrl(ride.driverDetails.phoneNumber)}
                         className="flex items-center gap-2 text-primary hover:underline"
                       >
@@ -256,7 +256,7 @@ const RideDetailsModal = ({ ride, open, onOpenChange }: RideDetailsModalProps) =
                         <User className="h-4 w-4 text-muted-foreground" />
                         <span>{ride.studentDetails.name}</span>
                       </div>
-                      <a 
+                      <a
                         href={formatPhoneNumberUrl(ride.studentDetails.phoneNumber)}
                         className="flex items-center gap-2 text-primary hover:underline"
                       >
